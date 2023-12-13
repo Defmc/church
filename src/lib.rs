@@ -231,4 +231,32 @@ pub mod tests {
         };
         assert!(flip.alpha_eq(&alpha_redexed));
     }
+
+    #[test]
+    fn beta_reduction() {
+        // flip f x y = f y x
+        // flip = ^f^x^y . (f y x)
+        const Y_ID: VarId = 3;
+        const X_ID: VarId = 4;
+        const F_ID: VarId = 5;
+        let fy /* f -> y -> x -> (fy -> x) */ = Body::App(
+            Body::Id(F_ID).into(),
+            Body::Id(Y_ID).into(),
+            );
+        let body = Body::App(fy.into(), Body::Id(X_ID).into());
+        let mut flip = Lambda::from_args([F_ID, X_ID, Y_ID].into_iter().peekable(), body).unwrap();
+        flip.alpha_redex();
+
+        // original λa.λb.λc.((a c) b)
+        // applied f λb.λc.((f c) b)
+        // applied g λc.((f c) g)
+        // applied h ((f h) g)
+        assert_eq!(flip.to_string(), "λa.λb.λc.((a c) b)");
+        flip.curry(&Body::Id(5));
+        assert_eq!(flip.to_string(), "λb.λc.((f c) b)");
+        flip.curry(&Body::Id(6));
+        assert_eq!(flip.to_string(), "λc.((f c) g)");
+        let body = flip.apply(&Body::Id(7));
+        assert_eq!(body.to_string(), "((f h) g)");
+    }
 }
