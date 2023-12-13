@@ -68,18 +68,22 @@ impl Lambda {
         self_map: &mut HashMap<VarId, VarId>,
         rhs_map: &mut HashMap<VarId, VarId>,
     ) -> bool {
-        assert!(
-            !self_map.contains_key(&self.var),
-            "shadowing {} in self",
-            id_to_str(self.var)
-        );
-        assert!(
-            !rhs_map.contains_key(&rhs.var),
-            "shadowing {} in rhs",
-            id_to_str(rhs.var)
-        );
-        self_map.insert(self.var, self_map.len());
-        rhs_map.insert(rhs.var, rhs_map.len());
+        if self_map.contains_key(&self.var) {
+            let map_len = self_map.len();
+            let mut map = self_map.clone();
+            map.insert(self.var, map_len);
+            return self.eq_by_alpha(&rhs, &mut map, rhs_map);
+        } else {
+            self_map.insert(self.var, self_map.len());
+        }
+        if rhs_map.contains_key(&rhs.var) {
+            let map_len = rhs_map.len();
+            let mut map = rhs_map.clone();
+            map.insert(rhs.var, map_len);
+            return self.eq_by_alpha(&rhs, self_map, &mut map);
+        } else {
+            rhs_map.insert(rhs.var, rhs_map.len());
+        }
         self.body.eq_by_alpha(&rhs.body, self_map, rhs_map)
     }
 
