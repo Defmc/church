@@ -342,6 +342,11 @@ pub mod tests {
             body: Body::App(Body::Abs(Lambda::id().into()).into(), Body::Id(0).into()),
         };
         abs.alpha_redex();
+        let mut abs_other_id = Lambda {
+            var: 1,
+            body: Body::App(Body::Abs(Lambda::id().into()).into(), Body::Id(1).into()),
+        };
+        assert!(abs.alpha_eq(&abs_other_id));
     }
 
     #[test]
