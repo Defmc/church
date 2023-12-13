@@ -96,12 +96,12 @@ pub enum Body {
 impl Body {
     pub fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
         match self {
-            Body::Id(id) => *id = map[id],
-            Body::App(f, x) => {
+            Self::Id(id) => *id = map[id],
+            Self::App(f, x) => {
                 f.redex_by_alpha(map);
                 x.redex_by_alpha(map);
             }
-            Body::Abs(l) => l.redex_by_alpha(map),
+            Self::Abs(l) => l.redex_by_alpha(map),
         }
     }
 
@@ -113,11 +113,11 @@ impl Body {
     ) -> bool {
         println!("self_map: {self_map:?}\nrhs_map: {rhs_map:?}");
         match (self, rhs) {
-            (Body::Id(s_id), Body::Id(r_id)) => self_map[s_id] == rhs_map[r_id],
-            (Body::App(s_f, s_x), Body::App(r_f, r_x)) => {
+            (Self::Id(s_id), Self::Id(r_id)) => self_map[s_id] == rhs_map[r_id],
+            (Self::App(s_f, s_x), Self::App(r_f, r_x)) => {
                 s_f.eq_by_alpha(r_f, self_map, rhs_map) && s_x.eq_by_alpha(r_x, self_map, rhs_map)
             }
-            (Body::Abs(s_l), Body::Abs(r_l)) => s_l.eq_by_alpha(r_l, self_map, rhs_map),
+            (Self::Abs(s_l), Self::Abs(r_l)) => s_l.eq_by_alpha(r_l, self_map, rhs_map),
             (_, _) => false,
         }
     }
