@@ -78,6 +78,28 @@ impl Lambda {
         rhs_map.insert(rhs.var, rhs_map.len());
         self.body.eq_by_alpha(&rhs.body, self_map, rhs_map)
     }
+
+    pub fn apply(mut self, val: &Body) -> Body {
+        let id = self.var;
+        self.body.apply(id, val);
+        self.body
+    }
+
+    pub fn applied(mut self, id: VarId, val: &Body) -> Self {
+        self.body.apply(id, val);
+        self
+    }
+
+    pub fn curry(&mut self, val: &Body) -> &mut Self {
+        let id = self.var;
+        self.body.apply(id, val);
+        if let Body::Abs(l) = &self.body {
+            *self = *l.clone();
+        } else {
+            unreachable!()
+        }
+        self
+    }
 }
 
 impl fmt::Display for Lambda {
@@ -118,6 +140,21 @@ impl Body {
             }
             (Self::Abs(s_l), Self::Abs(r_l)) => s_l.eq_by_alpha(r_l, self_map, rhs_map),
             (_, _) => false,
+        }
+    }
+
+    pub fn apply(&mut self, id: VarId, val: &Self) {
+        match self {
+            Self::Id(s_id) => {
+                if *s_id == id {
+                    *self = val.clone()
+                }
+            }
+            Self::Abs(l) => l.body.apply(id, val),
+            Self::App(f, x) => {
+                f.apply(id, val);
+                x.apply(id, val);
+            }
         }
     }
 }
