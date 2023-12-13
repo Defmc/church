@@ -111,7 +111,6 @@ impl Body {
         self_map: &mut HashMap<VarId, VarId>,
         rhs_map: &mut HashMap<VarId, VarId>,
     ) -> bool {
-        println!("self_map: {self_map:?}\nrhs_map: {rhs_map:?}");
         match (self, rhs) {
             (Self::Id(s_id), Self::Id(r_id)) => self_map[s_id] == rhs_map[r_id],
             (Self::App(s_f, s_x), Self::App(r_f, r_x)) => {
@@ -126,9 +125,9 @@ impl Body {
 impl fmt::Display for Body {
     fn fmt(&self, w: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Body::Id(id) => w.write_fmt(format_args!("{}", alpha_alias(*id))),
-            Body::App(ref f, ref x) => w.write_fmt(format_args!("({f} {x})")),
-            Body::Abs(l) => w.write_fmt(format_args!("{l}")),
+            Self::Id(id) => w.write_fmt(format_args!("{}", alpha_alias(*id))),
+            Self::App(ref f, ref x) => w.write_fmt(format_args!("({f} {x})")),
+            Self::Abs(l) => w.write_fmt(format_args!("{l}")),
         }
     }
 }
