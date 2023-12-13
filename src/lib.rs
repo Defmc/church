@@ -352,10 +352,24 @@ pub mod tests {
     #[test]
     fn flip_flip_alpha_redex() {
         let mut fliper = flip(0, 1, 2);
-        let fliper_f = flip(0, 1, 2);
+        let fliper_f = {
+            // flip f x y = f y x
+            // flip = ^f^x^y . (f y x)
+            const F_ID: usize = 2;
+            const X_ID: usize = 1;
+            const Y_ID: usize = 0;
+            let fy /* f -> y -> x -> (fy -> x) */ = Body::App(
+            Body::Id(F_ID).into(),
+            Body::Id(Y_ID).into(),
+            );
+            let body = Body::App(fy.into(), Body::Id(X_ID).into());
+            Lambda::from_args([X_ID, Y_ID, F_ID].into_iter().peekable(), body).unwrap()
+        };
         fliper.curry(&fliper_f.into());
         println!("{fliper}");
         fliper.alpha_redex();
+        println!("{fliper}");
+        fliper.beta_redex();
         println!("{fliper}");
     }
 }
