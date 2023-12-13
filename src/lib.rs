@@ -43,7 +43,7 @@ impl Lambda {
         self.redex_by_alpha(&mut HashMap::new())
     }
 
-    fn redex_by_alpha(&mut self, map: &mut HashMap<usize, usize>) {
+    fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
         assert!(
             !map.contains_key(&self.var),
             "shadowing {}",
@@ -61,8 +61,8 @@ impl Lambda {
     pub fn eq_by_alpha(
         &self,
         rhs: &Self,
-        self_map: &mut HashMap<usize, usize>,
-        rhs_map: &mut HashMap<usize, usize>,
+        self_map: &mut HashMap<VarId, VarId>,
+        rhs_map: &mut HashMap<VarId, VarId>,
     ) -> bool {
         assert!(
             !self_map.contains_key(&self.var),
