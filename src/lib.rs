@@ -217,12 +217,48 @@ macro_rules! lambda {
             body: lambda!($($body)+),
         }.into())
     };
+    ($first:tt $second:tt $($body:tt)+) => {
+        Body::App(
+            lambda!($first $second).into(),
+            lambda!($($body)+).into()
+        )
+    };
+    ($first:tt ($second:tt $($body:tt)+)) => {
+        Body::App(
+            lambda!($first).into(),
+            lambda!($second $($body)+).into()
+        )
+    };
     (($first:tt $second:tt) $($body:tt)+) => {
         lambda!($first $second $($body)+)
+    };
+    ($first:tt $second:tt ($($body:tt)+)) => {
+        lambda!($first $second $($body)+)
+    };
+    (($first:tt $second:tt) ($($body:tt)+)) => {
+        lambda!($first $second $($body)+)
+    };
+    (($first:tt) $second:tt) => {
+        lambda!($first $second)
+    };
+    ($first:tt ($second:tt)) => {
+        lambda!($first $second)
+    };
+    (($first:tt) ($second:tt)) => {
+        lambda!($first $second)
+    };
+    ($first:tt $second:tt) => {
+        Body::App(
+            lambda!($first).into(),
+            lambda!($second).into()
+        )
     };
     ($first:tt) => {
         Body::Id(as_var_id!($first))
     };
+    (($first:tt)) => {
+        lambda!($first)
+    }
 }
 
 #[cfg(test)]
