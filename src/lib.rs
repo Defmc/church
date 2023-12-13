@@ -129,7 +129,7 @@ pub enum Body {
 impl Body {
     pub fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
         match self {
-            Self::Id(id) => *id = map[id], // allow free variables
+            Self::Id(id) => *id = map[id], // TODO: allow free variables
             Self::App(f, x) => {
                 f.redex_by_alpha(map);
                 x.redex_by_alpha(map);
@@ -200,6 +200,29 @@ impl From<Lambda> for Body {
     fn from(value: Lambda) -> Self {
         Self::Abs(value.into())
     }
+}
+
+#[macro_export]
+macro_rules! as_var_id {
+    ($var:ident) => {
+        ('z' as usize - (stringify!($var).as_bytes()[0] as usize))
+    };
+}
+
+#[macro_export]
+macro_rules! lambda {
+    (^$var:ident $($body:tt)+) => {
+        Body::Abs(Lambda {
+            var: as_var_id!($var),
+            body: lambda!($($body)+),
+        }.into())
+    };
+    (($first:tt $second:tt) $($body:tt)+) => {
+        lambda!($first $second $($body)+)
+    };
+    ($first:tt) => {
+        Body::Id(as_var_id!($first))
+    };
 }
 
 #[cfg(test)]
