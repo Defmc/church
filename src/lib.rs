@@ -61,6 +61,16 @@ impl Body {
         self.redex_by_alpha(&mut HashMap::new());
     }
 
+    pub fn alpha_reduced(mut self) -> Self {
+        self.alpha_redex();
+        self
+    }
+
+    pub fn beta_reduced(mut self) -> Self {
+        self.beta_redex();
+        self
+    }
+
     pub fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
         match self {
             Self::Id(id) => {
