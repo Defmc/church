@@ -40,6 +40,13 @@ impl Body {
         }
     }
 
+    pub fn order(&self) -> usize {
+        match self {
+            Self::Abs(_, ref a) => 1 + a.order(),
+            _ => 0,
+        }
+    }
+
     pub fn as_mut_abs(&mut self) -> Option<(&mut VarId, &mut Box<Self>)> {
         if let Self::Abs(v, b) = self {
             Some((v, b))
