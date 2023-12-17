@@ -42,6 +42,8 @@ impl Body {
         }
     }
 
+    /// Returns the order (how many abstractions) this term have
+    #[must_use]
     pub fn order(&self) -> usize {
         match self {
             Self::Abs(_, ref a) => 1 + a.order(),
@@ -61,16 +63,20 @@ impl Body {
         self.redex_by_alpha(&mut HashMap::new());
     }
 
+    #[must_use]
     pub fn alpha_reduced(mut self) -> Self {
         self.alpha_redex();
         self
     }
 
+    #[must_use]
     pub fn beta_reduced(mut self) -> Self {
         self.beta_redex();
         self
     }
 
+    /// # Panics
+    /// Never.
     pub fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
         match self {
             Self::Id(id) => {
@@ -108,6 +114,8 @@ impl Body {
         self.eq_by_alpha(rhs, &mut HashMap::new(), &mut HashMap::new())
     }
 
+    /// # Panics
+    /// Never.
     pub fn eq_by_alpha(
         &self,
         rhs: &Self,
@@ -156,7 +164,7 @@ impl Body {
             }
             Self::Abs(v, l) => {
                 if *v != id {
-                    l.apply_by(id, val)
+                    l.apply_by(id, val);
                 }
             }
             Self::App(f, x) => {
@@ -177,8 +185,9 @@ impl Body {
         self
     }
 
+    #[must_use]
     pub fn applied<'a>(mut self, vals: impl IntoIterator<Item = &'a Self>) -> Self {
-        for v in vals.into_iter() {
+        for v in vals {
             self.curry(v);
         }
         self
@@ -217,6 +226,9 @@ impl Body {
         }
     }
 
+    /// Declarative alternative for `Self::from_args`
+    /// # Panics
+    /// Never.
     #[must_use]
     pub fn with(self, it: impl IntoIterator<Item = VarId>) -> Self {
         Self::from_args(it.into_iter().peekable(), self).unwrap()

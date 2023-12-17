@@ -1,5 +1,6 @@
 use crate::{Body, VarId};
 
+#[must_use]
 pub fn natural(f: VarId, x: VarId, n: usize) -> Body {
     fn natural_body(f: VarId, x: VarId, n: usize) -> Body {
         if n == 0 {
@@ -14,15 +15,18 @@ pub fn natural(f: VarId, x: VarId, n: usize) -> Body {
 pub mod bool {
     use crate::Body;
 
+    #[must_use]
     pub fn t() -> Body {
         Body::Id(0).with([0, 1])
     }
 
+    #[must_use]
     pub fn f() -> Body {
         Body::Id(1).with([0, 1])
     }
 
     /// and x y == true, when x == y == true
+    #[must_use]
     pub fn and() -> Body {
         Body::App(
             Body::App(Body::Id(0).into(), Body::Id(1).into()).into(),
@@ -32,6 +36,7 @@ pub mod bool {
     }
 
     /// or x y == false, when x == y == false
+    #[must_use]
     pub fn or() -> Body {
         Body::App(
             Body::App(Body::Id(0).into(), Body::Id(0).into()).into(),
@@ -43,11 +48,13 @@ pub mod bool {
     /// inverts the boolean
     /// not true == false
     /// not false == true
+    #[must_use]
     pub fn not() -> Body {
         Body::App(Body::App(Body::Id(0).into(), f().into()).into(), t().into()).with([0])
     }
 
     /// xor == true, when x != y
+    #[must_use]
     pub fn xor() -> Body {
         let not_otherwise = not().applied([&Body::Id(1)]);
         let and = and().applied([&Body::Id(0), &not_otherwise]);
