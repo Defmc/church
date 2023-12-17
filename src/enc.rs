@@ -121,10 +121,12 @@ pub mod bool {
         }
 
         #[test]
-        pub fn and_true_false_no_reduced() {
-            let mut and = super::and().applied([&super::t(), &super::f()]);
-            and.beta_redex();
-            assert!(and.alpha_eq(&super::f()));
+        pub fn and_transitivity() {
+            for (l, r, out) in AND_LOGIC_TABLE {
+                assert!(test_case(super::and, *r, *l).alpha_eq(&bool_to_body(*out)))
+            }
+        }
+
         #[test]
         pub fn or() {
             for (l, r, out) in OR_LOGIC_TABLE {
@@ -133,6 +135,12 @@ pub mod bool {
         }
 
         #[test]
+        pub fn or_transitivity() {
+            for (l, r, out) in OR_LOGIC_TABLE {
+                assert!(test_case(super::or, *r, *l).alpha_eq(&bool_to_body(*out)))
+            }
+        }
+
         #[test]
         pub fn xor() {
             for (l, r, out) in XOR_LOGIC_TABLE {
@@ -141,6 +149,12 @@ pub mod bool {
         }
 
         #[test]
+        pub fn xor_transitivity() {
+            for (l, r, out) in XOR_LOGIC_TABLE {
+                assert!(test_case(super::xor, *r, *l).alpha_eq(&bool_to_body(*out)))
+            }
+        }
+
         #[test]
         pub fn not() {
             for (l, out) in NOT_LOGIC_TABLE {
