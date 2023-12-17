@@ -87,6 +87,14 @@ pub mod bool {
             (true, true, true),
         ];
 
+        const OR_LOGIC_TABLE: &[(bool, bool, bool)] = &[
+            /* (a, b, output) */
+            (false, false, false),
+            (true, false, true),
+            (false, true, true),
+            (true, true, true),
+        ];
+
         #[test]
         pub fn false_like_zero() {
             let f = super::f();
@@ -106,6 +114,14 @@ pub mod bool {
             let mut and = super::and().applied([&super::t(), &super::f()]);
             and.beta_redex();
             assert!(and.alpha_eq(&super::f()));
+        #[test]
+        pub fn or() {
+            for (l, r, out) in OR_LOGIC_TABLE {
+                assert!(test_case(super::or, *l, *r).alpha_eq(&bool_to_body(*out)))
+            }
+        }
+
+        #[test]
         }
     }
 }
