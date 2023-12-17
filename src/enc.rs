@@ -95,6 +95,14 @@ pub mod bool {
             (true, true, true),
         ];
 
+        const XOR_LOGIC_TABLE: &[(bool, bool, bool)] = &[
+            /* (a, b, output) */
+            (false, false, false),
+            (true, false, true),
+            (false, true, true),
+            (true, true, false),
+        ];
+
         const NOT_LOGIC_TABLE: &[(bool, bool)] =
             &[/* (a, output) */ (false, true), (true, false)];
 
@@ -125,6 +133,13 @@ pub mod bool {
         }
 
         #[test]
+        #[test]
+        pub fn xor() {
+            for (l, r, out) in XOR_LOGIC_TABLE {
+                assert!(test_case(super::xor, *l, *r).alpha_eq(&bool_to_body(*out)))
+            }
+        }
+
         #[test]
         #[test]
         pub fn not() {
