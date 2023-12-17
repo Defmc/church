@@ -22,6 +22,7 @@ pub mod bool {
         Body::Id(1).with([0, 1])
     }
 
+    /// and x y == true, when x == y == true
     pub fn and() -> Body {
         Body::App(
             Body::App(Body::Id(0).into(), Body::Id(1).into()).into(),
@@ -30,6 +31,7 @@ pub mod bool {
         .with([0, 1])
     }
 
+    /// or x y == false, when x == y == false
     pub fn or() -> Body {
         Body::App(
             Body::App(Body::Id(0).into(), Body::Id(0).into()).into(),
@@ -39,12 +41,13 @@ pub mod bool {
     }
 
     /// inverts the boolean
-    /// not(true) == false
-    /// not(false) == true
+    /// not true == false
+    /// not false == true
     pub fn not() -> Body {
         Body::App(Body::App(Body::Id(0).into(), f().into()).into(), t().into()).with([0])
     }
 
+    /// xor == true, when x != y
     pub fn xor() -> Body {
         let not_otherwise = not().applied([&Body::Id(1)]);
         let and = and().applied([&Body::Id(0), &not_otherwise]);
