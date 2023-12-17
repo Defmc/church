@@ -144,7 +144,11 @@ impl Body {
                     *self = val.clone();
                 }
             }
-            Self::Abs(_, l) => l.apply_by(id, val),
+            Self::Abs(v, l) => {
+                if *v != id {
+                    l.apply_by(id, val)
+                }
+            }
             Self::App(f, x) => {
                 f.apply_by(id, val);
                 x.apply_by(id, val);

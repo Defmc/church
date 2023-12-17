@@ -70,5 +70,12 @@ pub mod bool {
             and.beta_redex();
             assert!(and.alpha_eq(&super::f()));
         }
+
+        #[test]
+        pub fn and_true_false_no_reduced() {
+            let mut and = super::and().applied([&super::t(), &super::f()]);
+            and.beta_redex();
+            assert!(and.alpha_eq(&super::f()));
+        }
     }
 }
