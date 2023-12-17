@@ -57,8 +57,11 @@ pub mod bool {
     #[must_use]
     pub fn xor() -> Body {
         let not_otherwise = not().applied([&Body::Id(1)]);
-        let and = and().applied([&Body::Id(0), &not_otherwise]);
-        or().applied([&and, &Body::Id(1)])
+        Body::App(
+            Body::App(Body::Id(0).into(), not_otherwise.into()).into(),
+            Body::Id(1).into(),
+        )
+        .with([0, 1])
     }
 
     #[cfg(test)]
