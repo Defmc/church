@@ -95,6 +95,9 @@ pub mod bool {
             (true, true, true),
         ];
 
+        const NOT_LOGIC_TABLE: &[(bool, bool)] =
+            &[/* (a, output) */ (false, true), (true, false)];
+
         #[test]
         pub fn false_like_zero() {
             let f = super::f();
@@ -122,6 +125,15 @@ pub mod bool {
         }
 
         #[test]
+        #[test]
+        #[test]
+        pub fn not() {
+            for (l, out) in NOT_LOGIC_TABLE {
+                assert!(super::not()
+                    .applied([&bool_to_body(*l)])
+                    .beta_reduced()
+                    .alpha_eq(&bool_to_body(*out)))
+            }
         }
     }
 }
