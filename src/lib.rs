@@ -77,6 +77,7 @@ impl Body {
                     let mut map = map.clone();
                     *map.get_mut(i).unwrap() = map.len();
                     *i = map.len();
+                    map.insert(map.len(), *i);
                     l.redex_by_alpha(&mut map);
                 } else {
                     map.insert(*i, map.len());
@@ -113,6 +114,7 @@ impl Body {
                 if self_map.contains_key(s_v) {
                     let mut map = self_map.clone();
                     *map.get_mut(s_v).unwrap() = map.len();
+                    map.insert(map.len(), *s_v);
                     edits.0 = Some(map);
                 } else {
                     self_map.insert(*s_v, self_map.len());
@@ -120,6 +122,7 @@ impl Body {
                 if rhs_map.contains_key(r_v) {
                     let mut map = rhs_map.clone();
                     *map.get_mut(r_v).unwrap() = map.len();
+                    map.insert(map.len(), *r_v);
                     edits.1 = Some(map);
                 } else {
                     rhs_map.insert(*r_v, rhs_map.len());
