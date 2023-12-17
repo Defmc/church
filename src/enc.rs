@@ -38,10 +38,14 @@ pub mod bool {
         .with([choice, otherwise].into_iter().peekable())
     }
 
+    /// inverts the boolean
+    /// not(true) == false
+    /// not(false) == true
     pub fn not(b: VarId) -> Body {
         Body::App(
             Body::App(Body::Id(b).into(), f(0, 1).into()).into(),
             t(0, 1).into(),
         )
+        .with([b].into_iter().peekable())
     }
 }
