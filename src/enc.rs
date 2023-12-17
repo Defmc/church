@@ -63,6 +63,30 @@ pub mod bool {
 
     #[cfg(test)]
     pub mod tests {
+        use crate::Body;
+
+        fn bool_to_body(b: bool) -> Body {
+            if b {
+                super::t()
+            } else {
+                super::f()
+            }
+        }
+
+        fn test_case(f: fn() -> Body, l: bool, r: bool) -> Body {
+            f().applied([&bool_to_body(l), &bool_to_body(r)])
+                .alpha_reduced()
+                .beta_reduced()
+        }
+
+        const AND_LOGIC_TABLE: &[(bool, bool, bool)] = &[
+            /* (a, b, output) */
+            (false, false, false),
+            (true, false, false),
+            (false, true, false),
+            (true, true, true),
+        ];
+
         #[test]
         pub fn false_like_zero() {
             let f = super::f();
@@ -71,11 +95,10 @@ pub mod bool {
         }
 
         #[test]
-        pub fn and_true_false() {
-            let mut and = super::and().applied([&super::t(), &super::f()]);
-            and.alpha_redex();
-            and.beta_redex();
-            assert!(and.alpha_eq(&super::f()));
+        pub fn and() {
+            for (l, r, out) in AND_LOGIC_TABLE {
+                assert!(test_case(super::and, *l, *r).alpha_eq(&bool_to_body(*out)))
+            }
         }
 
         #[test]
