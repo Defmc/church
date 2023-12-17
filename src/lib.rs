@@ -115,7 +115,7 @@ impl Body {
         rhs_map: &mut HashMap<VarId, VarId>,
     ) -> bool {
         match (self, rhs) {
-            (Self::Id(s_id), Self::Id(r_id)) => self_map[s_id] == rhs_map[r_id],
+            (Self::Id(s_id), Self::Id(r_id)) => self_map.get(s_id) == rhs_map.get(r_id),
             (Self::App(s_f, s_x), Self::App(r_f, r_x)) => {
                 s_f.eq_by_alpha(r_f, self_map, rhs_map) && s_x.eq_by_alpha(r_x, self_map, rhs_map)
             }
