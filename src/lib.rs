@@ -6,6 +6,9 @@ pub type FnId = usize;
 
 pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyzabcdefghijklmnopqrtstuvwxyz";
 
+/// Church encoding
+pub mod enc;
+
 #[must_use]
 pub fn id_to_str(i: usize) -> &'static str {
     let rotations = i / ALPHABET.len();
@@ -211,20 +214,9 @@ impl fmt::Display for Body {
     }
 }
 
-pub fn church_numeral(f: VarId, x: VarId, n: usize) -> Body {
-    fn church_body(f: VarId, x: VarId, n: usize) -> Body {
-        if n == 0 {
-            Body::Id(x)
-        } else {
-            Body::App(Body::Id(f).into(), church_body(f, x, n - 1).into())
-        }
-    }
-    church_body(f, x, n).with([f, x].into_iter().peekable())
-}
-
 #[cfg(test)]
 pub mod tests {
-    use crate::{church_numeral, Body, VarId};
+    use crate::{enc::natural, Body, VarId};
 
     fn flip(y_id: VarId, x_id: VarId, f_id: VarId) -> Body {
         // flip f x y = f y x
@@ -332,14 +324,14 @@ pub mod tests {
     fn right_associative_format() {
         const F_ID: VarId = 0;
         const X_ID: VarId = 1;
-        assert_eq!(church_numeral(F_ID, X_ID, 0).to_string(), "λa.λb.b");
-        assert_eq!(church_numeral(F_ID, X_ID, 1).to_string(), "λa.λb.a b");
+        assert_eq!(natural(F_ID, X_ID, 0).to_string(), "λa.λb.b");
+        assert_eq!(natural(F_ID, X_ID, 1).to_string(), "λa.λb.a b");
         assert_eq!(
-            church_numeral(F_ID, X_ID, 5).to_string(),
+            natural(F_ID, X_ID, 5).to_string(),
             "λa.λb.a (a (a (a (a b))))"
         );
         assert_eq!(
-            church_numeral(F_ID, X_ID, 10).to_string(),
+            natural(F_ID, X_ID, 10).to_string(),
             "λa.λb.a (a (a (a (a (a (a (a (a (a b)))))))))"
         );
     }
