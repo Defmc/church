@@ -171,7 +171,6 @@ pub mod tests {
             );
         let body = Body::App(fy.into(), Body::Id(X_ID).into());
         let mut flip = Lambda::from_args([F_ID, X_ID, Y_ID].into_iter().peekable(), body).unwrap();
-        println!("{flip}");
         flip.alpha_redex();
         assert_eq!(flip.to_string(), "λa.λb.λc.((a c) b)");
     }
