@@ -67,3 +67,28 @@ impl fmt::Display for Body {
     }
 }
 
+#[cfg(test)]
+pub mod tests {
+    use crate::{Body, Lambda, VarId};
+
+    #[test]
+    fn flip() {
+        // flip f x y = f y x
+        // flip = ^f^x^y . (f y x)
+        const Y_ID: VarId = 0;
+        const X_ID: VarId = 1;
+        const F_ID: VarId = 2;
+        let fy /* f -> y -> x -> (fy -> x) */ = Body::App(
+            Body::Id(F_ID).into(),
+            Body::Id(Y_ID).into(),
+            );
+        let body = Body::App(fy.into(), Body::Id(X_ID).into());
+        let flip = Lambda::from_args([F_ID, X_ID, Y_ID].into_iter().peekable(), body).unwrap();
+        assert_eq!(flip.to_string(), "λc.λb.λa.((c a) b)");
+    }
+
+    #[test]
+    fn id() {
+        assert_eq!(Lambda::id().to_string(), "λa.a");
+    }
+}
