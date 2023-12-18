@@ -4,6 +4,8 @@ use std::iter::Peekable;
 pub type VarId = usize;
 pub type FnId = usize;
 
+pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyz";
+
 #[derive(Debug, Clone)]
 pub struct Lambda {
     pub var: VarId,
@@ -35,6 +37,15 @@ impl Lambda {
     }
 }
 
+impl fmt::Display for Lambda {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!(
+            "λ{}.{}",
+            &ALPHABET[self.var % ALPHABET.len()..self.var % ALPHABET.len() + 1],
+            self.body
+        ))
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Body {
@@ -43,4 +54,16 @@ pub enum Body {
     /* abstraction */ Abs(Box<Lambda>),
 }
 
+impl fmt::Display for Body {
+    fn fmt(&self, w: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Body::Id(id) => w.write_fmt(format_args!(
+                "{}",
+                &ALPHABET[id % ALPHABET.len()..id % ALPHABET.len() + 1]
+            )),
+            Body::App(ref f, ref x) => w.write_fmt(format_args!("({f} {x})")),
+            Body::Abs(l) => w.write_fmt(format_args!("{l}")),
+        }
+    }
+}
 
