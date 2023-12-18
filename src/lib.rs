@@ -174,4 +174,25 @@ pub mod tests {
         flip.alpha_redex();
         assert_eq!(flip.to_string(), "λa.λb.λc.((a c) b)");
     }
+
+    #[test]
+    fn flip_alpha_eq() {
+        // flip f x y = f y x
+        // flip = ^f^x^y . (f y x)
+        const Y_ID: VarId = 3;
+        const X_ID: VarId = 4;
+        const F_ID: VarId = 5;
+        let fy /* f -> y -> x -> (fy -> x) */ = Body::App(
+            Body::Id(F_ID).into(),
+            Body::Id(Y_ID).into(),
+            );
+        let body = Body::App(fy.into(), Body::Id(X_ID).into());
+        let flip = Lambda::from_args([F_ID, X_ID, Y_ID].into_iter().peekable(), body).unwrap();
+        let alpha_redexed = {
+            let mut flip = flip.clone();
+            flip.alpha_redex();
+            flip
+        };
+        assert!(flip.alpha_eq(&alpha_redexed));
+    }
 }
