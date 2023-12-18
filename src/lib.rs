@@ -53,6 +53,31 @@ impl Lambda {
         self.var = map.len() - 1;
         self.body.redex_by_alpha(map)
     }
+
+    pub fn alpha_eq(&self, rhs: &Self) -> bool {
+        self.eq_by_alpha(rhs, &mut HashMap::new(), &mut HashMap::new())
+    }
+
+    pub fn eq_by_alpha(
+        &self,
+        rhs: &Self,
+        self_map: &mut HashMap<usize, usize>,
+        rhs_map: &mut HashMap<usize, usize>,
+    ) -> bool {
+        assert!(
+            !self_map.contains_key(&self.var),
+            "shadowing {} in self",
+            alpha_alias(self.var)
+        );
+        assert!(
+            !rhs_map.contains_key(&rhs.var),
+            "shadowing {} in rhs",
+            alpha_alias(rhs.var)
+        );
+        self_map.insert(self.var, self_map.len());
+        rhs_map.insert(rhs.var, rhs_map.len());
+        self.body.eq_by_alpha(&rhs.body, self_map, rhs_map)
+    }
 }
 
 impl fmt::Display for Lambda {
@@ -77,6 +102,23 @@ impl Body {
                 x.redex_by_alpha(map);
             }
             Body::Abs(l) => l.redex_by_alpha(map),
+        }
+    }
+
+    pub fn eq_by_alpha(
+        &self,
+        rhs: &Self,
+        self_map: &mut HashMap<VarId, VarId>,
+        rhs_map: &mut HashMap<VarId, VarId>,
+    ) -> bool {
+        println!("self_map: {self_map:?}\nrhs_map: {rhs_map:?}");
+        match (self, rhs) {
+            (Body::Id(s_id), Body::Id(r_id)) => self_map[s_id] == rhs_map[r_id],
+            (Body::App(s_f, s_x), Body::App(r_f, r_x)) => {
+                s_f.eq_by_alpha(r_f, self_map, rhs_map) && s_x.eq_by_alpha(r_x, self_map, rhs_map)
+            }
+            (Body::Abs(s_l), Body::Abs(r_l)) => s_l.eq_by_alpha(r_l, self_map, rhs_map),
+            (_, _) => false,
         }
     }
 }
