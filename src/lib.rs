@@ -1,10 +1,13 @@
 use core::fmt;
-use std::iter::Peekable;
+use std::collections::HashMap;
 
 pub type VarId = usize;
 pub type FnId = usize;
 
 pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyz";
+pub fn alpha_alias(i: usize) -> &'static str {
+    &ALPHABET[i % ALPHABET.len()..i % ALPHABET.len() + 1]
+}
 
 #[derive(Debug, Clone)]
 pub struct Lambda {
@@ -25,7 +28,7 @@ impl Lambda {
     }
 
     pub fn from_args(mut it: impl Iterator<Item = VarId>, body: Body) -> Option<Self> {
-        // TODO: alpha reduction
+        // TODO: avoid clone by using a `Peekable` iterator
         let next = it.next()?;
         let body = if let Some(abs) = Self::from_args(it, body.clone()) {
             Body::Abs(abs.into())
@@ -35,15 +38,26 @@ impl Lambda {
         let l = Lambda::new(next, body);
         Some(l)
     }
+
+    pub fn alpha_redex(&mut self) {
+        self.redex_by_alpha(&mut HashMap::new())
+    }
+
+    fn redex_by_alpha(&mut self, map: &mut HashMap<usize, usize>) {
+        assert!(
+            !map.contains_key(&self.var),
+            "shadowing {}",
+            alpha_alias(self.var)
+        );
+        map.insert(self.var, map.len());
+        self.var = map.len() - 1;
+        self.body.redex_by_alpha(map)
+    }
 }
 
 impl fmt::Display for Lambda {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_fmt(format_args!(
-            "λ{}.{}",
-            &ALPHABET[self.var % ALPHABET.len()..self.var % ALPHABET.len() + 1],
-            self.body
-        ))
+        f.write_fmt(format_args!("λ{}.{}", alpha_alias(self.var), self.body))
     }
 }
 
@@ -54,13 +68,23 @@ pub enum Body {
     /* abstraction */ Abs(Box<Lambda>),
 }
 
+impl Body {
+    pub fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
+        match self {
+            Body::Id(id) => *id = map[id],
+            Body::App(f, x) => {
+                f.redex_by_alpha(map);
+                x.redex_by_alpha(map);
+            }
+            Body::Abs(l) => l.redex_by_alpha(map),
+        }
+    }
+}
+
 impl fmt::Display for Body {
     fn fmt(&self, w: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Body::Id(id) => w.write_fmt(format_args!(
-                "{}",
-                &ALPHABET[id % ALPHABET.len()..id % ALPHABET.len() + 1]
-            )),
+            Body::Id(id) => w.write_fmt(format_args!("{}", alpha_alias(*id))),
             Body::App(ref f, ref x) => w.write_fmt(format_args!("({f} {x})")),
             Body::Abs(l) => w.write_fmt(format_args!("{l}")),
         }
@@ -90,5 +114,23 @@ pub mod tests {
     #[test]
     fn id() {
         assert_eq!(Lambda::id().to_string(), "λa.a");
+    }
+
+    #[test]
+    fn flip_alpha_redex() {
+        // flip f x y = f y x
+        // flip = ^f^x^y . (f y x)
+        const Y_ID: VarId = usize::MAX;
+        const X_ID: VarId = usize::MAX / 2;
+        const F_ID: VarId = 0;
+        let fy /* f -> y -> x -> (fy -> x) */ = Body::App(
+            Body::Id(F_ID).into(),
+            Body::Id(Y_ID).into(),
+            );
+        let body = Body::App(fy.into(), Body::Id(X_ID).into());
+        let mut flip = Lambda::from_args([F_ID, X_ID, Y_ID].into_iter().peekable(), body).unwrap();
+        println!("{flip}");
+        flip.alpha_redex();
+        assert_eq!(flip.to_string(), "λa.λb.λc.((a c) b)");
     }
 }
