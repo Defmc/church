@@ -1,15 +1,15 @@
 use core::fmt;
-use std::collections::HashMap;
+use std::{collections::HashMap, iter::Peekable};
 
 pub type VarId = usize;
 pub type FnId = usize;
 
 pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyz";
-pub fn alpha_alias(i: usize) -> &'static str {
+pub fn id_to_str(i: usize) -> &'static str {
     &ALPHABET[i % ALPHABET.len()..i % ALPHABET.len() + 1]
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Lambda {
     pub var: VarId,
     pub body: Body,
@@ -27,10 +27,10 @@ impl Lambda {
         }
     }
 
-    pub fn from_args(mut it: impl Iterator<Item = VarId>, body: Body) -> Option<Self> {
-        // TODO: avoid clone by using a `Peekable` iterator
+    pub fn from_args<I: Iterator<Item = VarId>>(mut it: Peekable<I>, body: Body) -> Option<Self> {
         let next = it.next()?;
-        let body = if let Some(abs) = Self::from_args(it, body.clone()) {
+        let body = if it.peek().is_some() {
+            let abs = Self::from_args(it, body).unwrap();
             Body::Abs(abs.into())
         } else {
             body
@@ -44,14 +44,18 @@ impl Lambda {
     }
 
     fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
-        assert!(
-            !map.contains_key(&self.var),
-            "shadowing {}",
-            alpha_alias(self.var)
-        );
-        map.insert(self.var, map.len());
-        self.var = map.len() - 1;
-        self.body.redex_by_alpha(map)
+        if map.contains_key(&self.var) {
+            let map_len = map.len();
+            let mut map = map.clone();
+            map.insert(self.var, map_len);
+            self.var = map_len;
+            map.insert(self.var, map_len);
+            self.body.redex_by_alpha(&mut map);
+        } else {
+            map.insert(self.var, map.len());
+            self.var = map.len() - 1;
+            self.body.redex_by_alpha(map)
+        }
     }
 
     pub fn alpha_eq(&self, rhs: &Self) -> bool {
@@ -67,22 +71,21 @@ impl Lambda {
         assert!(
             !self_map.contains_key(&self.var),
             "shadowing {} in self",
-            alpha_alias(self.var)
+            id_to_str(self.var)
         );
         assert!(
             !rhs_map.contains_key(&rhs.var),
             "shadowing {} in rhs",
-            alpha_alias(rhs.var)
+            id_to_str(rhs.var)
         );
         self_map.insert(self.var, self_map.len());
         rhs_map.insert(rhs.var, rhs_map.len());
         self.body.eq_by_alpha(&rhs.body, self_map, rhs_map)
     }
 
-    pub fn apply(mut self, val: &Body) -> Body {
+    pub fn apply(self, val: &Body) -> Body {
         let id = self.var;
-        self.body.apply(id, val);
-        self.body
+        self.applied(id, val).body
     }
 
     pub fn applied(mut self, id: VarId, val: &Body) -> Self {
@@ -100,15 +103,19 @@ impl Lambda {
         }
         self
     }
+
+    pub fn beta_redex(&mut self) {
+        self.body.beta_redex()
+    }
 }
 
 impl fmt::Display for Lambda {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_fmt(format_args!("λ{}.{}", alpha_alias(self.var), self.body))
+        f.write_fmt(format_args!("λ{}.{}", id_to_str(self.var), self.body))
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Body {
     /* identity */ Id(VarId),
     /* application */ App(Box<Body>, /* ( */ Box<Body> /* ) */),
@@ -118,7 +125,7 @@ pub enum Body {
 impl Body {
     pub fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
         match self {
-            Self::Id(id) => *id = map[id],
+            Self::Id(id) => *id = map[id], // allow free variables
             Self::App(f, x) => {
                 f.redex_by_alpha(map);
                 x.redex_by_alpha(map);
@@ -157,15 +164,37 @@ impl Body {
             }
         }
     }
+
+    pub fn beta_redex(&mut self) {
+        match self {
+            Self::Id(..) => {}
+            Self::App(f, x) => {
+                f.beta_redex();
+                x.beta_redex();
+                if let Self::Abs(l) = f.as_mut() {
+                    *self = l.clone().apply(x);
+                }
+            }
+            Self::Abs(l) => {
+                l.beta_redex();
+            }
+        }
+    }
 }
 
 impl fmt::Display for Body {
     fn fmt(&self, w: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Id(id) => w.write_fmt(format_args!("{}", alpha_alias(*id))),
+            Self::Id(id) => w.write_fmt(format_args!("{}", id_to_str(*id))),
             Self::App(ref f, ref x) => w.write_fmt(format_args!("({f} {x})")),
             Self::Abs(l) => w.write_fmt(format_args!("{l}")),
         }
+    }
+}
+
+impl From<Lambda> for Body {
+    fn from(value: Lambda) -> Self {
+        Self::Abs(value.into())
     }
 }
 
@@ -213,7 +242,7 @@ pub mod tests {
     }
 
     #[test]
-    fn beta_reduction() {
+    fn flip_application() {
         let mut flip = flip(1, 2, 3);
         flip.alpha_redex();
 
@@ -224,5 +253,41 @@ pub mod tests {
         assert_eq!(flip.to_string(), "λc.((f c) g)");
         let body = flip.apply(&Body::Id(7));
         assert_eq!(body.to_string(), "((f h) g)");
+    }
+
+    #[test]
+    fn id_of_id_reduction() {
+        const F_ID: usize = 1;
+        const X_ID: usize = F_ID + 1;
+        // id_f = ^f^x . f x
+        let mut id_f = Lambda::from_args(
+            [F_ID, X_ID].into_iter().peekable(),
+            Body::App(Body::Id(F_ID).into(), Body::Id(X_ID).into()),
+        )
+        .unwrap();
+        // id = ^x . x
+        let id = Lambda::id();
+        id_f.curry(&Body::Abs(id.into()));
+        id_f.beta_redex();
+        assert!(id_f.alpha_eq(&Lambda::id()));
+    }
+
+    #[test]
+    fn id_id_alpha_redex() {
+        let mut abs = Lambda {
+            var: 0,
+            body: Body::App(Body::Abs(Lambda::id().into()).into(), Body::Id(0).into()),
+        };
+        abs.alpha_redex();
+    }
+
+    #[test]
+    fn flip_flip_alpha_redex() {
+        let mut fliper = flip(0, 1, 2);
+        let fliper_f = flip(0, 1, 2);
+        fliper.curry(&fliper_f.into());
+        println!("{fliper}");
+        fliper.alpha_redex();
+        println!("{fliper}");
     }
 }
