@@ -173,57 +173,37 @@ impl fmt::Display for Body {
 pub mod tests {
     use crate::{Body, Lambda, VarId};
 
-    #[test]
-    fn flip() {
+    fn flip(y_id: VarId, x_id: VarId, f_id: VarId) -> Lambda {
         // flip f x y = f y x
         // flip = ^f^x^y . (f y x)
-        const Y_ID: VarId = 0;
-        const X_ID: VarId = 1;
-        const F_ID: VarId = 2;
         let fy /* f -> y -> x -> (fy -> x) */ = Body::App(
-            Body::Id(F_ID).into(),
-            Body::Id(Y_ID).into(),
+            Body::Id(f_id).into(),
+            Body::Id(y_id).into(),
             );
-        let body = Body::App(fy.into(), Body::Id(X_ID).into());
-        let flip = Lambda::from_args([F_ID, X_ID, Y_ID].into_iter().peekable(), body).unwrap();
-        assert_eq!(flip.to_string(), "λc.λb.λa.((c a) b)");
+        let body = Body::App(fy.into(), Body::Id(x_id).into());
+        Lambda::from_args([f_id, x_id, y_id].into_iter().peekable(), body).unwrap()
     }
 
     #[test]
-    fn id() {
+    fn flip_format() {
+        assert_eq!(flip(0, 1, 2).to_string(), "λc.λb.λa.((c a) b)");
+    }
+
+    #[test]
+    fn id_format() {
         assert_eq!(Lambda::id().to_string(), "λa.a");
     }
 
     #[test]
     fn flip_alpha_redex() {
-        // flip f x y = f y x
-        // flip = ^f^x^y . (f y x)
-        const Y_ID: VarId = usize::MAX;
-        const X_ID: VarId = usize::MAX / 2;
-        const F_ID: VarId = 0;
-        let fy /* f -> y -> x -> (fy -> x) */ = Body::App(
-            Body::Id(F_ID).into(),
-            Body::Id(Y_ID).into(),
-            );
-        let body = Body::App(fy.into(), Body::Id(X_ID).into());
-        let mut flip = Lambda::from_args([F_ID, X_ID, Y_ID].into_iter().peekable(), body).unwrap();
+        let mut flip = flip(VarId::MAX, VarId::MAX / 2, 0);
         flip.alpha_redex();
         assert_eq!(flip.to_string(), "λa.λb.λc.((a c) b)");
     }
 
     #[test]
     fn flip_alpha_eq() {
-        // flip f x y = f y x
-        // flip = ^f^x^y . (f y x)
-        const Y_ID: VarId = 3;
-        const X_ID: VarId = 4;
-        const F_ID: VarId = 5;
-        let fy /* f -> y -> x -> (fy -> x) */ = Body::App(
-            Body::Id(F_ID).into(),
-            Body::Id(Y_ID).into(),
-            );
-        let body = Body::App(fy.into(), Body::Id(X_ID).into());
-        let flip = Lambda::from_args([F_ID, X_ID, Y_ID].into_iter().peekable(), body).unwrap();
+        let flip = flip(VarId::MAX, VarId::MAX / 2, 0);
         let alpha_redexed = {
             let mut flip = flip.clone();
             flip.alpha_redex();
@@ -234,23 +214,9 @@ pub mod tests {
 
     #[test]
     fn beta_reduction() {
-        // flip f x y = f y x
-        // flip = ^f^x^y . (f y x)
-        const Y_ID: VarId = 3;
-        const X_ID: VarId = 4;
-        const F_ID: VarId = 5;
-        let fy /* f -> y -> x -> (fy -> x) */ = Body::App(
-            Body::Id(F_ID).into(),
-            Body::Id(Y_ID).into(),
-            );
-        let body = Body::App(fy.into(), Body::Id(X_ID).into());
-        let mut flip = Lambda::from_args([F_ID, X_ID, Y_ID].into_iter().peekable(), body).unwrap();
+        let mut flip = flip(1, 2, 3);
         flip.alpha_redex();
 
-        // original λa.λb.λc.((a c) b)
-        // applied f λb.λc.((f c) b)
-        // applied g λc.((f c) g)
-        // applied h ((f h) g)
         assert_eq!(flip.to_string(), "λa.λb.λc.((a c) b)");
         flip.curry(&Body::Id(5));
         assert_eq!(flip.to_string(), "λb.λc.((f c) b)");
