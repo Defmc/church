@@ -54,7 +54,11 @@ impl Body {
 
     pub fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
         match self {
-            Self::Id(id) => *id = map[id], // TODO: allow free variables
+            Self::Id(id) => {
+                if let Some(mid) = map.get(id) {
+                    *id = *mid;
+                }
+            }
             Self::App(f, x) => {
                 f.redex_by_alpha(map);
                 x.redex_by_alpha(map);
@@ -76,6 +80,11 @@ impl Body {
         }
     }
 
+    /// α-equivalency refers to expressions with same implementation, disconsidering the variable
+    /// names. `PartialEq` compares the variables, so we can say that `PartialEq` ⊂ `alpha_eq`.
+    /// ^f^x . f x != ^g^y . g y, but
+    /// ^f^x . f x α== ^g^y . g y, where
+    /// ^f^x . f (f x) α!= ^f^x . f x and ^f^x . f (f x) != ^f^x . f x
     #[must_use]
     pub fn alpha_eq(&self, rhs: &Self) -> bool {
         self.eq_by_alpha(rhs, &mut HashMap::new(), &mut HashMap::new())
@@ -171,6 +180,11 @@ impl Body {
             Self::Abs(_, ref b) => b.len().saturating_add(1),
         }
     }
+
+    #[must_use]
+    pub fn with<I: Iterator<Item = VarId>>(self, it: Peekable<I>) -> Self {
+        Self::from_args(it, self).unwrap()
+    }
 }
 
 impl fmt::Display for Body {
@@ -179,7 +193,7 @@ impl fmt::Display for Body {
             Self::Id(id) => w.write_fmt(format_args!("{}", id_to_str(*id))),
             Self::App(ref f, ref x) => w.write_fmt(format_args!(
                 "{f} {}",
-                if x.len() > 1 {
+                if usize::from(x.len()) > 1 {
                     format!("({x})")
                 } else {
                     format!("{x}")
