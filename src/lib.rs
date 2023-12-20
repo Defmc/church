@@ -4,9 +4,11 @@ use std::{collections::HashMap, iter::Peekable};
 pub type VarId = usize;
 pub type FnId = usize;
 
-pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyz";
+pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyzabcdefghijklmnopqrtstuvwxyz";
 pub fn id_to_str(i: usize) -> &'static str {
-    &ALPHABET[i % ALPHABET.len()..i % ALPHABET.len() + 1]
+    let rotations = i / ALPHABET.len();
+    let i = i % ALPHABET.len();
+    &ALPHABET[i..i + rotations + 1]
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
