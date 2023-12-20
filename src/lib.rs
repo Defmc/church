@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::HashMap, iter::Peekable};
+use std::{collections::HashMap, iter::Peekable, num::NonZeroUsize};
 
 pub type VarId = usize;
 pub type FnId = usize;
@@ -157,11 +157,18 @@ impl Body {
         }
     }
 
-    pub fn len(&self) -> usize {
+    /// Returns the length of expressions as the amount of variables related.
+    /// len(a) == 1
+    /// len(^a.a) == 2
+    /// len(^f^x^y . f x y) == 6
+    /// # Panics
+    /// Never.
+    #[must_use]
+    pub fn len(&self) -> NonZeroUsize {
         match self {
-            Self::Id(..) => 1,
-            Self::App(ref f, ref x) => f.len() + x.len(),
-            Self::Abs(_, ref b) => 1 + b.len(),
+            Self::Id(..) => 1.try_into().unwrap(),
+            Self::App(ref f, ref x) => f.len().saturating_add(x.len().into()),
+            Self::Abs(_, ref b) => b.len().saturating_add(1),
         }
     }
 }
