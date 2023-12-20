@@ -1,0 +1,207 @@
+version: 2.1
+
+parameters:
+  toolchain:
+    description: defines the toolchain to be used, can be "nightly", "beta" or "stable"
+    type: string
+    default: "stable"
+
+commands:
+
+  setup-cache-env:
+    steps:
+      - run: |
+          echo 'export RUSTFLAGS="$RUSTFLAGS -C link-arg=-fuse-ld=lld"' >> $BASH_ENV
+          echo 'export "RUSTC_WRAPPER"="sccache"' >> $BASH_ENV
+          echo 'export "SCCACHE_CACHE_SIZE"="1G"' >> $BASH_ENV
+          sccache --version
+
+  restore-cache:
+    steps:
+      - restore_cache:
+          name: Restore sccache cache
+          key: sccache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "Cargo.lock" }}
+
+  save-cache:
+    steps:
+      - save_cache:
+          name: Save sccache cache
+          key: sccache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "Cargo.lock" }}
+          paths:
+            - "~/.cache/sccache"
+
+jobs:
+  build-linux-stable:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: cargo +stable build -vv --release --all-features
+      - save-cache
+
+  build-linux-beta:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: cargo +beta build -vv --release --all-features
+      - save-cache
+
+  build-linux-nightly:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: cargo +nightly build -vv --release --all-features
+      - save-cache
+
+  clippy-stable:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: rustup component add clippy
+      - run: cargo +stable clippy -vv --tests --all --all-features --examples -- -D warnings
+      - save-cache
+
+  clippy-beta:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: rustup component add clippy
+      - run: cargo +beta clippy -vv --tests --all --all-features --examples -- -D warnings
+      - save-cache
+
+  clippy-nightly:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: rustup component add clippy
+      - run: cargo +nightly clippy -vv --tests --all --all-features --examples -- -D warnings
+      - save-cache
+
+  format:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - run: cargo fmt -v --all -- --check
+
+  test-stable:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: cargo +stable -vv --all --all-features -- --show-output --test-threads=1
+      - save-cache
+
+        
+  test-beta:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: cargo +beta -vv --all --all-features -- --show-output --test-threads=1
+      - save-cache
+
+  test-nightly:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: cargo +nightly -vv --all --all-features -- --show-output --test-threads=1
+      - save-cache
+
+  udeps:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: cargo +nightly udeps -vv --all --all-features
+      - save-cache
+
+  audit:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: cargo generate-lockfile -vv
+      - run: cargo audit
+      - save-cache
+
+  bench-stable:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: cargo +stable bench -vv --all --all-features
+      - save-cache
+
+  bench-beta:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: cargo +beta bench -vv --all --all-features
+      - save-cache
+
+  bench-nightly:
+    docker:
+      - image: defmc/rust:latest
+    resource_class: small
+    steps:
+      - checkout
+      - setup-cache-env
+      - restore-cache
+      - run: cargo +nightly bench -vv --all --all-features
+      - save-cache
+
+workflows:
+  test:
+    jobs: [build-linux-<<pipeline.parameters.toolchain>>, test-<<pipeline.parameters.toolchain>>, bench-<<pipeline.parameters.toolchain>>]
+  code-quality:
+    jobs: [format, clippy-<<pipeline.parameters.toolchain>>, udeps]
+  security:
+    jobs: [audit]
