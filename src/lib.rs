@@ -156,13 +156,28 @@ impl Body {
             }
         }
     }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Id(..) => 1,
+            Self::App(ref f, ref x) => f.len() + x.len(),
+            Self::Abs(_, ref b) => 1 + b.len(),
+        }
+    }
 }
 
 impl fmt::Display for Body {
     fn fmt(&self, w: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Id(id) => w.write_fmt(format_args!("{}", id_to_str(*id))),
-            Self::App(ref f, ref x) => w.write_fmt(format_args!("({f} {x})")),
+            Self::App(ref f, ref x) => w.write_fmt(format_args!(
+                "{f} {}",
+                if x.len() > 1 {
+                    format!("({x})")
+                } else {
+                    format!("{x}")
+                }
+            )),
             Self::Abs(v, l) => w.write_fmt(format_args!("λ{}.{l}", id_to_str(*v))),
         }
     }
@@ -185,7 +200,7 @@ pub mod tests {
 
     #[test]
     fn flip_format() {
-        assert_eq!(flip(0, 1, 2).to_string(), "λc.λb.λa.((c a) b)");
+        assert_eq!(flip(0, 1, 2).to_string(), "λc.λb.λa.c a b");
     }
 
     #[test]
@@ -197,7 +212,7 @@ pub mod tests {
     fn flip_alpha_redex() {
         let mut flip = flip(VarId::MAX, VarId::MAX / 2, 0);
         flip.alpha_redex();
-        assert_eq!(flip.to_string(), "λa.λb.λc.((a c) b)");
+        assert_eq!(flip.to_string(), "λa.λb.λc.a c b");
     }
 
     #[test]
@@ -216,13 +231,13 @@ pub mod tests {
         let mut flip = flip(1, 2, 3);
         flip.alpha_redex();
 
-        assert_eq!(flip.to_string(), "λa.λb.λc.((a c) b)");
+        assert_eq!(flip.to_string(), "λa.λb.λc.a c b");
         flip.curry(&Body::Id(5));
-        assert_eq!(flip.to_string(), "λb.λc.((f c) b)");
+        assert_eq!(flip.to_string(), "λb.λc.f c b");
         flip.curry(&Body::Id(6));
-        assert_eq!(flip.to_string(), "λc.((f c) g)");
-        let body = flip.apply(&Body::Id(7));
-        assert_eq!(body.to_string(), "((f h) g)");
+        assert_eq!(flip.to_string(), "λc.f c g");
+        let body = flip.curry(&Body::Id(7));
+        assert_eq!(body.to_string(), "f h g");
     }
 
     #[test]
