@@ -128,34 +128,15 @@ impl Body {
         }
     }
 
-    /// Curry the function, mut don't need to have a next lambda abstraction
-    /// `apply` (^f . f c) g == g c
-    /// # Panics
-    /// If it isn't a lambda abstraction
-    #[must_use]
-    pub fn apply(mut self, val: &Self) -> Self {
-        if let Self::Abs(v, l) = &mut self {
-            l.apply_by(*v, val);
-            *l.clone()
-        } else {
-            assert!(matches!(self, Self::Abs(..)));
-            unreachable!()
-        }
-    }
-
-    /// "Curries" the function, turning it into the next lambda term
+    /// "Curries" the function, turning it into the next term
     /// `curry` (^x.^f . f x) c == ^f . f c
     /// # Panics
-    /// If it isn't a lambda abstraction or if the next stage isn't a lambda abstraciton. In these cases, `Self::apply` should be used
-    pub fn curry(&mut self, val: &Self) {
-        if let Self::Abs(v, l) = self {
-            l.apply_by(*v, val);
-            *self = *l.clone();
-        } else {
-            assert!(matches!(self, Self::Abs(..)));
-            unreachable!()
-        };
-        assert!(matches!(self, Self::Abs(..)));
+    /// If it isn't a lambda abstraction.
+    pub fn curry(&mut self, val: &Self) -> &mut Self {
+        let (v, l) = self.as_mut_abs().expect("currying a non-abstraction");
+        l.apply_by(*v, val);
+        *self = *l.clone();
+        self
     }
 
     pub fn beta_redex(&mut self) {
