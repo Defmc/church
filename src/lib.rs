@@ -85,23 +85,23 @@ impl Body {
                 s_f.eq_by_alpha(r_f, self_map, rhs_map) && s_x.eq_by_alpha(r_x, self_map, rhs_map)
             }
             (Self::Abs(s_v, s_l), Self::Abs(r_v, r_l)) => {
-                if self_map.contains_key(&s_v) {
+                if self_map.contains_key(s_v) {
                     let map_len = self_map.len();
                     let mut map = self_map.clone();
                     map.insert(*s_v, map_len);
-                    return self.eq_by_alpha(&rhs, &mut map, rhs_map);
+                    return self.eq_by_alpha(rhs, &mut map, rhs_map);
                 } else {
                     self_map.insert(*s_v, self_map.len());
                 }
-                if rhs_map.contains_key(&r_v) {
+                if rhs_map.contains_key(r_v) {
                     let map_len = rhs_map.len();
                     let mut map = rhs_map.clone();
                     map.insert(*r_v, map_len);
-                    return self.eq_by_alpha(&rhs, self_map, &mut map);
+                    return self.eq_by_alpha(rhs, self_map, &mut map);
                 } else {
                     rhs_map.insert(*r_v, rhs_map.len());
                 }
-                s_l.eq_by_alpha(&r_l, self_map, rhs_map)
+                s_l.eq_by_alpha(r_l, self_map, rhs_map)
             }
             (_, _) => false,
         }
