@@ -5,10 +5,12 @@ pub type VarId = usize;
 pub type FnId = usize;
 
 pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyzabcdefghijklmnopqrtstuvwxyz";
+
+#[must_use]
 pub fn id_to_str(i: usize) -> &'static str {
     let rotations = i / ALPHABET.len();
     let i = i % ALPHABET.len();
-    &ALPHABET[i..i + rotations + 1]
+    &ALPHABET[i..=i + rotations]
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -19,10 +21,15 @@ pub enum Body {
 }
 
 impl Body {
+    #[must_use]
     pub fn id() -> Self {
         Self::Abs(0, Body::Id(0).into())
     }
 
+    /// Create a lambda abstraction from left-to-right arguments
+    /// `from_args` f x y (f x y) = ^f^x^y . f x y
+    /// # Panics
+    /// Never.
     pub fn from_args<I: Iterator<Item = VarId>>(mut it: Peekable<I>, body: Body) -> Option<Self> {
         let next = it.next()?;
         if it.peek().is_some() {
@@ -42,7 +49,7 @@ impl Body {
     }
 
     pub fn alpha_redex(&mut self) {
-        self.redex_by_alpha(&mut HashMap::new())
+        self.redex_by_alpha(&mut HashMap::new());
     }
 
     pub fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
@@ -63,12 +70,13 @@ impl Body {
                 } else {
                     map.insert(*i, map.len());
                     *i = map.len() - 1;
-                    l.redex_by_alpha(map)
+                    l.redex_by_alpha(map);
                 }
             }
         }
     }
 
+    #[must_use]
     pub fn alpha_eq(&self, rhs: &Self) -> bool {
         self.eq_by_alpha(rhs, &mut HashMap::new(), &mut HashMap::new())
     }
@@ -90,17 +98,15 @@ impl Body {
                     let mut map = self_map.clone();
                     map.insert(*s_v, map_len);
                     return self.eq_by_alpha(rhs, &mut map, rhs_map);
-                } else {
-                    self_map.insert(*s_v, self_map.len());
                 }
+                self_map.insert(*s_v, self_map.len());
                 if rhs_map.contains_key(r_v) {
                     let map_len = rhs_map.len();
                     let mut map = rhs_map.clone();
                     map.insert(*r_v, map_len);
                     return self.eq_by_alpha(rhs, self_map, &mut map);
-                } else {
-                    rhs_map.insert(*r_v, rhs_map.len());
                 }
+                rhs_map.insert(*r_v, rhs_map.len());
                 s_l.eq_by_alpha(r_l, self_map, rhs_map)
             }
             (_, _) => false,
@@ -111,7 +117,7 @@ impl Body {
         match self {
             Self::Id(s_id) => {
                 if *s_id == id {
-                    *self = val.clone()
+                    *self = val.clone();
                 }
             }
             Self::Abs(_, l) => l.apply_by(id, val),
@@ -122,6 +128,11 @@ impl Body {
         }
     }
 
+    /// Curry the function, mut don't need to have a next lambda abstraction
+    /// `apply` (^f . f c) g == g c
+    /// # Panics
+    /// If it isn't a lambda abstraction
+    #[must_use]
     pub fn apply(mut self, val: &Self) -> Self {
         if let Self::Abs(v, l) = &mut self {
             l.apply_by(*v, val);
@@ -132,6 +143,10 @@ impl Body {
         }
     }
 
+    /// "Curries" the function, turning it into the next lambda term
+    /// `curry` (^x.^f . f x) c == ^f . f c
+    /// # Panics
+    /// If it isn't a lambda abstraction or if the next stage isn't a lambda abstraciton. In these cases, `Self::apply` should be used
     pub fn curry(&mut self, val: &Self) {
         if let Self::Abs(v, l) = self {
             l.apply_by(*v, val);
@@ -140,7 +155,7 @@ impl Body {
             assert!(matches!(self, Self::Abs(..)));
             unreachable!()
         };
-        assert!(matches!(self, Self::Abs(..)))
+        assert!(matches!(self, Self::Abs(..)));
     }
 
     pub fn beta_redex(&mut self) {
