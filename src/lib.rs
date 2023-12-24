@@ -152,13 +152,13 @@ impl Body {
     /// ^f^x . f (f x) α!= ^f^x . f x and ^f^x . f (f x) != ^f^x . f x
     #[must_use]
     pub fn alpha_eq(&self, rhs: &Self) -> bool {
-        let self_frees = self.free_variables().into_iter();
-        let rhs_frees = rhs.free_variables().into_iter();
-        self.eq_by_alpha(
-            rhs,
-            &mut self_frees.map(|i| (i, i)).collect(),
-            &mut rhs_frees.map(|i| (i, i)).collect(),
-        )
+        let mut self_frees: HashMap<_, _> =
+            self.free_variables().into_iter().map(|i| (i, i)).collect();
+        let self_binds = self_frees.len();
+        let mut rhs_frees: HashMap<_, _> =
+            rhs.free_variables().into_iter().map(|i| (i, i)).collect();
+        let rhs_binds = rhs_frees.len();
+        self.eq_by_alpha(rhs, &mut self_frees, self_binds, &mut rhs_frees, rhs_binds)
     }
 
     // TODO: Restore state instead of cloning the entire map
@@ -191,34 +191,49 @@ impl Body {
         &self,
         rhs: &Self,
         self_map: &mut HashMap<VarId, VarId>,
+        self_binds: usize,
         rhs_map: &mut HashMap<VarId, VarId>,
+        rhs_binds: usize,
     ) -> bool {
         match (self, rhs) {
             (Self::Id(s_id), Self::Id(r_id)) => self_map.get(s_id) == rhs_map.get(r_id),
             (Self::App(s_f, s_x), Self::App(r_f, r_x)) => {
-                s_f.eq_by_alpha(r_f, &mut self_map.clone(), &mut rhs_map.clone())
-                    && s_x.eq_by_alpha(r_x, &mut self_map.clone(), &mut rhs_map.clone())
+                s_f.eq_by_alpha(
+                    r_f,
+                    &mut self_map.clone(),
+                    self_binds,
+                    &mut rhs_map.clone(),
+                    rhs_binds,
+                ) && s_x.eq_by_alpha(
+                    r_x,
+                    &mut self_map.clone(),
+                    self_binds,
+                    &mut rhs_map.clone(),
+                    rhs_binds,
+                )
             }
             (Self::Abs(s_v, s_l), Self::Abs(r_v, r_l)) => {
                 let mut edits = (None, None);
                 if self_map.contains_key(s_v) {
                     let mut map = self_map.clone();
-                    *map.get_mut(s_v).unwrap() = map.len();
+                    *map.get_mut(s_v).unwrap() = self_binds;
                     edits.0 = Some(map);
                 } else {
-                    self_map.insert(*s_v, self_map.len());
+                    self_map.insert(*s_v, self_binds);
                 }
                 if rhs_map.contains_key(r_v) {
                     let mut map = rhs_map.clone();
-                    *map.get_mut(r_v).unwrap() = map.len();
+                    *map.get_mut(r_v).unwrap() = rhs_binds;
                     edits.1 = Some(map);
                 } else {
-                    rhs_map.insert(*r_v, rhs_map.len());
+                    rhs_map.insert(*r_v, rhs_binds);
                 }
                 s_l.eq_by_alpha(
                     r_l,
                     edits.0.as_mut().map_or_else(|| self_map, |m| m),
+                    self_binds + 1,
                     edits.1.as_mut().map_or_else(|| rhs_map, |m| m),
+                    rhs_binds + 1,
                 )
             }
             (_, _) => false,
