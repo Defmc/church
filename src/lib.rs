@@ -157,8 +157,8 @@ impl Body {
         self
     }
 
-    pub fn applied<'a>(mut self, vals: impl Iterator<Item = &'a Self>) -> Self {
-        for v in vals {
+    pub fn applied<'a>(mut self, vals: impl IntoIterator<Item = &'a Self>) -> Self {
+        for v in vals.into_iter() {
             self.curry(v);
         }
         self
@@ -198,8 +198,8 @@ impl Body {
     }
 
     #[must_use]
-    pub fn with<I: Iterator<Item = VarId>>(self, it: Peekable<I>) -> Self {
-        Self::from_args(it, self).unwrap()
+    pub fn with(self, it: impl IntoIterator<Item = VarId>) -> Self {
+        Self::from_args(it.into_iter().peekable(), self).unwrap()
     }
 }
 
