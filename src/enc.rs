@@ -52,5 +52,23 @@ pub mod bool {
         or().applied([&and, &Body::Id(1)].into_iter().peekable())
     }
 
+    #[cfg(test)]
+    pub mod tests {
+        #[test]
+        pub fn false_like_zero() {
+            let f = super::f();
+            let zero = super::super::natural(0, 1, 0);
+            assert!(f.alpha_eq(&zero));
+        }
+
+        #[test]
+        pub fn and_true_false() {
+            let mut and = super::and().applied([&super::t(), &super::f()].into_iter().peekable());
+            println!("and: {and}");
+            and.alpha_redex();
+            println!("reduced and: {and}");
+            and.beta_redex();
+            println!("reduced and: {and}");
+        }
     }
 }
