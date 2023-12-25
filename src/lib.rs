@@ -158,6 +158,13 @@ impl Body {
         self
     }
 
+    pub fn applied<'a>(mut self, vals: impl Iterator<Item = &'a Self>) -> Self {
+        for v in vals {
+            self.curry(v);
+        }
+        self
+    }
+
     pub fn beta_redex(&mut self) {
         match self {
             Self::Id(..) => {}
