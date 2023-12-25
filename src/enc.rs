@@ -8,18 +8,18 @@ pub fn natural(f: VarId, x: VarId, n: usize) -> Body {
             Body::App(Body::Id(f).into(), natural_body(f, x, n - 1).into())
         }
     }
-    natural_body(f, x, n).with([f, x].into_iter().peekable())
+    natural_body(f, x, n).with([f, x])
 }
 
 pub mod bool {
-    use crate::{Body, VarId};
+    use crate::Body;
 
     pub fn t() -> Body {
-        Body::Id(0).with([0, 1].into_iter().peekable())
+        Body::Id(0).with([0, 1])
     }
 
     pub fn f() -> Body {
-        Body::Id(1).with([0, 1].into_iter().peekable())
+        Body::Id(1).with([0, 1])
     }
 
     pub fn and() -> Body {
@@ -27,7 +27,7 @@ pub mod bool {
             Body::App(Body::Id(0).into(), Body::Id(1).into()).into(),
             Body::Id(0).into(),
         )
-        .with([0, 1].into_iter().peekable())
+        .with([0, 1])
     }
 
     pub fn or() -> Body {
@@ -35,21 +35,20 @@ pub mod bool {
             Body::App(Body::Id(0).into(), Body::Id(0).into()).into(),
             Body::Id(1).into(),
         )
-        .with([0, 1].into_iter().peekable())
+        .with([0, 1])
     }
 
     /// inverts the boolean
     /// not(true) == false
     /// not(false) == true
     pub fn not() -> Body {
-        Body::App(Body::App(Body::Id(0).into(), f().into()).into(), t().into())
-            .with([0].into_iter().peekable())
+        Body::App(Body::App(Body::Id(0).into(), f().into()).into(), t().into()).with([0])
     }
 
     pub fn xor() -> Body {
-        let not_otherwise = not().applied([&Body::Id(1)].into_iter().peekable());
-        let and = and().applied([&Body::Id(0), &not_otherwise].into_iter().peekable());
-        or().applied([&and, &Body::Id(1)].into_iter().peekable())
+        let not_otherwise = not().applied([&Body::Id(1)]);
+        let and = and().applied([&Body::Id(0), &not_otherwise]);
+        or().applied([&and, &Body::Id(1)])
     }
 
     #[cfg(test)]
@@ -63,12 +62,10 @@ pub mod bool {
 
         #[test]
         pub fn and_true_false() {
-            let mut and = super::and().applied([&super::t(), &super::f()].into_iter().peekable());
-            println!("and: {and}");
+            let mut and = super::and().applied([&super::t(), &super::f()]);
             and.alpha_redex();
-            println!("reduced and: {and}");
             and.beta_redex();
-            println!("reduced and: {and}");
+            assert!(and.alpha_eq(&super::f()));
         }
     }
 }
