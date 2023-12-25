@@ -2,7 +2,6 @@ use core::fmt;
 use std::{collections::HashMap, iter::Peekable, num::NonZeroUsize};
 
 pub type VarId = usize;
-pub type FnId = usize;
 
 pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyzabcdefghijklmnopqrtstuvwxyz";
 
