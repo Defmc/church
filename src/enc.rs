@@ -14,38 +14,43 @@ pub fn natural(f: VarId, x: VarId, n: usize) -> Body {
 pub mod bool {
     use crate::{Body, VarId};
 
-    pub fn t(choice: VarId, otherwise: VarId) -> Body {
-        Body::Id(choice).with([choice, otherwise].into_iter().peekable())
+    pub fn t() -> Body {
+        Body::Id(0).with([0, 1].into_iter().peekable())
     }
 
-    pub fn f(choice: VarId, otherwise: VarId) -> Body {
-        Body::Id(otherwise).with([choice, otherwise].into_iter().peekable())
+    pub fn f() -> Body {
+        Body::Id(1).with([0, 1].into_iter().peekable())
     }
 
-    pub fn and(choice: VarId, otherwise: VarId) -> Body {
+    pub fn and() -> Body {
         Body::App(
-            Body::App(Body::Id(choice).into(), Body::Id(otherwise).into()).into(),
-            Body::Id(choice).into(),
+            Body::App(Body::Id(0).into(), Body::Id(1).into()).into(),
+            Body::Id(0).into(),
         )
-        .with([choice, otherwise].into_iter().peekable())
+        .with([0, 1].into_iter().peekable())
     }
 
-    pub fn or(choice: VarId, otherwise: VarId) -> Body {
+    pub fn or() -> Body {
         Body::App(
-            Body::App(Body::Id(choice).into(), Body::Id(choice).into()).into(),
-            Body::Id(otherwise).into(),
+            Body::App(Body::Id(0).into(), Body::Id(0).into()).into(),
+            Body::Id(1).into(),
         )
-        .with([choice, otherwise].into_iter().peekable())
+        .with([0, 1].into_iter().peekable())
     }
 
     /// inverts the boolean
     /// not(true) == false
     /// not(false) == true
-    pub fn not(b: VarId) -> Body {
-        Body::App(
-            Body::App(Body::Id(b).into(), f(0, 1).into()).into(),
-            t(0, 1).into(),
-        )
-        .with([b].into_iter().peekable())
+    pub fn not() -> Body {
+        Body::App(Body::App(Body::Id(0).into(), f().into()).into(), t().into())
+            .with([0].into_iter().peekable())
+    }
+
+    pub fn xor() -> Body {
+        let not_otherwise = not().applied([&Body::Id(1)].into_iter().peekable());
+        let and = and().applied([&Body::Id(0), &not_otherwise].into_iter().peekable());
+        or().applied([&and, &Body::Id(1)].into_iter().peekable())
+    }
+
     }
 }
