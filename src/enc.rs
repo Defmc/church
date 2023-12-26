@@ -122,6 +122,17 @@ pub mod bool {
                 assert!(test_case(super::and, *l, *r).alpha_eq(&bool_to_body(*out)))
             }
         }
+        #[test]
+        pub fn nand() {
+            fn nand() -> Body {
+                let and = super::and().applied([&Body::Id(0), &Body::Id(1)]);
+                let not = super::not().applied([&and]);
+                not.with([0, 1])
+            }
+            for (l, r, out) in AND_LOGIC_TABLE {
+                assert!(test_case(nand, *l, *r).alpha_eq(&bool_to_body(!*out)))
+            }
+        }
 
         #[test]
         pub fn and_transitivity() {
@@ -134,6 +145,18 @@ pub mod bool {
         pub fn or() {
             for (l, r, out) in OR_LOGIC_TABLE {
                 assert!(test_case(super::or, *l, *r).alpha_eq(&bool_to_body(*out)))
+            }
+        }
+
+        #[test]
+        pub fn nor() {
+            fn nor() -> Body {
+                let or = super::or().applied([&Body::Id(0), &Body::Id(1)]);
+                let not = super::not().applied([&or]);
+                not.with([0, 1])
+            }
+            for (l, r, out) in OR_LOGIC_TABLE {
+                assert!(test_case(nor, *l, *r).alpha_eq(&bool_to_body(!*out)))
             }
         }
 
