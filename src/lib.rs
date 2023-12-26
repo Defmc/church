@@ -59,6 +59,10 @@ impl Body {
         }
     }
 
+    pub fn in_app(self, s: Self) -> Body {
+        Body::App(self.into(), s.into())
+    }
+
     pub fn alpha_redex(&mut self) {
         self.redex_by_alpha(&mut HashMap::new());
     }
@@ -351,11 +355,9 @@ pub mod tests {
             Body::from_args([X_ID, Y_ID, F_ID].into_iter().peekable(), body).unwrap()
         };
         fliper.curry(&fliper_f.into());
-        println!("{fliper}");
         fliper.alpha_redex();
-        println!("{fliper}");
         fliper.beta_redex();
-        println!("{fliper}");
+        // TODO: Add test
     }
 
     #[test]
