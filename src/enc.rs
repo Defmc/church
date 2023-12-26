@@ -190,5 +190,24 @@ pub mod bool {
                     .alpha_eq(&bool_to_body(*out)))
             }
         }
+
+        #[test]
+        pub fn xor_as_or_and_not_and() {
+            fn new_xor() -> Body {
+                let and = super::and().applied([&Body::Id(0), &Body::Id(1)]);
+                let nand = super::not().applied([&and]);
+                let or = super::or().applied([&Body::Id(0), &Body::Id(1)]);
+                let xor = super::and().in_app(or).in_app(nand);
+                // FIXME: beta reduction is requiring alpha
+                xor.with([0, 1]).alpha_reduced().beta_reduced()
+            }
+            for (l, r, out) in XOR_LOGIC_TABLE {
+                println!("{}", new_xor());
+                // λa.λb.a a b (a b a (λc.λd.d) (λc.λd.c)) (a a b)
+                // not beta: λa.λb.λc.λd.c d c (a a b) (a b a (λc.λd.d) (λc.λd.c))
+                // not alpha: λa.λb.a a (a b a (λa.λb.b) (λa.λb.a)) (a b a (λa.λb.b) (λa.λb.a)) (a a (a b a (λa.λb.b) (λa.λb.a)))
+                assert!(test_case(new_xor, *l, *r).alpha_eq(&bool_to_body(*out)))
+            }
+        }
     }
 }
