@@ -67,7 +67,16 @@ pub fn lexer(src: &str) -> impl Iterator<Item = Gramem> + '_ {
 pub mod out;
 
 #[must_use]
-pub fn parser<I: Iterator<Item = Gramem>>(buffer: I) -> Dfa<Meta<Ast>, Sym, I> {
+pub fn build_parser<I: Iterator<Item = Gramem>>(buffer: I) -> Dfa<Meta<Ast>, Sym, I> {
     let parser = Clr::new(out::grammar());
     parser.dfa(buffer, out::reduct_map())
+}
+
+#[must_use]
+pub fn parse<I: Iterator<Item = Gramem>>(buffer: I) -> Result<Body, lrp::Error<Sym>> {
+    let mut parser = build_parser(buffer);
+    match parser.start() {
+        Err(e) => Err(e),
+        Ok(..) => Ok(parser.items[0].item.item.as_expr().clone()),
+    }
 }

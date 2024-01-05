@@ -1,4 +1,3 @@
-use church::parser;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::str::FromStr;
@@ -36,12 +35,11 @@ pub fn reduct_map() -> ReductMap<Meta<Ast>, Sym> {}"#,
     println!("input\t\toutput");
     const SAMPLES: &[&str] = &["^a.(a)", "^a.(^b.(a))", "^a.(^b.(b))"];
     for sample in SAMPLES {
-        let lex = parser::lexer(sample);
-        let mut parser = parser::parser(lex);
-        let err = parser.start();
-        assert!(err.is_ok(), "{err:?}");
-        let out = parser.items[0].item.item.as_expr().clone().alpha_reduced();
-        println!("{sample}\t\t{out}");
+        let lex = church::parser::lexer(sample);
+        println!(
+            "{sample}\t\t{}",
+            church::parser::parse(lex).unwrap().alpha_reduced()
+        );
     }
 
     Ok(())
