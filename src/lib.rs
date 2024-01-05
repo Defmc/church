@@ -452,7 +452,6 @@ pub mod tests {
         fliper.curry(&fliper_f.into());
         fliper.alpha_redex();
         fliper.beta_redex();
-        // TODO: Add test
     }
 
     #[test]

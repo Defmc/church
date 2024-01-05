@@ -128,12 +128,7 @@ pub mod bool {
             fn nand() -> Body {
                 let and = super::and().in_app(Body::Id(0)).in_app(Body::Id(1));
                 let not = super::not().in_app(and);
-                println!("without beta: {}", not.clone().with([0, 1]).alpha_reduced());
-                println!(
-                    "with beta: {}",
-                    not.clone().with([0, 1]).alpha_reduced().beta_reduced()
-                );
-                not.with([0, 1]).alpha_reduced().beta_reduced()
+                not.with([0, 1]).beta_reduced()
             }
             for (l, r, out) in AND_LOGIC_TABLE {
                 assert!(test_case(nand, *l, *r).alpha_eq(&bool_to_body(!*out)))
@@ -217,6 +212,8 @@ pub mod bool {
                 //     xor.clone().with([0, 1]).beta_reduced().alpha_reduced()
                 // );
                 //
+                // e e: (λa.(λb.(a b a)) (λa.(λb.(a a b)) a b) (λa.(a (λa.(λb.(b))) (λa.(λb.(a)))) (λa.(λb.(a b a)) a b)))
+                // e a: (λc.(λd.(c d c)) (λc.(λd.(c c d)) a b) (λc.(c (λd.(λe.(e))) (λd.(λe.(d)))) (λc.(λd.(c d c)) a b)))
                 // e: λa.(λb.(λa.(λb.(a b a)) (λa.(λb.(a a b)) a b) (λa.(a (λa.(λb.(b))) (λa.(λb.(a)))) (λa.(λb.(a b a)) a b))))
                 // a: λa.(λb.(λc.(λd.(c d c)) (λc.(λd.(c c d)) a b) (λc.(c (λd.(λe.(e))) (λd.(λe.(d)))) (λc.(λd.(c d c)) a b))))
                 // b: λa.(λb.(a a (a b a (λa.(λb.(b))) (λa.(λb.(a)))) (a b a (λa.(λb.(b))) (λa.(λb.(a)))) (a a (a b a (λa.(λb.(b))) (λa.(λb.(a)))))))
