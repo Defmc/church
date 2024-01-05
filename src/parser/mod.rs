@@ -72,7 +72,6 @@ pub fn build_parser<I: Iterator<Item = Gramem>>(buffer: I) -> Dfa<Meta<Ast>, Sym
     parser.dfa(buffer, out::reduct_map())
 }
 
-#[must_use]
 pub fn parse<I: Iterator<Item = Gramem>>(buffer: I) -> Result<Body, lrp::Error<Sym>> {
     let mut parser = build_parser(buffer);
     match parser.start() {
