@@ -257,7 +257,7 @@ impl fmt::Display for Body {
                     format!("{x}")
                 }
             )),
-            Self::Abs(v, l) => w.write_fmt(format_args!("λ{}.{l}", id_to_str(*v))),
+            Self::Abs(v, l) => w.write_fmt(format_args!("λ{}.({l})", id_to_str(*v))),
         }
     }
 }
@@ -279,19 +279,19 @@ pub mod tests {
 
     #[test]
     fn flip_format() {
-        assert_eq!(flip(0, 1, 2).to_string(), "λc.λb.λa.c a b");
+        assert_eq!(flip(0, 1, 2).to_string(), "λc.(λb.(λa.(c a b)))");
     }
 
     #[test]
     fn id_format() {
-        assert_eq!(Body::id().to_string(), "λa.a");
+        assert_eq!(Body::id().to_string(), "λa.(a)");
     }
 
     #[test]
     fn flip_alpha_redex() {
         let mut flip = flip(VarId::MAX, VarId::MAX / 2, 0);
         flip.alpha_redex();
-        assert_eq!(flip.to_string(), "λa.λb.λc.a c b");
+        assert_eq!(flip.to_string(), "λa.(λb.(λc.(a c b)))");
     }
 
     #[test]
@@ -310,11 +310,11 @@ pub mod tests {
         let mut flip = flip(1, 2, 3);
         flip.alpha_redex();
 
-        assert_eq!(flip.to_string(), "λa.λb.λc.a c b");
+        assert_eq!(flip.to_string(), "λa.(λb.(λc.(a c b)))");
         flip.curry(&Body::Id(5));
-        assert_eq!(flip.to_string(), "λb.λc.f c b");
+        assert_eq!(flip.to_string(), "λb.(λc.(f c b))");
         flip.curry(&Body::Id(6));
-        assert_eq!(flip.to_string(), "λc.f c g");
+        assert_eq!(flip.to_string(), "λc.(f c g)");
         let body = flip.curry(&Body::Id(7));
         assert_eq!(body.to_string(), "f h g");
     }
@@ -370,15 +370,15 @@ pub mod tests {
     fn right_associative_format() {
         const F_ID: VarId = 0;
         const X_ID: VarId = 1;
-        assert_eq!(natural(F_ID, X_ID, 0).to_string(), "λa.λb.b");
-        assert_eq!(natural(F_ID, X_ID, 1).to_string(), "λa.λb.a b");
+        assert_eq!(natural(F_ID, X_ID, 0).to_string(), "λa.(λb.(b))");
+        assert_eq!(natural(F_ID, X_ID, 1).to_string(), "λa.(λb.(a b))");
         assert_eq!(
             natural(F_ID, X_ID, 5).to_string(),
-            "λa.λb.a (a (a (a (a b))))"
+            "λa.(λb.(a (a (a (a (a b))))))"
         );
         assert_eq!(
             natural(F_ID, X_ID, 10).to_string(),
-            "λa.λb.a (a (a (a (a (a (a (a (a (a b)))))))))"
+            "λa.(λb.(a (a (a (a (a (a (a (a (a (a b)))))))))))"
         );
     }
 
