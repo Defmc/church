@@ -120,10 +120,26 @@ impl Body {
         }
     }
 
+    /// returns all free variables, including the ones binded on one application
+    /// FV(^x.(x a x) b) = { a, b }
+    /// FV(^x.(a) ^a.(a)) = { a }
+    /// FV(a) = { a }
     #[must_use]
     pub fn free_variables(&self) -> HashSet<VarId> {
         let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
         self.get_free_variables(&mut binds, &mut frees);
+        frees
+    }
+
+    /// return all variables used
+    /// FV(^x.(x a x) b) = { x, a, b }
+    /// FV(^x.(a) ^a.(a)) = { x, a }
+    /// FV(a) = { a }
+    #[must_use]
+    pub fn variables(&self) -> HashSet<VarId> {
+        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
+        self.get_free_variables(&mut binds, &mut frees);
+        frees.extend(binds);
         frees
     }
 
