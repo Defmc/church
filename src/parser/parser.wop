@@ -9,11 +9,10 @@ alias Ident Sym::Var;
 
 EntryPoint: Ast = Expr:&e -> { Ast::Expr(e.item.item.as_expr().clone()) }%;
 
-Lambda: Ast = "^" Ident:&i "." Expr:&e -> { Ast::Expr(Body::Abs(i.item.item.as_var().chars().next().unwrap() as usize, e.item.item.as_expr().clone().into())) }%;
+Lambda: Ast = "^" Ident:&i "." "(" App:&a ")" -> { Ast::Expr(Body::Abs(i.item.item.as_var().chars().next().unwrap() as usize, a.item.item.as_expr().clone().into())) }%;
 App: Ast = App:&a Expr:&e -> { Ast::Expr(Body::App(a.item.item.as_expr().clone().into(), e.item.item.as_expr().clone().into())) }%
             | Expr:&e -> { Ast::Expr(e.item.item.as_expr().clone()) }%;
 
 Expr: Ast = "(" Expr:&e ")" -> { Ast::Expr(e.item.item.as_expr().clone()) }% 
                    | Lambda:&l -> { Ast::Expr(l.item.item.as_expr().clone()) }%
-                   | App:&a -> { Ast::Expr(a.item.item.as_expr().clone()) }%
                    | Ident:&i -> { Ast::Expr(Body::Id(i.item.item.as_var().chars().next().unwrap() as usize)) }%;

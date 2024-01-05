@@ -3,7 +3,7 @@ use std::{collections::HashMap, iter::Peekable, num::NonZeroUsize};
 
 pub type VarId = usize;
 
-pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyzabcdefghijklmnopqrtstuvwxyz";
+pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyz";
 
 /// Church encoding
 pub mod enc;
@@ -12,10 +12,14 @@ pub mod enc;
 pub mod parser;
 
 #[must_use]
-pub fn id_to_str(i: usize) -> &'static str {
+pub fn id_to_str(i: usize) -> String {
     let rotations = i / ALPHABET.len();
     let i = i % ALPHABET.len();
-    &ALPHABET[i..=i + rotations]
+    format!(
+        "{}{}",
+        ALPHABET[i..=i].chars().next().unwrap(),
+        "'".repeat(rotations)
+    )
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
