@@ -11,6 +11,8 @@ pub mod enc;
 /// Parsing lib
 pub mod parser;
 
+/// # Panics
+/// Never.
 #[must_use]
 pub fn id_to_str(i: usize) -> String {
     let rotations = i / ALPHABET.len();
@@ -66,6 +68,7 @@ impl Body {
         }
     }
 
+    #[must_use]
     pub fn in_app(self, s: Self) -> Body {
         Body::App(self.into(), s.into())
     }

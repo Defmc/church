@@ -1,6 +1,6 @@
 use crate::{Body, VarId};
 use logos::Logos;
-use lrp::{Clr, Dfa, Meta, Parser, Token};
+use lrp::{Dfa, Meta, Parser, Slr, Token};
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord)]
 pub enum Ast {
@@ -10,18 +10,18 @@ pub enum Ast {
 }
 
 impl Ast {
+    #[must_use]
     pub fn as_expr(&self) -> &Body {
         match self {
             Self::Expr(e) => e,
-            Self::Token(_) => unreachable!(),
-            Self::Var(_) => unreachable!(),
+            Self::Token(_) | Self::Var(_) => unreachable!(),
         }
     }
 
+    #[must_use]
     pub fn as_var(&self) -> VarId {
         match self {
-            Self::Expr(_) => unreachable!(),
-            Self::Token(_) => unreachable!(),
+            Self::Expr(_) | Self::Token(_) => unreachable!(),
             Self::Var(id) => *id,
         }
     }
@@ -54,6 +54,8 @@ pub enum Sym {
     Eof,
 }
 
+/// # Panics
+/// Never.
 pub fn lexer(src: &str) -> impl Iterator<Item = Gramem> + '_ {
     Sym::lexer(src).spanned().map(|(t, s)| {
         let ast = match t.as_ref().expect("invalid symbol") {
@@ -72,13 +74,15 @@ pub fn lexer(src: &str) -> impl Iterator<Item = Gramem> + '_ {
 pub mod out;
 
 #[must_use]
-pub fn build_parser<I: Iterator<Item = Gramem>>(buffer: I) -> Dfa<Meta<Ast>, Sym, I> {
-    let parser = Clr::new(out::grammar());
+pub fn build<I: Iterator<Item = Gramem>>(buffer: I) -> Dfa<Meta<Ast>, Sym, I> {
+    let parser = Slr::new(out::grammar());
     parser.dfa(buffer, out::reduct_map())
 }
 
+/// # Errors
+/// Same as `lrp::Dfa`.
 pub fn parse<I: Iterator<Item = Gramem>>(buffer: I) -> Result<Body, lrp::Error<Sym>> {
-    let mut parser = build_parser(buffer);
+    let mut parser = build(buffer);
     match parser.start() {
         Err(e) => Err(e),
         Ok(..) => Ok(parser.items[0].item.item.as_expr().clone()),
