@@ -143,6 +143,13 @@ impl Body {
         frees
     }
 
+    #[must_use]
+    pub fn bounded_variables(&self) -> HashSet<VarId> {
+        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
+        self.get_free_variables(&mut binds, &mut frees);
+        binds
+    }
+
     pub fn get_free_variables(&self, binds: &mut HashSet<VarId>, frees: &mut HashSet<VarId>) {
         match self {
             Self::Id(id) => {
@@ -265,13 +272,27 @@ impl Body {
             }
             Self::Abs(v, l) => {
                 if *v != id {
-                    l.apply_by(id, val);
+                    l.safe_subst(id, val);
                 }
             }
             Self::App(f, x) => {
                 f.apply_by(id, val);
                 x.apply_by(id, val);
             }
+        }
+    }
+
+    pub fn safe_subst(&mut self, id: VarId, val: &Self) {
+        let vars = self.variables();
+        println!("vars = {vars:?}");
+        let frees_val = val.free_variables();
+        println!("frees_val = {frees_val:?}");
+        // if there's no free variable capturing (used vars on lhs /\ free vars on rhs), we just apply on the abstraction body
+        if frees_val.intersection(&vars).count() == 0 {
+            self.apply_by(id, val);
+        } else {
+            let _reserveds: HashSet<_> = frees_val.union(&vars).collect();
+            todo!("capture avoiding substitution");
         }
     }
 
