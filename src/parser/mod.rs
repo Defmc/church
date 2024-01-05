@@ -1,4 +1,4 @@
-use crate::Body;
+use crate::{Body, VarId};
 use logos::Logos;
 use lrp::{Clr, Dfa, Meta, Parser, Token};
 
@@ -6,7 +6,7 @@ use lrp::{Clr, Dfa, Meta, Parser, Token};
 pub enum Ast {
     Expr(Body),
     Token(Sym),
-    Var(String),
+    Var(VarId),
 }
 
 impl Ast {
@@ -18,11 +18,11 @@ impl Ast {
         }
     }
 
-    pub fn as_var(&self) -> &str {
+    pub fn as_var(&self) -> VarId {
         match self {
             Self::Expr(_) => unreachable!(),
             Self::Token(_) => unreachable!(),
-            Self::Var(s) => s,
+            Self::Var(id) => *id,
         }
     }
 }
@@ -35,7 +35,7 @@ pub enum Sym {
     #[token("^")]
     #[token("\\")]
     LambdaChar,
-    #[regex(r#"[a-zA-Z_]\w*"#)]
+    #[regex(r#"[a-z]'*"#)]
     Var,
     #[token(".")]
     #[token("->")]
@@ -57,7 +57,12 @@ pub enum Sym {
 pub fn lexer(src: &str) -> impl Iterator<Item = Gramem> + '_ {
     Sym::lexer(src).spanned().map(|(t, s)| {
         let ast = match t.as_ref().expect("invalid symbol") {
-            Sym::Var => Ast::Var(src[s.start..s.end].to_string()),
+            Sym::Var => {
+                let s = &src[s.start..s.end];
+                let post = (s.len() - 1) * crate::ALPHABET.len();
+                let c = s.chars().next().unwrap() as usize - 'a' as usize;
+                Ast::Var(post + c)
+            }
             _ => Ast::Token(t.unwrap()),
         };
         Token::new(Meta::new(ast, s.into()), t.unwrap())
