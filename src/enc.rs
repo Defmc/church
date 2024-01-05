@@ -205,14 +205,26 @@ pub mod bool {
                 let or = super::or().in_app(Body::Id(0)).in_app(Body::Id(1));
                 let xor = super::and().in_app(or).in_app(nand);
                 // FIXME: beta reduction is requiring alpha
+                // println!("e: {}", xor.clone().with([0, 1]));
+                // println!("a: {}", xor.clone().with([0, 1]).alpha_reduced());
+                // println!("b: {}", xor.clone().with([0, 1]).beta_reduced());
+                // println!(
+                //     "a/b: {}",
+                //     xor.clone().with([0, 1]).alpha_reduced().beta_reduced()
+                // );
+                // println!(
+                //     "b/a: {}",
+                //     xor.clone().with([0, 1]).beta_reduced().alpha_reduced()
+                // );
+                //
+                // e: λa.(λb.(λa.(λb.(a b a)) (λa.(λb.(a a b)) a b) (λa.(a (λa.(λb.(b))) (λa.(λb.(a)))) (λa.(λb.(a b a)) a b))))
+                // a: λa.(λb.(λc.(λd.(c d c)) (λc.(λd.(c c d)) a b) (λc.(c (λd.(λe.(e))) (λd.(λe.(d)))) (λc.(λd.(c d c)) a b))))
+                // b: λa.(λb.(a a (a b a (λa.(λb.(b))) (λa.(λb.(a)))) (a b a (λa.(λb.(b))) (λa.(λb.(a)))) (a a (a b a (λa.(λb.(b))) (λa.(λb.(a)))))))
+                // a/b: λa.(λb.(a a b (a b a (λd.(λe.(e))) (λd.(λe.(d)))) (a a b)))
+                // b/a: λa.(λb.(a a (a b a (λc.(λd.(d))) (λc.(λd.(c)))) (a b a (λc.(λd.(d))) (λc.(λd.(c)))) (a a (a b a (λc.(λd.(d))) (λc.(λd.(c)))))))
                 xor.with([0, 1]).alpha_reduced().beta_reduced()
-                // λa.λb.a a b (a b a (λd.λe.e) (λd.λe.d)) (a a b)
-                // λa.λb.a a b (a b a (λc.λd.d) (λc.λd.c)) (a a b)
-                // not beta: λa.λb.λc.λd.c d c (a a b) (a b a (λc.λd.d) (λc.λd.c))
-                // not alpha: λa.λb.a a (a b a (λa.λb.b) (λa.λb.a)) (a b a (λa.λb.b) (λa.λb.a)) (a a (a b a (λa.λb.b) (λa.λb.a)))
             }
             for (l, r, out) in XOR_LOGIC_TABLE {
-                println!("here it is: {}", new_xor());
                 assert!(
                     test_case(new_xor, *l, *r).alpha_eq(&bool_to_body(*out)),
                     "{}",
