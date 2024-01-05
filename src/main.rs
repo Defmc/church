@@ -31,16 +31,19 @@ pub fn reduct_map() -> ReductMap<Meta<Ast>, Sym> {}"#,
         wop::builder::REDUCTOR_LINTS,
         builder.dump_reductor(src),
     )?;
-    println!("samples");
-    println!("input\t\toutput");
-    const SAMPLES: &[&str] = &["^a.(a)", "^a.(^b.(a))", "^a.(^b.(b))"];
-    for sample in SAMPLES {
-        let lex = church::parser::lexer(sample);
-        println!(
-            "{sample}\t\t{}",
-            church::parser::parse(lex).unwrap().alpha_reduced()
-        );
+    drop(writer);
+    let mut buf = String::new();
+    loop {
+        print!("\n\\> ");
+        std::io::stdout().flush().unwrap();
+        buf.clear();
+        std::io::stdin().read_line(&mut buf)?;
+        let lex = church::parser::lexer(&buf);
+        let expr = church::parser::parse(lex).unwrap();
+        println!("\texpr:    {expr}");
+        println!("\tα-redex: {}", expr.clone().alpha_reduced());
+        println!("\t\t-> β:  {}", expr.clone().alpha_reduced().beta_reduced());
+        println!("\tβ-redex: {}", expr.clone().beta_reduced());
+        println!("\t\t-> α:  {}", expr.clone().beta_reduced().alpha_reduced());
     }
-
-    Ok(())
 }
