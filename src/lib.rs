@@ -282,17 +282,44 @@ impl Body {
         }
     }
 
-    pub fn safe_subst(&mut self, id: VarId, val: &Self) {
+    pub fn safe_subst(&mut self, mut id: VarId, val: &Self) {
         let vars = self.variables();
-        println!("vars = {vars:?}");
         let frees_val = val.free_variables();
-        println!("frees_val = {frees_val:?}");
         // if there's no free variable capturing (used vars on lhs /\ free vars on rhs), we just apply on the abstraction body
-        if frees_val.intersection(&vars).count() == 0 {
-            self.apply_by(id, val);
-        } else {
-            let _reserveds: HashSet<_> = frees_val.union(&vars).collect();
-            todo!("capture avoiding substitution");
+        if frees_val.intersection(&vars).count() != 0 {
+            let reserveds: HashSet<_> = frees_val.union(&vars).copied().collect();
+            let safes = (0..).filter(|n| !reserveds.contains(n)).take(vars.len());
+            let news = safes.zip(&reserveds);
+            for (to, from) in news {
+                self.rename(*from, to);
+                if *from == id {
+                    id = to;
+                }
+            }
+            // todo!("capture avoiding substitution");
+        }
+        self.apply_by(id, val);
+    }
+
+    pub fn rename(&mut self, from: VarId, to: VarId) {
+        match self {
+            Self::Id(ref mut i) => {
+                assert_ne!(*i, to);
+                if *i == from {
+                    *i = to;
+                }
+            }
+            Self::Abs(ref mut v, ref mut l) => {
+                assert_ne!(*v, to);
+                if *v == from {
+                    *v = to;
+                }
+                l.rename(from, to);
+            }
+            Self::App(ref mut lhs, ref mut rhs) => {
+                lhs.rename(from, to);
+                rhs.rename(from, to);
+            }
         }
     }
 
