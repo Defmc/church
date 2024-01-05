@@ -21,7 +21,7 @@ pub fn grammar() -> Grammar<Sym> {{
     Grammar::new(Sym::EntryPoint, {}, Sym::Eof)
 }}"#,
         wop::builder::GRAMMAR_LINTS,
-        builder.dump_grammar(&src)
+        builder.dump_grammar(src)
     )?;
 
     writeln!(
@@ -30,7 +30,7 @@ pub fn grammar() -> Grammar<Sym> {{
 #[allow({})]
 pub fn reduct_map() -> ReductMap<Meta<Ast>, Sym> {}"#,
         wop::builder::REDUCTOR_LINTS,
-        builder.dump_reductor(&src),
+        builder.dump_reductor(src),
     )?;
     println!("samples");
     println!("input\t\toutput");

@@ -54,7 +54,7 @@ pub enum Sym {
     Eof,
 }
 
-pub fn lexer<'source>(src: &'source str) -> impl Iterator<Item = Gramem> + 'source {
+pub fn lexer(src: &str) -> impl Iterator<Item = Gramem> + '_ {
     Sym::lexer(src).spanned().map(|(t, s)| {
         let ast = match t.as_ref().expect("invalid symbol") {
             Sym::Var => Ast::Var(src[s.start..s.end].to_string()),

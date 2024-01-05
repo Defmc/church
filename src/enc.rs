@@ -13,7 +13,7 @@ pub fn natural(f: VarId, x: VarId, n: usize) -> Body {
 }
 
 pub mod bool {
-    use crate::{Body, VarId};
+    use crate::Body;
 
     #[must_use]
     pub fn t() -> Body {

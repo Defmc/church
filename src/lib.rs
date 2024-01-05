@@ -174,7 +174,6 @@ impl Body {
             Self::Abs(v, l) => {
                 if *v != id {
                     l.apply_by(id, val);
-                } else {
                 }
             }
             Self::App(f, x) => {
