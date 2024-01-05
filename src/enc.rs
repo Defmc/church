@@ -13,7 +13,7 @@ pub fn natural(f: VarId, x: VarId, n: usize) -> Body {
 }
 
 pub mod bool {
-    use crate::Body;
+    use crate::{Body, VarId};
 
     #[must_use]
     pub fn t() -> Body {
@@ -28,21 +28,19 @@ pub mod bool {
     /// and x y == true, when x == y == true
     #[must_use]
     pub fn and() -> Body {
-        Body::App(
-            Body::App(Body::Id(0).into(), Body::Id(1).into()).into(),
-            Body::Id(0).into(),
-        )
-        .with([0, 1])
+        Body::Id(0)
+            .in_app(Body::Id(1))
+            .in_app(Body::Id(0))
+            .with([0, 1])
     }
 
     /// or x y == false, when x == y == false
     #[must_use]
     pub fn or() -> Body {
-        Body::App(
-            Body::App(Body::Id(0).into(), Body::Id(0).into()).into(),
-            Body::Id(1).into(),
-        )
-        .with([0, 1])
+        Body::Id(0)
+            .in_app(Body::Id(0))
+            .in_app(Body::Id(1))
+            .with([0, 1])
     }
 
     /// inverts the boolean
@@ -50,18 +48,17 @@ pub mod bool {
     /// not false == true
     #[must_use]
     pub fn not() -> Body {
-        Body::App(Body::App(Body::Id(0).into(), f().into()).into(), t().into()).with([0])
+        Body::Id(0).in_app(f()).in_app(t()).with([0])
     }
 
     /// xor == true, when x != y
     #[must_use]
     pub fn xor() -> Body {
         let not_otherwise = not().applied([&Body::Id(1)]);
-        Body::App(
-            Body::App(Body::Id(0).into(), not_otherwise.into()).into(),
-            Body::Id(1).into(),
-        )
-        .with([0, 1])
+        Body::Id(0)
+            .in_app(not_otherwise)
+            .in_app(Body::Id(1))
+            .with([0, 1])
     }
 
     #[cfg(test)]
@@ -78,7 +75,6 @@ pub mod bool {
 
         fn test_case(f: fn() -> Body, l: bool, r: bool) -> Body {
             f().applied([&bool_to_body(l), &bool_to_body(r)])
-                .alpha_reduced()
                 .beta_reduced()
         }
 
@@ -119,15 +115,25 @@ pub mod bool {
         #[test]
         pub fn and() {
             for (l, r, out) in AND_LOGIC_TABLE {
-                assert!(test_case(super::and, *l, *r).alpha_eq(&bool_to_body(*out)))
+                assert!(
+                    test_case(super::and, *l, *r).alpha_eq(&bool_to_body(*out)),
+                    "{} != {}",
+                    test_case(super::and, *l, *r),
+                    bool_to_body(*out)
+                )
             }
         }
         #[test]
         pub fn nand() {
             fn nand() -> Body {
-                let and = super::and().applied([&Body::Id(0), &Body::Id(1)]);
-                let not = super::not().applied([&and]);
-                not.with([0, 1])
+                let and = super::and().in_app(Body::Id(0)).in_app(Body::Id(1));
+                let not = super::not().in_app(and);
+                println!("without beta: {}", not.clone().with([0, 1]).alpha_reduced());
+                println!(
+                    "with beta: {}",
+                    not.clone().with([0, 1]).alpha_reduced().beta_reduced()
+                );
+                not.with([0, 1]).alpha_reduced().beta_reduced()
             }
             for (l, r, out) in AND_LOGIC_TABLE {
                 assert!(test_case(nand, *l, *r).alpha_eq(&bool_to_body(!*out)))
@@ -151,9 +157,9 @@ pub mod bool {
         #[test]
         pub fn nor() {
             fn nor() -> Body {
-                let or = super::or().applied([&Body::Id(0), &Body::Id(1)]);
-                let not = super::not().applied([&or]);
-                not.with([0, 1])
+                let or = super::or().in_app(Body::Id(0)).in_app(Body::Id(1));
+                let not = super::not().in_app(or);
+                not.with([0, 1]).beta_reduced()
             }
             for (l, r, out) in OR_LOGIC_TABLE {
                 assert!(test_case(nor, *l, *r).alpha_eq(&bool_to_body(!*out)))
@@ -194,19 +200,24 @@ pub mod bool {
         #[test]
         pub fn xor_as_or_and_not_and() {
             fn new_xor() -> Body {
-                let and = super::and().applied([&Body::Id(0), &Body::Id(1)]);
-                let nand = super::not().applied([&and]);
-                let or = super::or().applied([&Body::Id(0), &Body::Id(1)]);
+                let and = super::and().in_app(Body::Id(0)).in_app(Body::Id(1));
+                let nand = super::not().in_app(and);
+                let or = super::or().in_app(Body::Id(0)).in_app(Body::Id(1));
                 let xor = super::and().in_app(or).in_app(nand);
                 // FIXME: beta reduction is requiring alpha
                 xor.with([0, 1]).alpha_reduced().beta_reduced()
-            }
-            for (l, r, out) in XOR_LOGIC_TABLE {
-                println!("{}", new_xor());
+                // λa.λb.a a b (a b a (λd.λe.e) (λd.λe.d)) (a a b)
                 // λa.λb.a a b (a b a (λc.λd.d) (λc.λd.c)) (a a b)
                 // not beta: λa.λb.λc.λd.c d c (a a b) (a b a (λc.λd.d) (λc.λd.c))
                 // not alpha: λa.λb.a a (a b a (λa.λb.b) (λa.λb.a)) (a b a (λa.λb.b) (λa.λb.a)) (a a (a b a (λa.λb.b) (λa.λb.a)))
-                assert!(test_case(new_xor, *l, *r).alpha_eq(&bool_to_body(*out)))
+            }
+            for (l, r, out) in XOR_LOGIC_TABLE {
+                println!("here it is: {}", new_xor());
+                assert!(
+                    test_case(new_xor, *l, *r).alpha_eq(&bool_to_body(*out)),
+                    "{}",
+                    test_case(new_xor, *l, *r)
+                )
             }
         }
     }

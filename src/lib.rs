@@ -8,6 +8,9 @@ pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyzabcdefghijklmnopqrtstuvwx
 /// Church encoding
 pub mod enc;
 
+/// Parsing lib
+pub mod parser;
+
 #[must_use]
 pub fn id_to_str(i: usize) -> &'static str {
     let rotations = i / ALPHABET.len();
@@ -51,7 +54,7 @@ impl Body {
         }
     }
 
-    pub fn as_mut_abs(&mut self) -> Option<(&mut VarId, &mut Box<Self>)> {
+    pub fn as_mut_abs(&mut self) -> Option<(&mut VarId, &mut Self)> {
         if let Self::Abs(v, b) = self {
             Some((v, b))
         } else {
@@ -136,7 +139,6 @@ impl Body {
                 if self_map.contains_key(s_v) {
                     let mut map = self_map.clone();
                     *map.get_mut(s_v).unwrap() = map.len();
-                    map.insert(map.len(), *s_v);
                     edits.0 = Some(map);
                 } else {
                     self_map.insert(*s_v, self_map.len());
@@ -144,7 +146,6 @@ impl Body {
                 if rhs_map.contains_key(r_v) {
                     let mut map = rhs_map.clone();
                     *map.get_mut(r_v).unwrap() = map.len();
-                    map.insert(map.len(), *r_v);
                     edits.1 = Some(map);
                 } else {
                     rhs_map.insert(*r_v, rhs_map.len());
@@ -169,6 +170,7 @@ impl Body {
             Self::Abs(v, l) => {
                 if *v != id {
                     l.apply_by(id, val);
+                } else {
                 }
             }
             Self::App(f, x) => {
@@ -185,7 +187,7 @@ impl Body {
     pub fn curry(&mut self, val: &Self) -> &mut Self {
         let (v, l) = self.as_mut_abs().expect("currying a non-abstraction");
         l.apply_by(*v, val);
-        *self = *l.clone();
+        *self = l.clone();
         self
     }
 
@@ -207,6 +209,7 @@ impl Body {
                     let mut l = l.clone();
                     l.apply_by(*v, x);
                     *self = *l;
+                    self.beta_redex();
                 }
             }
             Self::Abs(_, l) => {
@@ -374,5 +377,12 @@ pub mod tests {
             natural(F_ID, X_ID, 10).to_string(),
             "λa.λb.a (a (a (a (a (a (a (a (a (a b)))))))))"
         );
+    }
+
+    #[test]
+    pub fn shadowing() {
+
+        // λa.λb.a a b (a b a (λd.λe.e) (λd.λe.d)) (a a b)
+        // λa.λb.a a b (a b a (λc.λd.d) (λc.λd.c)) (a a b)
     }
 }
