@@ -16,6 +16,9 @@ pub mod enc;
 /// Parsing lib
 pub mod parser;
 
+/// Delta Reductions
+pub mod scope;
+
 /// # Panics
 /// Never.
 #[must_use]
