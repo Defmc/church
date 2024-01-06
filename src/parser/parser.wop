@@ -13,6 +13,6 @@ Lambda: Ast = "^" Ident:&i "." "(" App:&a ")" -> { Ast::Expr(Body::Abs(i.item.it
 App: Ast = App:&a Expr:&e -> { Ast::Expr(Body::App(a.item.item.as_expr().clone().into(), e.item.item.as_expr().clone().into())) }%
             | Expr:&e -> { Ast::Expr(e.item.item.as_expr().clone()) }%;
 
-Expr: Ast = "(" Expr:&e ")" -> { Ast::Expr(e.item.item.as_expr().clone()) }% 
+Expr: Ast = "(" App:&e ")" -> { Ast::Expr(e.item.item.as_expr().clone()) }% 
                    | Lambda:&l -> { Ast::Expr(l.item.item.as_expr().clone()) }%
                    | Ident:&i -> { Ast::Expr(Body::Id(i.item.item.as_var())) }%;
