@@ -3,7 +3,7 @@ use std::{collections::HashMap, iter::Peekable, num::NonZeroUsize};
 
 pub type VarId = usize;
 
-pub const ALPHABET: &str = "abcdefghijklmnopqrtstuvwxyz";
+pub const ALPHABET: &str = "abcdefghijklmnopqrstuvwxyz";
 
 /// Church encoding
 pub mod enc;
