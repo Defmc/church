@@ -39,11 +39,15 @@ pub fn reduct_map() -> ReductMap<Meta<Ast>, Sym> {}"#,
         buf.clear();
         std::io::stdin().read_line(&mut buf)?;
         let lex = church::parser::lexer(&buf);
-        let expr = church::parser::parse(lex).unwrap();
-        println!("\texpr:    {expr}");
-        println!("\tα-redex: {}", expr.clone().alpha_reduced());
-        println!("\t\t-> β:  {}", expr.clone().alpha_reduced().beta_reduced());
-        println!("\tβ-redex: {}", expr.clone().beta_reduced());
-        println!("\t\t-> α:  {}", expr.clone().beta_reduced().alpha_reduced());
+        match church::parser::parse(lex) {
+            Ok(expr) => {
+                println!("\texpr:    {expr}");
+                println!("\tα-redex: {}", expr.clone().alpha_reduced());
+                println!("\t\t-> β:  {}", expr.clone().alpha_reduced().beta_reduced());
+                println!("\tβ-redex: {}", expr.clone().beta_reduced());
+                println!("\t\t-> α:  {}", expr.clone().beta_reduced().alpha_reduced());
+            }
+            Err(e) => println!("\terror:   {e:?}"),
+        }
     }
 }
