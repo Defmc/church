@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 logos = "0.13.0"
-wop = { path = "lrp/wop"}
-lrp = { path = "lrp"}
+wop = "0.1.0."
+lrp = "0.1.0"

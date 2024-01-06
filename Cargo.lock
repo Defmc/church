@@ -31,7 +31,7 @@ name = "church"
 version = "0.1.0"
 dependencies = [
  "logos 0.13.0",
- "lrp",
+ "lrp 0.1.0",
  "wop",
 ]
 
@@ -220,6 +220,15 @@ dependencies = [
 [[package]]
 name = "lrp"
 version = "0.1.0"
+dependencies = [
+ "prettytable-rs",
+]
+
+[[package]]
+name = "lrp"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10a9ce4b0ecae8f8cde3928f5a9bd5a0eb85b893eee1078ba8d43bbbfb994b33"
 dependencies = [
  "prettytable-rs",
 ]
@@ -497,5 +506,5 @@ name = "wop"
 version = "0.1.0"
 dependencies = [
  "logos 0.12.1",
- "lrp",
+ "lrp 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
