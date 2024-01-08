@@ -105,8 +105,8 @@ impl Body {
                 }
             }
             Self::App(f, x) => {
-                f.redex_by_alpha(map);
-                x.redex_by_alpha(map);
+                f.redex_by_alpha(&mut map.clone());
+                x.redex_by_alpha(&mut map.clone());
             }
             Self::Abs(i, l) => {
                 let (mut maybe_map, bind) = Self::try_alpha_redex(*i, map);
@@ -196,7 +196,8 @@ impl Body {
         match (self, rhs) {
             (Self::Id(s_id), Self::Id(r_id)) => self_map.get(s_id) == rhs_map.get(r_id),
             (Self::App(s_f, s_x), Self::App(r_f, r_x)) => {
-                s_f.eq_by_alpha(r_f, self_map, rhs_map) && s_x.eq_by_alpha(r_x, self_map, rhs_map)
+                s_f.eq_by_alpha(r_f, &mut self_map.clone(), &mut rhs_map.clone())
+                    && s_x.eq_by_alpha(r_x, &mut self_map.clone(), &mut rhs_map.clone())
             }
             (Self::Abs(s_v, s_l), Self::Abs(r_v, r_l)) => {
                 let mut edits = (None, None);
