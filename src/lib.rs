@@ -108,13 +108,12 @@ impl Body {
                 x.redex_by_alpha(map);
             }
             Self::Abs(i, l) => {
-                if let Some(ref mut map) = Self::try_alpha_redex(*i, map) {
-                    *i = map.len();
-                    map.insert(map.len(), *i);
-                    l.redex_by_alpha(map);
+                let (mut maybe_map, bind) = Self::try_alpha_redex(*i, map);
+                *i = bind;
+                if let Some(ref mut new_map) = maybe_map {
+                    l.redex_by_alpha(new_map)
                 } else {
-                    *i = map.len() - 1;
-                    l.redex_by_alpha(map);
+                    l.redex_by_alpha(map)
                 }
             }
         }
@@ -161,18 +160,27 @@ impl Body {
         )
     }
 
+    // TODO: Restore state instead of cloning the entire map
     #[must_use]
     pub fn try_alpha_redex(
         id: VarId,
         map: &mut HashMap<VarId, VarId>,
-    ) -> Option<HashMap<VarId, VarId>> {
+    ) -> (Option<HashMap<VarId, VarId>>, VarId) {
+        let mut new_id = id;
+        // TODO: Use a better data structure
+        let keys: HashSet<VarId> = map.keys().copied().collect();
+        while keys.contains(&new_id) || map.contains_key(&new_id) {
+            new_id += 1;
+        }
         if map.contains_key(&id) {
             let mut map = map.clone();
-            *map.get_mut(&id).unwrap() = map.len();
-            Some(map)
+            *map.get_mut(&id).unwrap() = new_id;
+            map.insert(new_id, new_id);
+            (Some(map), new_id)
         } else {
-            map.insert(id, map.len());
-            None
+            map.insert(id, new_id);
+            map.insert(new_id, new_id);
+            (None, new_id)
         }
     }
 
@@ -190,10 +198,21 @@ impl Body {
                 s_f.eq_by_alpha(r_f, self_map, rhs_map) && s_x.eq_by_alpha(r_x, self_map, rhs_map)
             }
             (Self::Abs(s_v, s_l), Self::Abs(r_v, r_l)) => {
-                let mut edits = (
-                    Self::try_alpha_redex(*s_v, self_map),
-                    Self::try_alpha_redex(*r_v, rhs_map),
-                );
+                let mut edits = (None, None);
+                if self_map.contains_key(s_v) {
+                    let mut map = self_map.clone();
+                    *map.get_mut(s_v).unwrap() = map.len();
+                    edits.0 = Some(map);
+                } else {
+                    self_map.insert(*s_v, self_map.len());
+                }
+                if rhs_map.contains_key(r_v) {
+                    let mut map = rhs_map.clone();
+                    *map.get_mut(r_v).unwrap() = map.len();
+                    edits.1 = Some(map);
+                } else {
+                    rhs_map.insert(*r_v, rhs_map.len());
+                }
                 s_l.eq_by_alpha(
                     r_l,
                     edits.0.as_mut().map_or_else(|| self_map, |m| m),
