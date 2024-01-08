@@ -3,6 +3,7 @@ use std::{
     collections::{HashMap, HashSet},
     iter::Peekable,
     num::NonZeroUsize,
+    str::FromStr,
 };
 
 pub type VarId = usize;
@@ -321,9 +322,19 @@ impl fmt::Display for Body {
     }
 }
 
+impl FromStr for Body {
+    type Err = lrp::Error<parser::Sym>;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let lex = parser::lexer(s);
+        parser::parse(lex)
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
-    use crate::{enc::natural, Body, VarId};
+    use std::str::FromStr;
+
+    use crate::{enc::natural, parser, Body, VarId};
 
     fn flip(y_id: VarId, x_id: VarId, f_id: VarId) -> Body {
         // flip f x y = f y x
@@ -348,9 +359,12 @@ pub mod tests {
 
     #[test]
     fn flip_alpha_redex() {
-        let mut flip = flip(VarId::MAX, VarId::MAX / 2, 0);
+        let mut flip = flip(10, 5, 0);
         flip.alpha_redex();
-        assert_eq!(flip.to_string(), "λa.(λb.(λc.(a c b)))");
+        assert!(
+            flip.alpha_eq(&Body::from_str("λa.(λb.(λc.(a c b)))").unwrap()),
+            "{flip}"
+        );
     }
 
     #[test]
@@ -369,13 +383,13 @@ pub mod tests {
         let mut flip = flip(1, 2, 3);
         flip.alpha_redex();
 
-        assert_eq!(flip.to_string(), "λa.(λb.(λc.(a c b)))");
+        assert!(flip.alpha_eq(&Body::from_str("λa.(λb.(λc.(a c b)))").unwrap()));
         flip.curry(&Body::Id(5));
-        assert_eq!(flip.to_string(), "λb.(λc.(f c b))");
+        assert!(flip.alpha_eq(&Body::from_str("λb.(λc.(f c b))").unwrap()));
         flip.curry(&Body::Id(6));
-        assert_eq!(flip.to_string(), "λc.(f c g)");
+        assert!(flip.alpha_eq(&Body::from_str("λc.(f c g)").unwrap()));
         let body = flip.curry(&Body::Id(7));
-        assert_eq!(body.to_string(), "f h g");
+        assert!(body.alpha_eq(&Body::from_str("f h g").unwrap()));
     }
 
     #[test]
@@ -392,7 +406,7 @@ pub mod tests {
         let id = Body::id();
         id_f.curry(&id);
         id_f.beta_redex();
-        assert!(id_f.alpha_eq(&Body::id()));
+        assert!(id_f.alpha_eq(&Body::id()), "{id_f}");
     }
 
     #[test]
