@@ -17,7 +17,7 @@
                 -> α:  a
 ```
 Possible approaches:
-- [ ]Add a "free variable" field in map while alpha reducing. If it's a free variable, but there's already another alias to a non-free, the reductor should re-map the non-free to another letter. In this way, alpha reducing will be a O(2) algorithm, instead of a current O(1) implementation.
+- [ ] Add a "free variable" field in map while alpha reducing. If it's a free variable, but there's already another alias to a non-free, the reductor should re-map the non-free to another letter. In this way, alpha reducing will be a O(2) algorithm, instead of a current O(1) implementation.
 
 ## can't parse applications in parenthesis (fixed)
 ```

@@ -31,7 +31,7 @@ name = "church"
 version = "0.1.0"
 dependencies = [
  "logos 0.13.0",
- "lrp 0.1.0",
+ "lrp",
  "wop",
 ]
 
@@ -215,13 +215,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dbfc0d229f1f42d790440136d941afd806bc9e949e2bcb8faa813b0f00d1267e"
 dependencies = [
  "logos-codegen",
-]
-
-[[package]]
-name = "lrp"
-version = "0.1.0"
-dependencies = [
- "prettytable-rs",
 ]
 
 [[package]]
@@ -504,7 +497,9 @@ checksum = "dff9641d1cd4be8d1a070daf9e3773c5f67e78b4d9d42263020c057706765c04"
 [[package]]
 name = "wop"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7baac56e356f41751ee3b3f33c960514a7e7efeee6b3292584b2f1b0016e3243"
 dependencies = [
  "logos 0.12.1",
- "lrp 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lrp",
 ]
