@@ -1,4 +1,4 @@
-## α reducing free variables
+## α reducing free variables (fixed)
 ```
 // `a` shouldn't be used, as there is another free alias to it
 \> ^b.(a a b)             
@@ -17,7 +17,7 @@
                 -> α:  a
 ```
 Possible approaches:
-- [ ] Add a "free variable" field in map while alpha reducing. If it's a free variable, but there's already another alias to a non-free, the reductor should re-map the non-free to another letter. In this way, alpha reducing will be a O(2) algorithm, instead of a current O(1) implementation.
+- [x] Add a "free variable" field in map while alpha reducing. If it's a free variable, but there's already another alias to a non-free, the reductor should re-map the non-free to another letter. In this way, alpha reducing will be a O(2) algorithm, instead of a current O(1) implementation.
 
 ## can't parse applications in parenthesis (fixed)
 ```

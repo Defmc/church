@@ -1,5 +1,9 @@
 use core::fmt;
-use std::{collections::HashMap, iter::Peekable, num::NonZeroUsize};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::Peekable,
+    num::NonZeroUsize,
+};
 
 pub type VarId = usize;
 
@@ -74,7 +78,8 @@ impl Body {
     }
 
     pub fn alpha_redex(&mut self) {
-        self.redex_by_alpha(&mut HashMap::new());
+        let frees = self.free_variables().into_iter();
+        self.redex_by_alpha(&mut frees.map(|i| (i, i)).collect())
     }
 
     #[must_use]
@@ -118,6 +123,31 @@ impl Body {
         }
     }
 
+    #[must_use]
+    pub fn free_variables(&self) -> HashSet<VarId> {
+        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
+        self.get_free_variables(&mut binds, &mut frees);
+        frees
+    }
+
+    pub fn get_free_variables(&self, binds: &mut HashSet<VarId>, frees: &mut HashSet<VarId>) {
+        match self {
+            Self::Id(id) => {
+                if !binds.contains(id) {
+                    frees.insert(*id);
+                }
+            }
+            Self::App(lhs, rhs) => {
+                lhs.get_free_variables(&mut binds.clone(), frees);
+                rhs.get_free_variables(&mut binds.clone(), frees);
+            }
+            Self::Abs(v, l) => {
+                binds.insert(*v);
+                l.get_free_variables(binds, frees)
+            }
+        }
+    }
+
     /// α-equivalency refers to expressions with same implementation, disconsidering the variable
     /// names. `PartialEq` compares the variables, so we can say that `PartialEq` ⊂ `alpha_eq`.
     /// ^f^x . f x != ^g^y . g y, but
@@ -125,7 +155,13 @@ impl Body {
     /// ^f^x . f (f x) α!= ^f^x . f x and ^f^x . f (f x) != ^f^x . f x
     #[must_use]
     pub fn alpha_eq(&self, rhs: &Self) -> bool {
-        self.eq_by_alpha(rhs, &mut HashMap::new(), &mut HashMap::new())
+        let self_frees = self.free_variables().into_iter();
+        let rhs_frees = rhs.free_variables().into_iter();
+        self.eq_by_alpha(
+            rhs,
+            &mut self_frees.map(|i| (i, i)).collect(),
+            &mut rhs_frees.map(|i| (i, i)).collect(),
+        )
     }
 
     /// # Panics
