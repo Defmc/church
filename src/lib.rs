@@ -108,14 +108,11 @@ impl Body {
                 x.redex_by_alpha(map);
             }
             Self::Abs(i, l) => {
-                if map.contains_key(i) {
-                    let mut map = map.clone();
-                    *map.get_mut(i).unwrap() = map.len();
+                if let Some(ref mut map) = Self::try_alpha_redex(*i, map) {
                     *i = map.len();
                     map.insert(map.len(), *i);
-                    l.redex_by_alpha(&mut map);
+                    l.redex_by_alpha(map);
                 } else {
-                    map.insert(*i, map.len());
                     *i = map.len() - 1;
                     l.redex_by_alpha(map);
                 }
@@ -164,6 +161,21 @@ impl Body {
         )
     }
 
+    #[must_use]
+    pub fn try_alpha_redex(
+        id: VarId,
+        map: &mut HashMap<VarId, VarId>,
+    ) -> Option<HashMap<VarId, VarId>> {
+        if map.contains_key(&id) {
+            let mut map = map.clone();
+            *map.get_mut(&id).unwrap() = map.len();
+            Some(map)
+        } else {
+            map.insert(id, map.len());
+            None
+        }
+    }
+
     /// # Panics
     /// Never.
     pub fn eq_by_alpha(
@@ -178,21 +190,10 @@ impl Body {
                 s_f.eq_by_alpha(r_f, self_map, rhs_map) && s_x.eq_by_alpha(r_x, self_map, rhs_map)
             }
             (Self::Abs(s_v, s_l), Self::Abs(r_v, r_l)) => {
-                let mut edits = (None, None);
-                if self_map.contains_key(s_v) {
-                    let mut map = self_map.clone();
-                    *map.get_mut(s_v).unwrap() = map.len();
-                    edits.0 = Some(map);
-                } else {
-                    self_map.insert(*s_v, self_map.len());
-                }
-                if rhs_map.contains_key(r_v) {
-                    let mut map = rhs_map.clone();
-                    *map.get_mut(r_v).unwrap() = map.len();
-                    edits.1 = Some(map);
-                } else {
-                    rhs_map.insert(*r_v, rhs_map.len());
-                }
+                let mut edits = (
+                    Self::try_alpha_redex(*s_v, self_map),
+                    Self::try_alpha_redex(*r_v, rhs_map),
+                );
                 s_l.eq_by_alpha(
                     r_l,
                     edits.0.as_mut().map_or_else(|| self_map, |m| m),
@@ -424,7 +425,7 @@ pub mod tests {
     #[test]
     pub fn shadowing() {
 
-        // λa.λb.a a b (a b a (λd.λe.e) (λd.λe.d)) (a a b)
+        // λa.λb.(a a b (a b a (λa.λb.b) (λa.λb.a)) (a a b))
         // λa.λb.a a b (a b a (λc.λd.d) (λc.λd.c)) (a a b)
     }
 }
