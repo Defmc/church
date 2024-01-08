@@ -33,6 +33,7 @@ pub fn reduct_map() -> ReductMap<Meta<Ast>, Sym> {}"#,
     )?;
     drop(writer);
     let mut buf = String::new();
+    let mut last_expr = church::Body::id();
     loop {
         print!("\n\\> ");
         std::io::stdout().flush().unwrap();
@@ -42,10 +43,12 @@ pub fn reduct_map() -> ReductMap<Meta<Ast>, Sym> {}"#,
         match church::parser::parse(lex) {
             Ok(expr) => {
                 println!("\texpr:    {expr}");
+                println!("\tα-eq:    {}", last_expr.alpha_eq(&expr));
                 println!("\tα-redex: {}", expr.clone().alpha_reduced());
                 println!("\t\t-> β:  {}", expr.clone().alpha_reduced().beta_reduced());
                 println!("\tβ-redex: {}", expr.clone().beta_reduced());
                 println!("\t\t-> α:  {}", expr.clone().beta_reduced().alpha_reduced());
+                last_expr = expr;
             }
             Err(e) => println!("\terror:   {e:?}"),
         }
