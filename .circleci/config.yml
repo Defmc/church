@@ -64,7 +64,7 @@ jobs:
       - run: cargo +nightly build -vv --release --all-features
       - save-cache
 
-  clippy-stable:
+  clippy:
     docker:
       - image: defmc/rust:latest
     resource_class: small
@@ -72,32 +72,7 @@ jobs:
       - checkout
       - setup-cache-env
       - restore-cache
-      - run: rustup component add clippy
       - run: cargo +stable clippy -vv --tests --all --all-features --examples -- -D warnings
-      - save-cache
-
-  clippy-beta:
-    docker:
-      - image: defmc/rust:latest
-    resource_class: small
-    steps:
-      - checkout
-      - setup-cache-env
-      - restore-cache
-      - run: rustup component add clippy
-      - run: cargo +beta clippy -vv --tests --all --all-features --examples -- -D warnings
-      - save-cache
-
-  clippy-nightly:
-    docker:
-      - image: defmc/rust:latest
-    resource_class: small
-    steps:
-      - checkout
-      - setup-cache-env
-      - restore-cache
-      - run: rustup component add clippy
-      - run: cargo +nightly clippy -vv --tests --all --all-features --examples -- -D warnings
       - save-cache
 
   format:
@@ -116,7 +91,7 @@ jobs:
       - checkout
       - setup-cache-env
       - restore-cache
-      - run: cargo +stable -vv --all --all-features -- --show-output --test-threads=1
+      - run: cargo +stable test -vv --all --all-features -- --show-output --test-threads=1
       - save-cache
 
         
@@ -128,7 +103,7 @@ jobs:
       - checkout
       - setup-cache-env
       - restore-cache
-      - run: cargo +beta -vv --all --all-features -- --show-output --test-threads=1
+      - run: cargo +beta test -vv --all --all-features -- --show-output --test-threads=1
       - save-cache
 
   test-nightly:
@@ -139,7 +114,7 @@ jobs:
       - checkout
       - setup-cache-env
       - restore-cache
-      - run: cargo +nightly -vv --all --all-features -- --show-output --test-threads=1
+      - run: cargo +nightly test -vv --all --all-features -- --show-output --test-threads=1
       - save-cache
 
   udeps:
@@ -202,6 +177,6 @@ workflows:
   test:
     jobs: [build-linux-<<pipeline.parameters.toolchain>>, test-<<pipeline.parameters.toolchain>>, bench-<<pipeline.parameters.toolchain>>]
   code-quality:
-    jobs: [format, clippy-<<pipeline.parameters.toolchain>>, udeps]
+    jobs: [format, clippy, udeps]
   security:
     jobs: [audit]
