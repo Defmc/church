@@ -81,7 +81,7 @@ jobs:
     resource_class: small
     steps:
       - checkout
-      - run: cargo fmt -v --all -- --check
+      - run: cargo +stable fmt -v --all -- --check
 
   test-stable:
     docker:
