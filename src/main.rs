@@ -39,6 +39,9 @@ pub fn reduct_map() -> ReductMap<Meta<Ast>, Sym> {}"#,
         std::io::stdout().flush().unwrap();
         buf.clear();
         std::io::stdin().read_line(&mut buf)?;
+        if buf.is_empty() {
+            break;
+        }
         let lex = church::parser::lexer(&buf);
         match church::parser::parse(lex) {
             Ok(expr) => {
@@ -53,4 +56,5 @@ pub fn reduct_map() -> ReductMap<Meta<Ast>, Sym> {}"#,
             Err(e) => println!("\terror:   {e:?}"),
         }
     }
+    Ok(())
 }
