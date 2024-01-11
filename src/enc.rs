@@ -1,15 +1,37 @@
-use crate::{Body, VarId};
+pub mod naturals {
+    use crate::Body;
 
-#[must_use]
-pub fn natural(f: VarId, x: VarId, n: usize) -> Body {
-    fn natural_body(f: VarId, x: VarId, n: usize) -> Body {
-        if n == 0 {
-            Body::Id(x)
-        } else {
-            Body::App(Body::Id(f).into(), natural_body(f, x, n - 1).into())
+    #[must_use]
+    pub fn natural(n: usize) -> Body {
+        fn natural_body(n: usize) -> Body {
+            if n == 0 {
+                Body::Id(1)
+            } else {
+                Body::App(Body::Id(0).into(), natural_body(n - 1).into())
+            }
+        }
+        natural_body(n).with([0, 1])
+    }
+
+    #[must_use]
+    // succ n f x = n f (f x) = f (n f x)
+    pub fn succ() -> Body {
+        Body::App(
+            Body::Id(1).into(),
+            Body::Id(0).in_app(Body::Id(1)).in_app(Body::Id(2)).into(),
+        )
+        .with([0, 1, 2])
+    }
+
+    #[cfg(test)]
+    pub mod tests {
+        #[test]
+        pub fn false_like_zero() {
+            let f = super::super::bool::f();
+            let zero = super::natural(0);
+            assert!(f.alpha_eq(&zero));
         }
     }
-    natural_body(f, x, n).with([f, x])
 }
 
 pub mod bool {
@@ -104,13 +126,6 @@ pub mod bool {
 
         const NOT_LOGIC_TABLE: &[(bool, bool)] =
             &[/* (a, output) */ (false, true), (true, false)];
-
-        #[test]
-        pub fn false_like_zero() {
-            let f = super::f();
-            let zero = super::super::natural(0, 1, 0);
-            assert!(f.alpha_eq(&zero));
-        }
 
         #[test]
         pub fn and() {

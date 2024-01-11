@@ -350,7 +350,7 @@ impl FromStr for Body {
 pub mod tests {
     use std::str::FromStr;
 
-    use crate::{enc::natural, parser, Body, VarId};
+    use crate::{enc::naturals::natural, Body, VarId};
 
     fn flip(y_id: VarId, x_id: VarId, f_id: VarId) -> Body {
         // flip f x y = f y x
@@ -449,23 +449,18 @@ pub mod tests {
             let body = Body::App(fy.into(), Body::Id(X_ID).into());
             Body::from_args([X_ID, Y_ID, F_ID].into_iter().peekable(), body).unwrap()
         };
-        fliper.curry(&fliper_f.into());
+        fliper.curry(&fliper_f);
         fliper.alpha_redex();
         fliper.beta_redex();
     }
 
     #[test]
     fn right_associative_format() {
-        const F_ID: VarId = 0;
-        const X_ID: VarId = 1;
-        assert_eq!(natural(F_ID, X_ID, 0).to_string(), "λa.(λb.(b))");
-        assert_eq!(natural(F_ID, X_ID, 1).to_string(), "λa.(λb.(a b))");
+        assert_eq!(natural(0).to_string(), "λa.(λb.(b))");
+        assert_eq!(natural(1).to_string(), "λa.(λb.(a b))");
+        assert_eq!(natural(5).to_string(), "λa.(λb.(a (a (a (a (a b))))))");
         assert_eq!(
-            natural(F_ID, X_ID, 5).to_string(),
-            "λa.(λb.(a (a (a (a (a b))))))"
-        );
-        assert_eq!(
-            natural(F_ID, X_ID, 10).to_string(),
+            natural(10).to_string(),
             "λa.(λb.(a (a (a (a (a (a (a (a (a (a b)))))))))))"
         );
     }
