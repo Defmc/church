@@ -14,7 +14,7 @@ pub mod naturals {
     }
 
     #[must_use]
-    // succ n f x = n f (f x) = f (n f x)
+    /// succ n f x = n f (f x) = f (n f x)
     pub fn succ() -> Body {
         Body::App(
             Body::Id(1).into(),
@@ -22,6 +22,10 @@ pub mod naturals {
         )
         .with([0, 1, 2])
     }
+
+    /// add n m f x = n + m
+    // #[must_use]
+    // pub fn add() -> Body {}
 
     #[cfg(test)]
     pub mod tests {
@@ -228,6 +232,7 @@ pub mod bool {
                 // );
                 //
                 // e e: (λa.(λb.(a b a)) (λa.(λb.(a a b)) a b) (λa.(a (λa.(λb.(b))) (λa.(λb.(a)))) (λa.(λb.(a b a)) a b)))
+                // e e: (\a.(\b.(a b a)) (\a.(\b.(a a b)) a b) (\a.(a (\a.(\b.(b))) (\a.(\b.(a)))) (\a.(\b.(a b a)) a b)))
                 // e a: (λc.(λd.(c d c)) (λc.(λd.(c c d)) a b) (λc.(c (λd.(λe.(e))) (λd.(λe.(d)))) (λc.(λd.(c d c)) a b)))
                 // e: λa.(λb.(λa.(λb.(a b a)) (λa.(λb.(a a b)) a b) (λa.(a (λa.(λb.(b))) (λa.(λb.(a)))) (λa.(λb.(a b a)) a b))))
                 // a: λa.(λb.(λc.(λd.(c d c)) (λc.(λd.(c c d)) a b) (λc.(c (λd.(λe.(e))) (λd.(λe.(d)))) (λc.(λd.(c d c)) a b))))

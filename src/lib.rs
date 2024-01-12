@@ -291,8 +291,14 @@ impl Body {
                     self.beta_redex();
                 }
             }
-            Self::Abs(_, l) => {
-                l.beta_redex();
+            Self::Abs(..) => {
+                if self.eta_redex_step() {
+                    self.beta_redex();
+                } else {
+                    if let Self::Abs(_, l) = self {
+                        l.beta_redex();
+                    }
+                }
             }
         }
     }
@@ -318,6 +324,18 @@ impl Body {
     #[must_use]
     pub fn with(self, it: impl IntoIterator<Item = VarId>) -> Self {
         Self::from_args(it.into_iter().peekable(), self).unwrap()
+    }
+
+    pub fn eta_redex_step(&mut self) -> bool {
+        if let Self::Abs(v, app) = self {
+            if let Self::App(lhs, rhs) = app.as_ref() {
+                if rhs.as_ref() == &Self::Id(*v) {
+                    *self = *lhs.clone();
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 
