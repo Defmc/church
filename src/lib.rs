@@ -283,7 +283,6 @@ impl Body {
             Self::Id(..) => {}
             Self::App(f, x) => {
                 f.beta_redex();
-                x.beta_redex();
                 if let Self::Abs(v, l) = f.as_mut() {
                     let mut l = l.clone();
                     l.apply_by(*v, x);
