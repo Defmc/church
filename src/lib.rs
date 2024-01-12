@@ -293,10 +293,8 @@ impl Body {
             Self::Abs(..) => {
                 if self.eta_redex_step() {
                     self.beta_redex();
-                } else {
-                    if let Self::Abs(_, l) = self {
-                        l.beta_redex();
-                    }
+                } else if let Self::Abs(_, l) = self {
+                    l.beta_redex();
                 }
             }
         }
