@@ -326,13 +326,28 @@ impl Body {
     pub fn eta_redex_step(&mut self) -> bool {
         if let Self::Abs(v, app) = self {
             if let Self::App(lhs, rhs) = app.as_ref() {
-                if rhs.as_ref() == &Self::Id(*v) {
+                if rhs.as_ref() == &Self::Id(*v) && !lhs.contains(&Body::Id(*v)) {
                     *self = *lhs.clone();
                     return true;
                 }
             }
         }
         false
+    }
+
+    /// returns if, at any depth, starting from the outmost expression, there's the passed
+    /// expression.
+    pub fn contains(&self, what: &Self) -> bool {
+        match self {
+            Self::Id(..) => self == what,
+            Self::App(lhs, rhs) => {
+                self == lhs.as_ref()
+                    || self == rhs.as_ref()
+                    || lhs.contains(what)
+                    || rhs.contains(what)
+            }
+            Self::Abs(_, l) => self == what || l.contains(what),
+        }
     }
 }
 
@@ -481,9 +496,13 @@ pub mod tests {
     }
 
     #[test]
-    pub fn shadowing() {
-
-        // λa.λb.(a a b (a b a (λa.λb.b) (λa.λb.a)) (a a b))
-        // λa.λb.a a b (a b a (λc.λd.d) (λc.λd.c)) (a a b)
+    pub fn freshness() {
+        let mut expr = Body::from_str("^x.(y)").unwrap();
+        println!("expr: {expr}");
+        expr.apply_by(
+            'y' as usize - 'a' as usize,
+            &Body::Id('x' as usize - 'a' as usize),
+        );
+        println!("applied: {expr}");
     }
 }
