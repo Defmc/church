@@ -60,3 +60,16 @@ Maybe it's storing the state between the redexes of applications
 ```
 
 - [x] Count binds with a variable, instead of `map.len`, as shadowing is ignored.
+
+## α first reduced expression diverging from β first reduced
+```
+\> ^b.(^a.(b a a)) ^x.(a)
+        expr:    λb.(λa.(b a a)) (λx.(a))
+        α-eq:    false
+        α-redex: λb.(λc.(b c c)) (λx.(a))
+                -> β:  λc.(a c)
+        β-redex: λa.(a a)
+                -> α:  λa.(a a)
+```
+
+- [ ] Happening cause of capturing substitution, there's no strategy to know if the `a` is from `^x.(a)` (where it's free), or from (`^a.(b a a)`).
