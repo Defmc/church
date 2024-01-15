@@ -4,8 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+repl = ["rustyline"]
+default = ["repl"]
 
 [dependencies]
 logos = "0.13.0"
 wop = "0.1.0"
 lrp = "0.1.0"
+rustyline = { version = "13.0.0", optional  = true}
