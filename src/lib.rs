@@ -560,10 +560,17 @@ pub mod tests {
     }
 
     #[test]
-    pub fn capture_avoiding_subsitution() {
-        let expr = Body::from_str("^b.(^a.(b a a)) ^x.(a)").unwrap();
+    pub fn free_capture_avoiding_subsitution() {
+        let expr = Body::from_str("λb.(λa.(b a a)) λx.(a)").unwrap();
         assert!(expr
             .beta_reduced()
-            .alpha_eq(&Body::from_str("^c.(a c)").unwrap()));
+            .alpha_eq(&Body::from_str("λc.(a c)").unwrap()));
+    }
+    #[test]
+    pub fn bound_capture_avoiding_subsitution() {
+        let expr = Body::from_str("λa.(λb.(λa.(b a a)) λx.(a))").unwrap();
+        assert!(expr
+            .beta_reduced()
+            .alpha_eq(&Body::from_str("λa.(λc.(a c))").unwrap()));
     }
 }
