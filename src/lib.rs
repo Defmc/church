@@ -270,9 +270,11 @@ impl Body {
                     *self = val.clone();
                 }
             }
-            Self::Abs(v, l) => {
-                if *v != id {
-                    l.safe_subst(id, val);
+            Self::Abs(..) => {
+                let v = *self.as_mut_abs().unwrap().0;
+                if v != id {
+                    self.fix_captures(val);
+                    self.as_mut_abs().unwrap().1.apply_by(id, val);
                 }
             }
             Self::App(f, x) => {
@@ -282,23 +284,19 @@ impl Body {
         }
     }
 
-    pub fn safe_subst(&mut self, mut id: VarId, val: &Self) {
-        let vars = self.variables();
-        let frees_val = val.free_variables();
+    pub fn fix_captures(&mut self, rhs: &Self) {
+        let vars = self.bounded_variables();
+        let frees_val = rhs.free_variables();
         // if there's no free variable capturing (used vars on lhs /\ free vars on rhs), we just apply on the abstraction body
-        if frees_val.intersection(&vars).count() != 0 {
-            let reserveds: HashSet<_> = frees_val.union(&vars).copied().collect();
+        let captures: HashSet<_> = frees_val.intersection(&vars).collect(); // TODO: Use vec
+        if !captures.is_empty() {
+            let reserveds: HashSet<_> = frees_val.union(&self.variables()).copied().collect();
             let safes = (0..).filter(|n| !reserveds.contains(n)).take(vars.len());
-            let news = safes.zip(&reserveds);
+            let news = safes.zip(&captures);
             for (to, from) in news {
-                self.rename(*from, to);
-                if *from == id {
-                    id = to;
-                }
+                self.rename(**from, to);
             }
-            // todo!("capture avoiding substitution");
         }
-        self.apply_by(id, val);
     }
 
     pub fn rename(&mut self, from: VarId, to: VarId) {
@@ -347,10 +345,12 @@ impl Body {
             Self::Id(..) => {}
             Self::App(f, x) => {
                 f.beta_redex();
-                if let Self::Abs(v, l) = f.as_mut() {
-                    let mut l = l.clone();
-                    l.apply_by(*v, x);
-                    *self = *l;
+                if matches!(f.as_ref(), Self::Abs(..)) {
+                    let mut f = f.clone();
+                    f.fix_captures(x);
+                    let (id, l) = f.as_mut_abs().unwrap();
+                    l.apply_by(*id, x);
+                    *self = l.clone();
                     self.beta_redex();
                 }
             }
