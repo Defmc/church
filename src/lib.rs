@@ -560,13 +560,10 @@ pub mod tests {
     }
 
     #[test]
-    pub fn freshness() {
-        let mut expr = Body::from_str("^x.(y)").unwrap();
-        println!("expr: {expr}");
-        expr.apply_by(
-            'y' as usize - 'a' as usize,
-            &Body::Id('x' as usize - 'a' as usize),
-        );
-        println!("applied: {expr}");
+    pub fn capture_avoiding_subsitution() {
+        let expr = Body::from_str("^b.(^a.(b a a)) ^x.(a)").unwrap();
+        assert!(expr
+            .beta_reduced()
+            .alpha_eq(&Body::from_str("^c.(a c)").unwrap()));
     }
 }
