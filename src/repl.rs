@@ -77,6 +77,7 @@ impl Mode {
                     match buf.trim() {
                         "c" => break,
                         "a" => break 'redex,
+                        "" => break,
                         _ => eprintln!("unknown option"),
                     }
                 }
