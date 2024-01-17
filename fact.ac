@@ -1,0 +1,2 @@
+Fact = Y ^f.(^n.(If (IsZero n) 1 Mult n (f (Pred n))))
+Ack = ^p.((p (^a.(^q.(a (q a 1)))) Succ))
