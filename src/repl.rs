@@ -1,4 +1,4 @@
-use church::{scope::Scope, Body};
+use church::{scope::Scope, Body, VarId};
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
 use std::{fs::read_to_string, io::Write, path::PathBuf, str::FromStr, time::Instant};
 
@@ -115,6 +115,8 @@ impl Mode {
             self.bench("alias matching", || {
                 if let Some(alias) = repl.scope.get_from_alpha_key(&l) {
                     println!("{alias}");
+                } else if let Some(n) = Repl::natural_from_church_encoding(&l) {
+                    println!("{n}");
                 }
             });
         }
@@ -272,5 +274,30 @@ impl Repl {
             }
             Err(e) => eprintln!("error: {e:?}"),
         }
+    }
+
+    pub fn natural_from_church_encoding(s: &Body) -> Option<usize> {
+        fn get_natural(f: VarId, x: VarId, s: &Body) -> Option<usize> {
+            if let Body::App(lhs, rhs) = s {
+                if **lhs == Body::Id(f) {
+                    return get_natural(f, x, rhs).map(|n| n + 1);
+                }
+            } else if let Body::Id(v) = s {
+                return (*v == x).then_some(0);
+            }
+
+            None
+        }
+
+        if let Body::Abs(f, l) = s {
+            if let Body::Abs(x, l) = l.as_ref() {
+                return get_natural(*f, *x, l);
+            } else if *l.as_ref() == Body::Id(*f) {
+                // λf.(λx.(f x))
+                // λf.(f) # eta-reduced version of 1
+                return Some(1);
+            }
+        }
+        None
     }
 }
