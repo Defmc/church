@@ -3,6 +3,7 @@ use std::io::{BufWriter, Write};
 use std::str::FromStr;
 
 use rustyline::config::Configurer;
+use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -20,11 +21,14 @@ fn repl() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         let buf = match rl.readline("λ> ") {
             Ok(s) => s,
-            Err(e) => panic!("{e}"),
+            Err(e) => {
+                return if matches!(e, ReadlineError::Eof) {
+                    Ok(())
+                } else {
+                    Err(Box::new(e))
+                };
+            }
         };
-        if buf.is_empty() {
-            break;
-        }
         let lex = church::parser::lexer(&buf);
         match church::parser::parse(lex) {
             Ok(expr) => {
@@ -39,7 +43,6 @@ fn repl() -> Result<(), Box<dyn std::error::Error>> {
             Err(e) => println!("\terror:   {e:?}"),
         }
     }
-    Ok(())
 }
 
 fn bootstrap() -> Result<(), Box<dyn std::error::Error>> {

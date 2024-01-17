@@ -120,11 +120,34 @@ impl Body {
         }
     }
 
+    /// returns all free variables, including the ones binded on one application
+    /// FV(^x.(x a x) b) = { a, b }
+    /// FV(^x.(a) ^a.(a)) = { a }
+    /// FV(a) = { a }
     #[must_use]
     pub fn free_variables(&self) -> HashSet<VarId> {
         let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
         self.get_free_variables(&mut binds, &mut frees);
         frees
+    }
+
+    /// return all variables used
+    /// FV(^x.(x a x) b) = { x, a, b }
+    /// FV(^x.(a) ^a.(a)) = { x, a }
+    /// FV(a) = { a }
+    #[must_use]
+    pub fn variables(&self) -> HashSet<VarId> {
+        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
+        self.get_free_variables(&mut binds, &mut frees);
+        frees.extend(binds);
+        frees
+    }
+
+    #[must_use]
+    pub fn bounded_variables(&self) -> HashSet<VarId> {
+        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
+        self.get_free_variables(&mut binds, &mut frees);
+        binds
     }
 
     pub fn get_free_variables(&self, binds: &mut HashSet<VarId>, frees: &mut HashSet<VarId>) {
@@ -247,14 +270,75 @@ impl Body {
                     *self = val.clone();
                 }
             }
-            Self::Abs(v, l) => {
-                if *v != id {
-                    l.apply_by(id, val);
+            Self::Abs(..) => {
+                let v = *self.as_mut_abs().unwrap().0;
+                if v != id {
+                    self.fix_captures(val);
+                    self.as_mut_abs().unwrap().1.apply_by(id, val);
                 }
             }
             Self::App(f, x) => {
                 f.apply_by(id, val);
                 x.apply_by(id, val);
+            }
+        }
+    }
+
+    pub fn fix_captures(&mut self, rhs: &Self) {
+        let vars = self.bounded_variables();
+        let frees_val = rhs.free_variables();
+        // if there's no free variable capturing (used vars on lhs /\ free vars on rhs), we just apply on the abstraction body
+        let mut captures: Vec<_> = frees_val.intersection(&vars).collect(); // TODO: Use vec
+        captures.sort();
+        if !captures.is_empty() {
+            // println!("debugging {self} and {rhs}");
+            // println!(
+            //     "frees_val: {:?}",
+            //     frees_val
+            //         .iter()
+            //         .map(|s| id_to_str(*s))
+            //         .collect::<HashSet<_>>()
+            // );
+            // println!(
+            //     "vars: {:?}",
+            //     vars.iter().map(|s| id_to_str(*s)).collect::<HashSet<_>>()
+            // );
+            // println!(
+            //     "captures founded: {:?}",
+            //     captures
+            //         .iter()
+            //         .map(|s| id_to_str(**s))
+            //         .collect::<HashSet<_>>()
+            // );
+            let reserveds: HashSet<_> = rhs.variables().union(&self.variables()).copied().collect();
+            let safes = (0..).filter(|n| !reserveds.contains(n)).take(vars.len());
+            let news = safes.zip(&captures);
+            for (to, from) in news {
+                // println!("origin: {self}");
+                self.rename(**from, to);
+            }
+            // println!("final: {self} | {rhs}");
+        }
+    }
+
+    pub fn rename(&mut self, from: VarId, to: VarId) {
+        match self {
+            Self::Id(ref mut i) => {
+                assert_ne!(*i, to);
+                if *i == from {
+                    *i = to;
+                }
+            }
+            Self::Abs(ref mut v, ref mut l) => {
+                assert_ne!(*v, to);
+                if *v == from {
+                    *v = to;
+                }
+                l.rename(from, to);
+            }
+            Self::App(ref mut lhs, ref mut rhs) => {
+                lhs.rename(from, to);
+                rhs.rename(from, to);
             }
         }
     }
@@ -283,10 +367,12 @@ impl Body {
             Self::Id(..) => {}
             Self::App(f, x) => {
                 f.beta_redex();
-                if let Self::Abs(v, l) = f.as_mut() {
-                    let mut l = l.clone();
-                    l.apply_by(*v, x);
-                    *self = *l;
+                if matches!(f.as_ref(), Self::Abs(..)) {
+                    let mut f = f.clone();
+                    f.fix_captures(x);
+                    let (id, l) = f.as_mut_abs().unwrap();
+                    l.apply_by(*id, x);
+                    *self = l.clone();
                     self.beta_redex();
                 }
             }
@@ -496,13 +582,17 @@ pub mod tests {
     }
 
     #[test]
-    pub fn freshness() {
-        let mut expr = Body::from_str("^x.(y)").unwrap();
-        println!("expr: {expr}");
-        expr.apply_by(
-            'y' as usize - 'a' as usize,
-            &Body::Id('x' as usize - 'a' as usize),
-        );
-        println!("applied: {expr}");
+    pub fn free_capture_avoiding_subsitution() {
+        let expr = Body::from_str("λb.(λa.(b a a)) λx.(a)").unwrap();
+        assert!(expr
+            .beta_reduced()
+            .alpha_eq(&Body::from_str("λc.(a c)").unwrap()));
+    }
+    #[test]
+    pub fn bound_capture_avoiding_subsitution() {
+        let expr = Body::from_str("λa.(λb.(λa.(b a a)) λx.(a))").unwrap();
+        assert!(expr
+            .beta_reduced()
+            .alpha_eq(&Body::from_str("λa.(λc.(a c))").unwrap()));
     }
 }
