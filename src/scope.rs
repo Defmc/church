@@ -88,13 +88,12 @@ impl FromStr for Scope {
                 }
             }
         }
-        let mut s = Scope {
+        let s = Scope {
             aliases: defs.keys().cloned().collect(),
             defs: defs.values().cloned().collect(),
             cached_defs: HashMap::new(),
             index: HashMap::new(),
         };
-        s.update();
         Ok(s)
     }
 }
