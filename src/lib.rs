@@ -315,30 +315,31 @@ impl Body {
             let news = safes.zip(&captures);
             for (to, from) in news {
                 // println!("origin: {self}");
-                self.rename(**from, to);
+                self.rename_vars(**from, to, false);
             }
             // println!("final: {self} | {rhs}");
         }
     }
 
-    pub fn rename(&mut self, from: VarId, to: VarId) {
+    pub fn rename_vars(&mut self, from: VarId, to: VarId, force: bool) {
         match self {
             Self::Id(ref mut i) => {
                 assert_ne!(*i, to);
-                if *i == from {
+                if *i == from && force {
                     *i = to;
                 }
             }
             Self::Abs(ref mut v, ref mut l) => {
                 assert_ne!(*v, to);
-                if *v == from {
+                let force = *v == from || force;
+                if *v == from && force {
                     *v = to;
                 }
-                l.rename(from, to);
+                l.rename_vars(from, to, force);
             }
             Self::App(ref mut lhs, ref mut rhs) => {
-                lhs.rename(from, to);
-                rhs.rename(from, to);
+                lhs.rename_vars(from, to, force);
+                rhs.rename_vars(from, to, force);
             }
         }
     }
