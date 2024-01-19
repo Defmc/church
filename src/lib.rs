@@ -137,12 +137,26 @@ impl Body {
     /// FV(a) = { a }
     #[must_use]
     pub fn variables(&self) -> HashSet<VarId> {
-        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
-        self.get_free_variables(&mut binds, &mut frees);
-        frees.extend(binds);
-        frees
+        let mut binds = HashSet::new();
+        self.get_variables(&mut binds);
+        binds
     }
 
+    fn get_variables(&self, binds: &mut HashSet<VarId>) {
+        match self {
+            Self::Id(id) => {
+                binds.insert(*id);
+            }
+            Self::App(lhs, rhs) => {
+                lhs.get_variables(binds);
+                rhs.get_variables(binds);
+            }
+            Self::Abs(v, l) => {
+                binds.insert(*v);
+                l.get_variables(binds);
+            }
+        }
+    }
     #[must_use]
     pub fn bounded_variables(&self) -> HashSet<VarId> {
         let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
