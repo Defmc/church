@@ -341,10 +341,10 @@ impl Body {
             // );
             let reserveds: HashSet<_> = rhs.variables().union(&self.variables()).copied().collect();
             let safes = (0..).filter(|n| !reserveds.contains(n)).take(vars.len());
-            let news = safes.zip(&captures);
-            for (to, from) in news {
+            let news = captures.into_iter().zip(safes);
+            for (&from, to) in news {
                 // println!("origin: {self}");
-                self.rename_vars(**from, to, false);
+                self.rename_vars(from, to, false);
             }
             // println!("final: {self} | {rhs}");
         }
