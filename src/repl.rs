@@ -1,12 +1,12 @@
 use church::{scope::Scope, Body};
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
-use std::{path::PathBuf, str::FromStr};
+use std::{fs::read_to_string, path::PathBuf, str::FromStr};
 
 pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
 pub type Handler = fn(&mut Repl, &str);
 
-pub const HANDLERS: &[(&str, Handler)] = &[("show ", Repl::show)];
+pub const HANDLERS: &[(&str, Handler)] = &[("show ", Repl::show), ("load ", Repl::load)];
 
 #[derive(Debug)]
 pub struct Repl {
@@ -105,6 +105,16 @@ impl Repl {
                 println!("{}", self.scope.defs[input])
             }
             _ => eprintln!("unknown option {input:?}"),
+        }
+    }
+
+    pub fn load(&mut self, input: &str) {
+        match read_to_string(input) {
+            Ok(s) => {
+                self.alias(&s);
+                self.loaded_files.push(input.into());
+            }
+            Err(e) => eprintln!("error: {e:?}"),
         }
     }
 }
