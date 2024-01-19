@@ -4,9 +4,8 @@ use std::str::FromStr;
 
 use church::scope::Scope;
 use church::Body;
-use rustyline::config::Configurer;
-use rustyline::error::ReadlineError;
-use rustyline::DefaultEditor;
+
+pub mod repl;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     bootstrap()?;
@@ -15,32 +14,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "repl")]
 fn repl() -> Result<(), Box<dyn std::error::Error>> {
-    let mut last_expr = church::Body::id();
-    let mut rl = DefaultEditor::new()?;
-    rl.set_auto_add_history(true);
-    rl.set_history_ignore_space(true);
-    let mut scope = Scope::default();
-    loop {
-        let buf = match rl.readline("λ> ") {
-            Ok(s) => s,
-            Err(e) => {
-                return if matches!(e, ReadlineError::Eof) {
-                    Ok(())
-                } else {
-                    Err(Box::new(e))
-                };
-            }
-        };
-        if buf.starts_with(':') {
-            cmd(&buf, &mut scope, &last_expr);
-        } else {
-            run(buf, &mut scope, &mut last_expr);
-        }
-    }
+    use repl::Repl;
+
+    let mut repl = Repl::default();
+    repl.start()
 }
 
-fn run(mut expr: String, scope: &mut Scope, last: &mut Body) {
+fn info(mut expr: String, scope: &mut Scope, last: &mut Body) {
     let new_scope = Scope::from_str(&expr).unwrap();
     if new_scope.defs.is_empty() {
         let origin = expr.clone();
@@ -51,11 +33,27 @@ fn run(mut expr: String, scope: &mut Scope, last: &mut Body) {
         let lex = church::parser::lexer(&expr);
         match church::parser::parse(lex) {
             Ok(expr) => {
+                println!(
+                    "\tδ-match: {}",
+                    scope.get_from_alpha_key(&expr).unwrap_or("n/a")
+                );
                 println!("\tα-eq:    {}", last.alpha_eq(&expr));
                 println!("\tα-redex: {}", expr.clone().alpha_reduced());
-                println!("\t\t-> β:  {}", expr.clone().alpha_reduced().beta_reduced());
+                println!(
+                    "\t   -> β:  {}",
+                    expr.clone().alpha_reduced().beta_reduced()
+                );
                 println!("\tβ-redex: {}", expr.clone().beta_reduced());
-                println!("\t\t-> α:  {}", expr.clone().beta_reduced().alpha_reduced());
+                println!(
+                    "\t   -> α:  {}",
+                    expr.clone().beta_reduced().alpha_reduced()
+                );
+                println!(
+                    "\tβ-match: {}",
+                    scope
+                        .get_from_alpha_key(&expr.clone().beta_reduced())
+                        .unwrap_or("n/a")
+                );
                 // TODO: Match system
                 *last = expr;
             }
