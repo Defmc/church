@@ -49,11 +49,15 @@ impl Repl {
             if buf.starts_with(':') {
                 self.handle(buf.strip_prefix(':').unwrap())
             } else {
-                self.run(buf.trim());
+                if buf.contains('=') {
+                    self.alias(buf);
+                } else {
                     self.run(buf);
+                }
             }
         }
     }
+
     pub fn run(&mut self, input: &str) {
         let mut input = input.to_string();
         self.scope.delta_redex(&mut input);
@@ -63,6 +67,13 @@ impl Repl {
                 println!("{}", expr.clone().beta_reduced());
                 self.last_expr = expr;
             }
+            Err(e) => eprintln!("error: {e:?}"),
+        }
+    }
+
+    pub fn alias(&mut self, input: &str) {
+        match Scope::from_str(&input) {
+            Ok(nscope) => self.scope.extend(nscope),
             Err(e) => eprintln!("error: {e:?}"),
         }
     }
