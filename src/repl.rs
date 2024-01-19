@@ -1,6 +1,6 @@
 use church::{scope::Scope, Body};
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
@@ -45,15 +45,26 @@ impl Repl {
                     };
                 }
             };
+            let buf = buf.trim();
             if buf.starts_with(':') {
-                self.handle(buf.trim().strip_prefix(':').unwrap())
+                self.handle(buf.strip_prefix(':').unwrap())
             } else {
                 self.run(buf.trim());
+                    self.run(buf);
             }
         }
     }
     pub fn run(&mut self, input: &str) {
-        todo!()
+        let mut input = input.to_string();
+        self.scope.delta_redex(&mut input);
+        let lex = church::parser::lexer(&input);
+        match church::parser::parse(lex) {
+            Ok(expr) => {
+                println!("{}", expr.clone().beta_reduced());
+                self.last_expr = expr;
+            }
+            Err(e) => eprintln!("error: {e:?}"),
+        }
     }
 
     pub fn handle(&mut self, input: &str) {
