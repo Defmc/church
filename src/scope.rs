@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
-use crate::parser;
+use crate::{parser, Body};
 
 #[derive(Debug, Clone, Default)]
 pub struct Scope {
@@ -38,6 +38,17 @@ impl Scope {
     pub fn extend(&mut self, rhs: Self) {
         self.defs.extend(rhs.defs);
         self.internal_delta()
+    }
+
+    pub fn get_from_alpha_key(&self, key: &Body) -> Option<&str> {
+        for (k, v) in self.defs.iter() {
+            if let Ok(b) = Body::from_str(v) {
+                if b.alpha_eq(key) {
+                    return Some(k);
+                }
+            }
+        }
+        None
     }
 }
 

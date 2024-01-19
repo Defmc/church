@@ -6,7 +6,7 @@ pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
 pub type Handler = fn(&mut Repl, &str);
 
-pub const HANDLERS: &[(&str, Handler)] = &[];
+pub const HANDLERS: &[(&str, Handler)] = &[("show ", Repl::show)];
 
 #[derive(Debug)]
 pub struct Repl {
@@ -45,16 +45,44 @@ impl Repl {
                     };
                 }
             };
-            self.handle(buf.trim());
+            if buf.starts_with(':') {
+                self.handle(buf.trim().strip_prefix(':').unwrap())
+            } else {
+                self.run(buf.trim());
+            }
         }
+    }
+    pub fn run(&mut self, input: &str) {
+        todo!()
     }
 
     pub fn handle(&mut self, input: &str) {
         for (prefix, h) in HANDLERS.iter() {
             if input.starts_with(prefix) {
                 let stripped = input.strip_prefix(prefix).unwrap();
-                h(self, stripped)
+                return h(self, stripped);
             }
+        }
+        eprintln!("error: command {input:?} not found");
+    }
+
+    pub fn show(&mut self, input: &str) {
+        match input {
+            "scope" => {
+                for (k, v) in self.scope.defs.iter() {
+                    println!("{k} = {v}");
+                }
+            }
+            "env" => {
+                println!("{self:?}");
+            }
+            "loaded" => {
+                println!("{:?}", self.loaded_files);
+            }
+            _ if self.scope.defs.contains_key(input) => {
+                println!("{}", self.scope.defs[input])
+            }
+            _ => eprintln!("unknown option {input:?}"),
         }
     }
 }
