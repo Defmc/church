@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{read_to_string, File};
 use std::io::{BufWriter, Write};
 use std::str::FromStr;
 
@@ -32,7 +32,11 @@ fn repl() -> Result<(), Box<dyn std::error::Error>> {
                 };
             }
         };
-        run(buf, &mut scope, &mut last_expr);
+        if buf.starts_with(':') {
+            cmd(&buf, &mut scope, &last_expr);
+        } else {
+            run(buf, &mut scope, &mut last_expr);
+        }
     }
 }
 
@@ -41,17 +45,18 @@ fn run(mut expr: String, scope: &mut Scope, last: &mut Body) {
     if new_scope.defs.is_empty() {
         let origin = expr.clone();
         let delta = scope.delta_redex(&mut expr);
+        println!("expr: {origin}");
+        println!("\tδ-eq:    {}", !delta);
+        println!("\tδ-redex: {expr}");
         let lex = church::parser::lexer(&expr);
         match church::parser::parse(lex) {
             Ok(expr) => {
-                println!("expr: {origin}");
-                println!("\tδ-eq:    {}", !delta);
-                println!("\tδ-redex: {expr}");
                 println!("\tα-eq:    {}", last.alpha_eq(&expr));
                 println!("\tα-redex: {}", expr.clone().alpha_reduced());
                 println!("\t\t-> β:  {}", expr.clone().alpha_reduced().beta_reduced());
                 println!("\tβ-redex: {}", expr.clone().beta_reduced());
                 println!("\t\t-> α:  {}", expr.clone().beta_reduced().alpha_reduced());
+                // TODO: Match system
                 *last = expr;
             }
             Err(e) => println!("\terror:   {e:?}"),
@@ -59,6 +64,32 @@ fn run(mut expr: String, scope: &mut Scope, last: &mut Body) {
     } else {
         scope.extend(new_scope);
     }
+}
+
+fn cmd(expr: &str, scope: &mut Scope, last: &Body) {
+    if expr.starts_with(":load") {
+        let expr = expr.strip_prefix(":load").unwrap();
+        load(expr.trim(), scope);
+    } else if expr.starts_with(":show") {
+        let expr = expr.strip_prefix(":show").unwrap();
+        match expr.trim() {
+            "scope" => {
+                for (k, v) in scope.defs.iter() {
+                    println!("{k} = {v}");
+                }
+            }
+            "last" => {
+                println!("{last}");
+            }
+            _ => println!("unknown option"),
+        }
+    }
+}
+
+fn load(path: &str, scope: &mut Scope) {
+    let src = read_to_string(path).unwrap();
+    let loaded_scope = Scope::from_str(&src).unwrap();
+    scope.extend(loaded_scope);
 }
 
 fn bootstrap() -> Result<(), Box<dyn std::error::Error>> {
