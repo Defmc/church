@@ -157,11 +157,26 @@ impl Body {
             }
         }
     }
+
     #[must_use]
     pub fn bounded_variables(&self) -> HashSet<VarId> {
-        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
-        self.get_free_variables(&mut binds, &mut frees);
+        let mut binds = HashSet::new();
+        self.get_bounded_variables(&mut binds);
         binds
+    }
+
+    fn get_bounded_variables(&self, binds: &mut HashSet<VarId>) {
+        match self {
+            Self::Id(..) => (),
+            Self::App(lhs, rhs) => {
+                lhs.get_bounded_variables(binds);
+                rhs.get_bounded_variables(binds);
+            }
+            Self::Abs(v, l) => {
+                binds.insert(*v);
+                l.get_bounded_variables(binds);
+            }
+        }
     }
 
     pub fn get_free_variables(&self, binds: &mut HashSet<VarId>, frees: &mut HashSet<VarId>) {
@@ -335,6 +350,9 @@ impl Body {
         }
     }
 
+    /// renames a bounded variable over an expression, fixing the bind abstraction.
+    /// `force` makes all ocurrences of to be renamed, desconsidering the context.
+    /// rename_vars ^x.(x y) 'x' 'a' false = ^a.(a y)
     pub fn rename_vars(&mut self, from: VarId, to: VarId, force: bool) {
         match self {
             Self::Id(ref mut i) => {
