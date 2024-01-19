@@ -64,7 +64,12 @@ impl Repl {
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
             Ok(expr) => {
-                println!("{}", expr.clone().beta_reduced());
+                let normal = expr.clone().beta_reduced();
+                if let Some(k) = self.scope.get_from_alpha_key(&normal) {
+                    println!("{k}");
+                } else {
+                    println!("{normal}");
+                }
                 self.last_expr = expr;
             }
             Err(e) => eprintln!("error: {e:?}"),
@@ -99,7 +104,9 @@ impl Repl {
                 println!("{self:?}");
             }
             "loaded" => {
-                println!("{:?}", self.loaded_files);
+                for p in self.loaded_files.iter() {
+                    println!("{p:?}");
+                }
             }
             _ if self.scope.defs.contains_key(input) => {
                 println!("{}", self.scope.defs[input])
