@@ -71,8 +71,8 @@ fn cmd(expr: &str, scope: &mut Scope, last: &Body) {
         let expr = expr.strip_prefix(":load").unwrap();
         load(expr.trim(), scope);
     } else if expr.starts_with(":show") {
-        let expr = expr.strip_prefix(":show").unwrap();
-        match expr.trim() {
+        let expr = expr.strip_prefix(":show").unwrap().trim();
+        match expr {
             "scope" => {
                 for (k, v) in scope.defs.iter() {
                     println!("{k} = {v}");
@@ -81,6 +81,7 @@ fn cmd(expr: &str, scope: &mut Scope, last: &Body) {
             "last" => {
                 println!("{last}");
             }
+            _ if scope.defs.contains_key(expr) => println!("{}", scope.defs[expr]),
             _ => println!("unknown option"),
         }
     }
