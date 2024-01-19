@@ -1,9 +1,6 @@
-use std::fs::{read_to_string, File};
+use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::str::FromStr;
-
-use church::scope::Scope;
-use church::Body;
 
 pub mod repl;
 
@@ -22,74 +19,47 @@ fn repl() -> Result<(), Box<dyn std::error::Error>> {
     repl.start()
 }
 
-fn info(mut expr: String, scope: &mut Scope, last: &mut Body) {
-    let new_scope = Scope::from_str(&expr).unwrap();
-    if new_scope.defs.is_empty() {
-        let origin = expr.clone();
-        let delta = scope.delta_redex(&mut expr);
-        println!("expr: {origin}");
-        println!("\tδ-eq:    {}", !delta);
-        println!("\tδ-redex: {expr}");
-        let lex = church::parser::lexer(&expr);
-        match church::parser::parse(lex) {
-            Ok(expr) => {
-                println!(
-                    "\tδ-match: {}",
-                    scope.get_from_alpha_key(&expr).unwrap_or("n/a")
-                );
-                println!("\tα-eq:    {}", last.alpha_eq(&expr));
-                println!("\tα-redex: {}", expr.clone().alpha_reduced());
-                println!(
-                    "\t   -> β:  {}",
-                    expr.clone().alpha_reduced().beta_reduced()
-                );
-                println!("\tβ-redex: {}", expr.clone().beta_reduced());
-                println!(
-                    "\t   -> α:  {}",
-                    expr.clone().beta_reduced().alpha_reduced()
-                );
-                println!(
-                    "\tβ-match: {}",
-                    scope
-                        .get_from_alpha_key(&expr.clone().beta_reduced())
-                        .unwrap_or("n/a")
-                );
-                // TODO: Match system
-                *last = expr;
-            }
-            Err(e) => println!("\terror:   {e:?}"),
-        }
-    } else {
-        scope.extend(new_scope);
-    }
-}
-
-fn cmd(expr: &str, scope: &mut Scope, last: &Body) {
-    if expr.starts_with(":load") {
-        let expr = expr.strip_prefix(":load").unwrap();
-        load(expr.trim(), scope);
-    } else if expr.starts_with(":show") {
-        let expr = expr.strip_prefix(":show").unwrap().trim();
-        match expr {
-            "scope" => {
-                for (k, v) in scope.defs.iter() {
-                    println!("{k} = {v}");
-                }
-            }
-            "last" => {
-                println!("{last}");
-            }
-            _ if scope.defs.contains_key(expr) => println!("{}", scope.defs[expr]),
-            _ => println!("unknown option"),
-        }
-    }
-}
-
-fn load(path: &str, scope: &mut Scope) {
-    let src = read_to_string(path).unwrap();
-    let loaded_scope = Scope::from_str(&src).unwrap();
-    scope.extend(loaded_scope);
-}
+// fn info(mut expr: String, scope: &mut Scope, last: &mut Body) {
+//     let new_scope = Scope::from_str(&expr).unwrap();
+//     if new_scope.defs.is_empty() {
+//         let origin = expr.clone();
+//         let delta = scope.delta_redex(&mut expr);
+//         println!("expr: {origin}");
+//         println!("\tδ-eq:    {}", !delta);
+//         println!("\tδ-redex: {expr}");
+//         let lex = church::parser::lexer(&expr);
+//         match church::parser::parse(lex) {
+//             Ok(expr) => {
+//                 println!(
+//                     "\tδ-match: {}",
+//                     scope.get_from_alpha_key(&expr).unwrap_or("n/a")
+//                 );
+//                 println!("\tα-eq:    {}", last.alpha_eq(&expr));
+//                 println!("\tα-redex: {}", expr.clone().alpha_reduced());
+//                 println!(
+//                     "\t   -> β:  {}",
+//                     expr.clone().alpha_reduced().beta_reduced()
+//                 );
+//                 println!("\tβ-redex: {}", expr.clone().beta_reduced());
+//                 println!(
+//                     "\t   -> α:  {}",
+//                     expr.clone().beta_reduced().alpha_reduced()
+//                 );
+//                 println!(
+//                     "\tβ-match: {}",
+//                     scope
+//                         .get_from_alpha_key(&expr.clone().beta_reduced())
+//                         .unwrap_or("n/a")
+//                 );
+//                 // TODO: Match system
+//                 *last = expr;
+//             }
+//             Err(e) => println!("\terror:   {e:?}"),
+//         }
+//     } else {
+//         scope.extend(new_scope);
+//     }
+// }
 
 fn bootstrap() -> Result<(), Box<dyn std::error::Error>> {
     let src = include_str!("parser/parser.wop");

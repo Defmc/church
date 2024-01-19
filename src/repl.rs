@@ -48,12 +48,10 @@ impl Repl {
             let buf = buf.trim();
             if buf.starts_with(':') {
                 self.handle(buf.strip_prefix(':').unwrap())
+            } else if buf.contains('=') {
+                self.alias(buf);
             } else {
-                if buf.contains('=') {
-                    self.alias(buf);
-                } else {
-                    self.run(buf);
-                }
+                self.run(buf);
             }
         }
     }
@@ -77,7 +75,7 @@ impl Repl {
     }
 
     pub fn alias(&mut self, input: &str) {
-        match Scope::from_str(&input) {
+        match Scope::from_str(input) {
             Ok(nscope) => self.scope.extend(nscope),
             Err(e) => eprintln!("error: {e:?}"),
         }
