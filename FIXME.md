@@ -73,3 +73,18 @@ Maybe it's storing the state between the redexes of applications
 ```
 
 - [x] Happening cause of capturing substitution, there's no strategy to know if the `a` is from `^x.(a)` (where it's free), or from (`^a.(b a a)`).
+
+## Y reducing one time
+```
+λ> :set show_alias true
+λ> I = ^x.(x)
+λ> I
+I
+λ> Y = ^f.(^x.(f (x x)) ^x.(f (x x)))
+λ> Y
+λf.(f (λx.(f (x x)) (λx.(f (x x)))))
+# why not just Y? Like for I
+```
+Should show `Y` again, but internally it's the beta reduction expression into `^f.(^x.(f (x x)) ^x.(f (x x)))`.
+
+- [ ] Use normal order strategy
