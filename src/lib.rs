@@ -405,9 +405,6 @@ impl Body {
         match self {
             Self::Id(..) => false,
             Self::App(f, x) => {
-                if f.beta_redex() {
-                    return true;
-                }
                 return if matches!(f.as_ref(), Self::Abs(..)) {
                     let mut f = f.clone();
                     f.fix_captures(x);
@@ -416,7 +413,7 @@ impl Body {
                     *self = l.clone();
                     true
                 } else {
-                    false
+                    f.beta_redex() || x.beta_redex()
                 };
             }
             Self::Abs(..) => {
