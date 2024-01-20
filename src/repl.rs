@@ -14,6 +14,7 @@ pub struct Repl {
     last_expr: Body,
     loaded_files: Vec<PathBuf>,
     prompt: String,
+    show_alias: bool,
     rl: DefaultEditor,
 }
 
@@ -26,6 +27,7 @@ impl Default for Repl {
             scope: Scope::default(),
             last_expr: Body::id(),
             loaded_files: Vec::default(),
+            show_alias: true,
             prompt: String::from("λ> "),
             rl,
         }
@@ -63,12 +65,13 @@ impl Repl {
         match church::parser::parse(lex) {
             Ok(expr) => {
                 let normal = expr.clone().beta_reduced();
+                self.last_expr = expr;
+                if self.show_alias {
                 if let Some(k) = self.scope.get_from_alpha_key(&normal) {
                     println!("{k}");
-                } else {
+                    return;
+                }}
                     println!("{normal}");
-                }
-                self.last_expr = expr;
             }
             Err(e) => eprintln!("error: {e:?}"),
         }
@@ -122,11 +125,13 @@ impl Repl {
             Err(e) => eprintln!("error: {e:?}"),
         }
     }
+
     pub fn set(&mut self, input: &str) {
         let mut input = input.split_whitespace();
         let option = input.next().expect("missing option");
         let value = input.next().expect("missing value");
         match option {
+            "show_alias" => self.show_alias = value == "true", _ => eprintln!("unknown option {option}")
 
         }
     }
