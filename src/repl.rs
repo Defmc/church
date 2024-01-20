@@ -11,6 +11,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     ("load ", Repl::load),
     ("set ", Repl::set),
     ("alpha_eq ", Repl::alpha_eq),
+    ("alpha ", Repl::alpha),
 ];
 
 #[derive(Debug)]
@@ -156,10 +157,23 @@ impl Repl {
             Ok(expr) => {
                 match expr {
                     Body::App(ref lhs, ref rhs) => {
-                        println!("{}", if lhs.alpha_eq(&rhs) { "true" } else { "false" });
+                        println!("{}", if lhs.alpha_eq(rhs) { "true" } else { "false" });
                     }
                     _ => eprintln!("missing the second expression"),
                 }
+                self.last_expr = expr;
+            }
+            Err(e) => eprintln!("error: {e:?}"),
+        }
+    }
+
+    pub fn alpha(&mut self, input: &str) {
+        let mut input = input.to_string();
+        self.scope.delta_redex(&mut input);
+        let lex = church::parser::lexer(&input);
+        match church::parser::parse(lex) {
+            Ok(expr) => {
+                println!("{}", expr.clone().alpha_reduced());
                 self.last_expr = expr;
             }
             Err(e) => eprintln!("error: {e:?}"),
