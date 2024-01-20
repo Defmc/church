@@ -6,7 +6,7 @@ pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
 pub type Handler = fn(&mut Repl, &str);
 
-pub const HANDLERS: &[(&str, Handler)] = &[("show ", Repl::show), ("load ", Repl::load)];
+pub const HANDLERS: &[(&str, Handler)] = &[("show ", Repl::show), ("load ", Repl::load), ("set ", Repl::set)];
 
 #[derive(Debug)]
 pub struct Repl {
@@ -120,6 +120,14 @@ impl Repl {
                 self.loaded_files.push(input.into());
             }
             Err(e) => eprintln!("error: {e:?}"),
+        }
+    }
+    pub fn set(&mut self, input: &str) {
+        let mut input = input.split_whitespace();
+        let option = input.next().expect("missing option");
+        let value = input.next().expect("missing value");
+        match option {
+
         }
     }
 }
