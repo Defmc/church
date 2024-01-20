@@ -6,7 +6,11 @@ pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
 pub type Handler = fn(&mut Repl, &str);
 
-pub const HANDLERS: &[(&str, Handler)] = &[("show ", Repl::show), ("load ", Repl::load), ("set ", Repl::set)];
+pub const HANDLERS: &[(&str, Handler)] = &[
+    ("show ", Repl::show),
+    ("load ", Repl::load),
+    ("set ", Repl::set),
+];
 
 #[derive(Debug)]
 pub struct Repl {
@@ -67,11 +71,12 @@ impl Repl {
                 let normal = expr.clone().beta_reduced();
                 self.last_expr = expr;
                 if self.show_alias {
-                if let Some(k) = self.scope.get_from_alpha_key(&normal) {
-                    println!("{k}");
-                    return;
-                }}
-                    println!("{normal}");
+                    if let Some(k) = self.scope.get_from_alpha_key(&normal) {
+                        println!("{k}");
+                        return;
+                    }
+                }
+                println!("{normal}");
             }
             Err(e) => eprintln!("error: {e:?}"),
         }
@@ -127,12 +132,18 @@ impl Repl {
     }
 
     pub fn set(&mut self, input: &str) {
-        let mut input = input.split_whitespace();
-        let option = input.next().expect("missing option");
-        let value = input.next().expect("missing value");
-        match option {
-            "show_alias" => self.show_alias = value == "true", _ => eprintln!("unknown option {option}")
-
+        if let Some(value) = input.strip_prefix("show_alias ") {
+            if value == "true" {
+                self.show_alias = true
+            } else if value == "false" {
+                self.show_alias = false
+            } else {
+                eprintln!("unknown value {value} for show_alias");
+            }
+        } else if let Some(value) = input.strip_prefix("prompt ") {
+            self.prompt = value.to_string();
+        } else {
+            eprintln!("unknown option {input}");
         }
     }
 }
