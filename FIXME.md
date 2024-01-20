@@ -83,7 +83,9 @@ I
 λ> Y = ^f.(^x.(f (x x)) ^x.(f (x x)))
 λ> Y
 λf.(f (λx.(f (x x)) (λx.(f (x x)))))
-# why not just Y? Like for I
+# why not just Y? Like for I. Also:
+λ> :alpha_eq λf.(f (λx.(f (x x)) (λx.(f (x x))))) ^f.(^x.(f (x x)) ^x.(f (x x)))
+false
 ```
 Should show `Y` again, but internally it's the beta reduction expression into `^f.(^x.(f (x x)) ^x.(f (x x)))`.
 

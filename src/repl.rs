@@ -75,7 +75,7 @@ impl Repl {
                 self.last_expr = expr;
                 if self.show_alias {
                     if let Some(k) = self.scope.get_from_alpha_key(&normal) {
-                        println!("matches {k}");
+                        println!("{k}");
                         return;
                     }
                 }

@@ -94,7 +94,10 @@ impl Body {
 
     #[must_use]
     pub fn beta_reduced(mut self) -> Self {
-        self.beta_redex();
+        println!("running {self}");
+        while self.beta_redex() == true {
+            // println!("running {self}");
+        }
         self
     }
 
@@ -398,25 +401,31 @@ impl Body {
         self
     }
 
-    pub fn beta_redex(&mut self) {
+    pub fn beta_redex(&mut self) -> bool {
         match self {
-            Self::Id(..) => {}
+            Self::Id(..) => false,
             Self::App(f, x) => {
-                f.beta_redex();
-                if matches!(f.as_ref(), Self::Abs(..)) {
+                if f.beta_redex() {
+                    return true;
+                }
+                return if matches!(f.as_ref(), Self::Abs(..)) {
                     let mut f = f.clone();
                     f.fix_captures(x);
                     let (id, l) = f.as_mut_abs().unwrap();
                     l.apply_by(*id, x);
                     *self = l.clone();
-                    self.beta_redex();
-                }
+                    true
+                } else {
+                    false
+                };
             }
             Self::Abs(..) => {
                 if self.eta_redex_step() {
-                    self.beta_redex();
+                    true
                 } else if let Self::Abs(_, l) = self {
-                    l.beta_redex();
+                    l.beta_redex()
+                } else {
+                    unreachable!()
                 }
             }
         }
