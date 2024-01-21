@@ -18,10 +18,10 @@ pub const HANDLERS: &[(&str, Handler)] = &[
 #[derive(Debug)]
 pub struct Repl {
     scope: Scope,
-    last_expr: Body,
     loaded_files: Vec<PathBuf>,
     prompt: String,
     show_alias: bool,
+    trace: bool,
     rl: DefaultEditor,
 }
 
@@ -32,9 +32,9 @@ impl Default for Repl {
         rl.set_history_ignore_space(true);
         Repl {
             scope: Scope::default(),
-            last_expr: Body::id(),
             loaded_files: Vec::default(),
             show_alias: true,
+            trace: false,
             prompt: String::from("λ> "),
             rl,
         }
@@ -71,8 +71,16 @@ impl Repl {
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
             Ok(expr) => {
-                let normal = expr.clone().beta_reduced();
-                self.last_expr = expr;
+                let normal = if self.trace {
+                    let mut expr = expr.clone();
+                    println!("{expr}");
+                    while expr.beta_redex() != false {
+                        println!("{expr}");
+                    }
+                    expr
+                } else {
+                    expr.clone().beta_reduced()
+                };
                 if self.show_alias {
                     if let Some(k) = self.scope.get_from_alpha_key(&normal) {
                         println!("{k}");
@@ -136,15 +144,19 @@ impl Repl {
 
     pub fn set(&mut self, input: &str) {
         if let Some(value) = input.strip_prefix("show_alias ") {
-            if value == "true" {
-                self.show_alias = true
-            } else if value == "false" {
-                self.show_alias = false
-            } else {
-                eprintln!("unknown value {value} for show_alias");
+            match value {
+                "true" => self.show_alias = true,
+                "false" => self.show_alias = false,
+                _ => eprintln!("unknown value {value} for show_alias"),
             }
         } else if let Some(value) = input.strip_prefix("prompt ") {
             self.prompt = value.to_string();
+        } else if let Some(value) = input.strip_prefix("trace ") {
+            match value {
+                "true" => self.trace = true,
+                "false" => self.trace = false,
+                _ => eprintln!("unknown value {value} for trace"),
+            }
         } else {
             eprintln!("unknown option {input}");
         }
@@ -155,15 +167,12 @@ impl Repl {
         self.scope.delta_redex(&mut input);
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
-            Ok(expr) => {
-                match expr {
-                    Body::App(ref lhs, ref rhs) => {
-                        println!("{}", if lhs.alpha_eq(rhs) { "true" } else { "false" });
-                    }
-                    _ => eprintln!("missing the second expression"),
+            Ok(expr) => match expr {
+                Body::App(ref lhs, ref rhs) => {
+                    println!("{}", if lhs.alpha_eq(rhs) { "true" } else { "false" });
                 }
-                self.last_expr = expr;
-            }
+                _ => eprintln!("missing the second expression"),
+            },
             Err(e) => eprintln!("error: {e:?}"),
         }
     }
@@ -175,7 +184,6 @@ impl Repl {
         match church::parser::parse(lex) {
             Ok(expr) => {
                 println!("{}", expr.clone().alpha_reduced());
-                self.last_expr = expr;
             }
             Err(e) => eprintln!("error: {e:?}"),
         }
@@ -187,7 +195,6 @@ impl Repl {
         match church::parser::parse(lex) {
             Ok(expr) => {
                 println!("{}", expr);
-                self.last_expr = expr;
             }
             Err(e) => eprintln!("error: {e:?}"),
         }
