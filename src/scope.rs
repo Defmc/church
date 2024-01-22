@@ -79,14 +79,6 @@ impl FromStr for Scope {
             let l = &l[..end];
             if let Some(equal_pos) = l.find(|c| c == '=') {
                 let bind = &l[..equal_pos].trim();
-                assert!(
-                    bind.chars().take(1).next().unwrap().is_uppercase(),
-                    "{bind} doesn't start with a uppercase letter"
-                );
-                assert!(
-                    bind.chars().all(|c| c.is_alphanumeric() || c == '_'),
-                    "{bind} doesn't start with a uppercase letter"
-                );
                 let imp = &l[equal_pos + 1..].trim();
                 if let Some(shadow) = defs.insert(bind.to_string(), imp.to_string()) {
                     panic!("shadowing {bind}, already defined as {shadow}");
