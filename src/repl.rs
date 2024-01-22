@@ -14,6 +14,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     ("alpha ", Repl::alpha),
     ("delta", Repl::delta),
     ("from_nat ", Repl::from_nat),
+    ("quit", Repl::quit),
 ];
 
 #[derive(Debug)]
@@ -23,6 +24,7 @@ pub struct Repl {
     prompt: String,
     show_alias: bool,
     mode: Mode,
+    quit: bool,
     rl: DefaultEditor,
 }
 
@@ -127,6 +129,7 @@ impl Default for Repl {
             loaded_files: Vec::default(),
             show_alias: true,
             mode: Mode::default(),
+            quit: false,
             prompt: String::from("λ> "),
             rl,
         }
@@ -135,7 +138,7 @@ impl Default for Repl {
 
 impl Repl {
     pub fn start(&mut self) -> Result {
-        loop {
+        while !self.quit {
             let buf = match self.rl.readline(&self.prompt) {
                 Ok(s) => s,
                 Err(e) => {
@@ -155,6 +158,7 @@ impl Repl {
                 self.run(buf);
             }
         }
+        Ok(())
     }
 
     pub fn run(&mut self, input: &str) {
@@ -316,5 +320,9 @@ impl Repl {
             Ok(n) => println!("{}", church::enc::naturals::natural(n)),
             Err(e) => eprintln!("error: {e:?}"),
         }
+    }
+
+    pub fn quit(&mut self, _input: &str) {
+        self.quit = true;
     }
 }
