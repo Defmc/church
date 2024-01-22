@@ -4,7 +4,10 @@ use crate::{parser, Body};
 
 #[derive(Debug, Clone, Default)]
 pub struct Scope {
+    // alias: definition
     pub defs: HashMap<String, String>,
+    // post-processed definition: alias
+    pub cached_defs: HashMap<String, String>,
 }
 
 impl Scope {
@@ -35,20 +38,29 @@ impl Scope {
             }
         }
     }
+
+    pub fn update(&mut self) {
+        self.internal_delta();
+        self.cache_defs();
+    }
+
+    pub fn cache_defs(&mut self) {
+        self.cached_defs.clear();
+        for (k, v) in self.defs.iter() {
+            if let Ok(l) = Body::from_str(&v) {
+                self.cached_defs
+                    .insert(l.alpha_reduced().to_string(), k.clone());
+            }
+        }
+    }
+
     pub fn extend(&mut self, rhs: Self) {
         self.defs.extend(rhs.defs);
-        self.internal_delta()
+        self.update();
     }
 
     pub fn get_from_alpha_key(&self, key: &Body) -> Option<&str> {
-        for (k, v) in self.defs.iter() {
-            if let Ok(b) = Body::from_str(v) {
-                if b.alpha_eq(key) {
-                    return Some(k);
-                }
-            }
-        }
-        None
+        self.cached_defs.get(&key.to_string()).map(|s| s.as_str())
     }
 }
 
@@ -75,8 +87,11 @@ impl FromStr for Scope {
                 }
             }
         }
-        let mut s = Scope { defs };
-        s.internal_delta();
+        let mut s = Scope {
+            defs,
+            cached_defs: HashMap::new(),
+        };
+        s.update();
         Ok(s)
     }
 }
