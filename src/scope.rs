@@ -15,10 +15,10 @@ pub struct Scope {
 }
 
 impl Scope {
-    pub fn delta_redex(&self, b: &String) -> (String, bool) {
+    pub fn delta_redex(&self, b: &str) -> (String, bool) {
         let ac = AhoCorasick::new(&self.aliases).unwrap();
         let result = ac.replace_all(b, &self.defs);
-        let changed = b != &result;
+        let changed = result != b;
         (result, changed)
     }
 
@@ -51,7 +51,7 @@ impl Scope {
     pub fn cache_defs(&mut self) {
         self.cached_defs.clear();
         for (k, v) in self.aliases.iter().zip(self.defs.iter()) {
-            if let Ok(l) = Body::from_str(&v) {
+            if let Ok(l) = Body::from_str(v) {
                 self.cached_defs
                     .insert(l.alpha_reduced().to_string(), k.clone());
             }

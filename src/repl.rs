@@ -83,7 +83,7 @@ impl Mode {
 
     pub fn run(&self, repl: &Repl, mut l: String) {
         self.bench("delta redex", || {
-            repl.scope.delta_redex(&mut l);
+            l = repl.scope.delta_redex(&l).0;
         });
         let l = if self.should_show() {
             match Body::from_str(&l) {
@@ -239,8 +239,7 @@ impl Repl {
     }
 
     pub fn alpha_eq(&mut self, input: &str) {
-        let mut input = input.to_string();
-        self.scope.delta_redex(&mut input);
+        let input = self.scope.delta_redex(input).0;
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
             Ok(expr) => match expr {
@@ -254,8 +253,7 @@ impl Repl {
     }
 
     pub fn alpha(&mut self, input: &str) {
-        let mut input = input.to_string();
-        self.scope.delta_redex(&mut input);
+        let input = self.scope.delta_redex(input).0;
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
             Ok(expr) => {
@@ -266,8 +264,7 @@ impl Repl {
     }
 
     pub fn delta(&mut self, input: &str) {
-        let mut input = input.to_string();
-        self.scope.delta_redex(&mut input);
+        let input = self.scope.delta_redex(input).0;
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
             Ok(expr) => {
