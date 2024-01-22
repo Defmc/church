@@ -13,7 +13,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     ("alpha_eq ", Repl::alpha_eq),
     ("alpha ", Repl::alpha),
     ("delta", Repl::delta),
-    ("from_nat ", Repl::from_nat),
+    ("gen_nats ", Repl::gen_nats),
     ("quit", Repl::quit),
 ];
 
@@ -315,10 +315,31 @@ impl Repl {
         false
     }
 
-    pub fn from_nat(&mut self, input: &str) {
-        match usize::from_str(input) {
-            Ok(n) => println!("{}", church::enc::naturals::natural(n)),
-            Err(e) => eprintln!("error: {e:?}"),
+    pub fn gen_nats(&mut self, input: &str) {
+        if let Some((s, e)) = input.split_once(' ') {
+            let s = if let Ok(s) = usize::from_str(s) {
+                s
+            } else {
+                println!("{s:?} is not a valid range start");
+                return;
+            };
+            let e = if let Ok(e) = usize::from_str(e) {
+                e
+            } else {
+                println!("{e:?} is not a valid range end");
+                return;
+            };
+            let mut numbers = Scope::default();
+            for i in s..e {
+                numbers.aliases.push(i.to_string());
+                numbers
+                    .defs
+                    .push(church::enc::naturals::natural(i).to_string());
+            }
+            numbers.update();
+            self.scope.extend(numbers);
+        } else {
+            eprintln!("missing two values (start end)");
         }
     }
 
