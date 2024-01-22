@@ -94,7 +94,7 @@ impl Body {
 
     #[must_use]
     pub fn beta_reduced(mut self) -> Self {
-        while self.beta_redex() == true {}
+        self.beta_redex();
         self
     }
 
@@ -398,7 +398,11 @@ impl Body {
         self
     }
 
-    pub fn beta_redex(&mut self) -> bool {
+    pub fn beta_redex(&mut self) {
+        while self.beta_redex_step() {}
+    }
+
+    pub fn beta_redex_step(&mut self) -> bool {
         match self {
             Self::Id(..) => false,
             Self::App(f, x) => {
@@ -410,14 +414,14 @@ impl Body {
                     *self = l.clone();
                     true
                 } else {
-                    f.beta_redex() || x.beta_redex()
+                    f.beta_redex_step() || x.beta_redex_step()
                 };
             }
             Self::Abs(..) => {
                 if self.eta_redex_step() {
                     true
                 } else if let Self::Abs(_, l) = self {
-                    l.beta_redex()
+                    l.beta_redex_step()
                 } else {
                     unreachable!()
                 }
@@ -623,13 +627,10 @@ pub mod tests {
     #[test]
     pub fn free_capture_avoiding_subsitution() {
         let expr = Body::from_str("λb.(λa.(b a a)) λx.(a)").unwrap();
-        assert!(
-            expr.clone()
-                .beta_reduced()
-                .alpha_eq(&Body::from_str("a").unwrap()),
-            "what {}",
-            expr.beta_reduced()
-        );
+        assert!(expr
+            .clone()
+            .beta_reduced()
+            .alpha_eq(&Body::from_str("a").unwrap()),);
     }
     #[test]
     pub fn bound_capture_avoiding_subsitution() {

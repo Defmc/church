@@ -63,7 +63,7 @@ impl Mode {
     pub fn run_show(&self, l: &mut Body) {
         let mut buf = String::new();
         println!("{l}");
-        'redex: while l.beta_redex() {
+        'redex: while l.beta_redex_step() {
             println!("{l}");
             if self == &Self::Debug {
                 loop {
