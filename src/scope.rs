@@ -16,7 +16,10 @@ pub struct Scope {
 
 impl Scope {
     pub fn delta_redex(&self, b: &str) -> (String, bool) {
-        let ac = AhoCorasick::new(&self.aliases).unwrap();
+        let ac = AhoCorasick::builder()
+            .match_kind(aho_corasick::MatchKind::LeftmostLongest)
+            .build(&self.aliases)
+            .unwrap();
         let result = ac.replace_all(b, &self.defs);
         let changed = result != b;
         (result, changed)
