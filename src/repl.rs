@@ -13,6 +13,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     ("alpha_eq ", Repl::alpha_eq),
     ("alpha ", Repl::alpha),
     ("delta", Repl::delta),
+    ("from_nat ", Repl::from_nat),
 ];
 
 #[derive(Debug)]
@@ -101,7 +102,6 @@ impl Mode {
                 Ok(mut l) => {
                     self.bench("beta redex", || {
                         l.beta_redex();
-                        println!("{l}");
                     });
                     l
                 }
@@ -111,15 +111,9 @@ impl Mode {
                 }
             }
         };
-        if repl.show_alias {
-            self.bench("alias matching", || {
-                if let Some(alias) = repl.scope.get_from_alpha_key(&l) {
-                    println!("{alias}");
-                } else if let Some(n) = Repl::natural_from_church_encoding(&l) {
-                    println!("{n}");
-                }
-            });
-        }
+        self.bench("printing", || {
+            repl.print_value(&l);
+        });
     }
 }
 
@@ -299,5 +293,28 @@ impl Repl {
             }
         }
         None
+    }
+
+    /// prints the body and return if has used another print way (like alias, number, etc.)
+    pub fn print_value(&self, b: &Body) -> bool {
+        if self.show_alias {
+            if let Some(alias) = self.scope.get_from_alpha_key(&b) {
+                println!("{alias}");
+                return true;
+            }
+        }
+        if let Some(n) = Repl::natural_from_church_encoding(&b) {
+            println!("{n}");
+            return true;
+        }
+        println!("{b}");
+        false
+    }
+
+    pub fn from_nat(&mut self, input: &str) {
+        match usize::from_str(input) {
+            Ok(n) => println!("{}", church::enc::naturals::natural(n)),
+            Err(e) => eprintln!("error: {e:?}"),
+        }
     }
 }
