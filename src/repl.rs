@@ -298,12 +298,12 @@ impl Repl {
     /// prints the body and return if has used another print way (like alias, number, etc.)
     pub fn print_value(&self, b: &Body) -> bool {
         if self.show_alias {
-            if let Some(alias) = self.scope.get_from_alpha_key(&b) {
+            if let Some(alias) = self.scope.get_from_alpha_key(b) {
                 println!("{alias}");
                 return true;
             }
         }
-        if let Some(n) = Repl::natural_from_church_encoding(&b) {
+        if let Some(n) = Repl::natural_from_church_encoding(b) {
             println!("{n}");
             return true;
         }
