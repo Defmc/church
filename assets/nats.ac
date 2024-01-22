@@ -1,3 +1,14 @@
+Y = ^f.(^x.(f (x x)) ^x.(f (x x))) # recursive combinator: Y f = Y (f (f (f (...))))
+I = ^x.(x) # identity function: I x = x
+True = ^a.(^b.(a))
+False = ^a.(^b.(b))
+IfElse = ^c.(^i.(^e.(c i e))) # if c, then i, else e
+And = ^a.(^b.(a b a)) 
+Or = ^a.(^b.(a a b))
+Not = ^a.(a False True)
+Xor = ^a.(^b.(a (Not b) b))
+Xnor = ^a.(^b.(a b (Not b)))
+
 Succ = λn.(λf.(λx.(f (n f x)))) 
 Pred = λx.(λy.(λz.(((x (λp.(λq.(q (p y))))) (λy.(z))) ^x.(x))))
 Plus = λm.(λn.(λf.(λx.(m f (n f x)))))

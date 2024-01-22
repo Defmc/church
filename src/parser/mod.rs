@@ -58,14 +58,15 @@ pub enum Sym {
 /// Never.
 pub fn lexer(src: &str) -> impl Iterator<Item = Gramem> + '_ {
     Sym::lexer(src).spanned().map(|(t, s)| {
-        let ast = match t.as_ref().expect("invalid symbol") {
-            Sym::Var => {
+        let ast = match t.as_ref() {
+            Ok(Sym::Var) => {
                 let s = &src[s.start..s.end];
                 let post = (s.len() - 1) * crate::ALPHABET.len();
                 let c = s.chars().next().unwrap() as usize - 'a' as usize;
                 Ast::Var(post + c)
             }
-            _ => Ast::Token(t.unwrap()),
+            Ok(_) => Ast::Token(t.unwrap()),
+            Err(_) => panic!("invalid symbol {:?}", &src[s.start..s.end]),
         };
         Token::new(Meta::new(ast, s.into()), t.unwrap())
     })
