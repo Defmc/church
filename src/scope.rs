@@ -17,6 +17,7 @@ pub struct Scope {
 impl Scope {
     pub fn delta_redex(&self, b: &str) -> (String, bool) {
         let ac = AhoCorasick::builder()
+            .ascii_case_insensitive(true)
             .match_kind(aho_corasick::MatchKind::LeftmostLongest)
             .build(&self.aliases)
             .unwrap();
