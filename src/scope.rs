@@ -1,39 +1,36 @@
 use std::{collections::HashMap, str::FromStr};
 
+use aho_corasick::AhoCorasick;
+
 use crate::{parser, Body};
 
 #[derive(Debug, Clone, Default)]
 pub struct Scope {
     // alias: definition
-    pub defs: HashMap<String, String>,
+    pub aliases: Vec<String>,
+    pub defs: Vec<String>,
+    pub index: HashMap<String, usize>,
     // post-processed definition: alias
     pub cached_defs: HashMap<String, String>,
 }
 
 impl Scope {
-    pub fn delta_redex(&self, b: &mut String) -> bool {
-        let mut changed = false;
-        for (k, v) in self.defs.iter() {
-            if b.contains(k) {
-                *b = b.replace(k, v);
-                changed = true;
-            }
-        }
-        changed
+    pub fn delta_redex(&self, b: &String) -> (String, bool) {
+        let ac = AhoCorasick::new(&self.aliases).unwrap();
+        let result = ac.replace_all(b, &self.defs);
+        let changed = b != &result;
+        (result, changed)
     }
 
     pub fn internal_delta(&mut self) {
         let mut changed = true;
-        let mut exprs: Vec<_> = self
-            .defs
-            .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
         while changed {
             changed = false;
-            for (k, expr) in exprs.iter_mut() {
-                if self.delta_redex(expr) {
-                    *self.defs.get_mut(k).unwrap() = expr.clone();
+            for i in 0..self.defs.len() {
+                let (result, diff) = self.delta_redex(&self.defs[i]);
+                if diff {
+                    self.defs[i] = result;
+                    changed = true;
                 }
             }
         }
@@ -42,11 +39,18 @@ impl Scope {
     pub fn update(&mut self) {
         self.internal_delta();
         self.cache_defs();
+        self.index = self
+            .aliases
+            .clone()
+            .into_iter()
+            .enumerate()
+            .map(|(i, a)| (a, i))
+            .collect();
     }
 
     pub fn cache_defs(&mut self) {
         self.cached_defs.clear();
-        for (k, v) in self.defs.iter() {
+        for (k, v) in self.aliases.iter().zip(self.defs.iter()) {
             if let Ok(l) = Body::from_str(&v) {
                 self.cached_defs
                     .insert(l.alpha_reduced().to_string(), k.clone());
@@ -56,6 +60,8 @@ impl Scope {
 
     pub fn extend(&mut self, rhs: Self) {
         self.defs.extend(rhs.defs);
+        self.aliases.extend(rhs.aliases);
+        // TODO: Check for dedups
         self.update();
     }
 
@@ -88,8 +94,10 @@ impl FromStr for Scope {
             }
         }
         let mut s = Scope {
-            defs,
+            aliases: defs.keys().cloned().collect(),
+            defs: defs.values().cloned().collect(),
             cached_defs: HashMap::new(),
+            index: HashMap::new(),
         };
         s.update();
         Ok(s)

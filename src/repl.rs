@@ -186,7 +186,7 @@ impl Repl {
     pub fn show(&mut self, input: &str) {
         match input {
             "scope" => {
-                for (k, v) in self.scope.defs.iter() {
+                for (k, v) in self.scope.aliases.iter().zip(self.scope.defs.iter()) {
                     println!("{k} = {v}");
                 }
             }
@@ -198,10 +198,13 @@ impl Repl {
                     println!("{p:?}");
                 }
             }
-            _ if self.scope.defs.contains_key(input) => {
-                println!("{}", self.scope.defs[input])
+            _ => {
+                if let Some(def) = self.scope.index.get(input) {
+                    println!("{}", self.scope.defs[*def]);
+                } else {
+                    eprintln!("unknown option {input:?}");
+                }
             }
-            _ => eprintln!("unknown option {input:?}"),
         }
     }
 
