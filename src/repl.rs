@@ -1,6 +1,6 @@
 use church::{scope::Scope, Body};
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
-use std::{fs::read_to_string, path::PathBuf, str::FromStr};
+use std::{fs::read_to_string, io::Write, path::PathBuf, str::FromStr, time::Instant};
 
 pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
@@ -21,8 +21,104 @@ pub struct Repl {
     loaded_files: Vec<PathBuf>,
     prompt: String,
     show_alias: bool,
-    trace: bool,
+    mode: Mode,
     rl: DefaultEditor,
+}
+
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Mode {
+    Debug,
+    Visual,
+    Bench,
+    #[default]
+    Normal,
+}
+
+impl FromStr for Mode {
+    type Err = ();
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "debug" => Ok(Self::Debug),
+            "visual" => Ok(Self::Visual),
+            "normal" => Ok(Self::Normal),
+            "bench" => Ok(Self::Bench),
+            _ => Err(()),
+        }
+    }
+}
+
+impl Mode {
+    pub fn should_show(&self) -> bool {
+        self == &Self::Visual || self == &Self::Debug
+    }
+
+    pub fn bench(&self, op: &str, f: impl FnOnce()) {
+        let start = Instant::now();
+        f();
+        if self == &Self::Bench {
+            println!("[{op}: {:?}]", start.elapsed())
+        };
+    }
+
+    pub fn run_show(&self, l: &mut Body) {
+        let mut buf = String::new();
+        println!("{l}");
+        'redex: while l.beta_redex() {
+            println!("{l}");
+            if self == &Self::Debug {
+                loop {
+                    print!("(c)ontinue or (a)bort: ");
+                    assert!(std::io::stdout().flush().is_ok());
+                    buf.clear();
+                    assert!(std::io::stdin().read_line(&mut buf).is_ok());
+                    match buf.trim() {
+                        "c" => break,
+                        "a" => break 'redex,
+                        _ => eprintln!("unknown option"),
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn run(&self, repl: &Repl, mut l: String) {
+        self.bench("delta redex", || {
+            repl.scope.delta_redex(&mut l);
+        });
+        let l = if self.should_show() {
+            match Body::from_str(&l) {
+                Ok(mut l) => {
+                    self.bench("beta redex", || self.run_show(&mut l));
+                    l
+                }
+                Err(e) => {
+                    eprintln!("error: {e:?}");
+                    return;
+                }
+            }
+        } else {
+            match Body::from_str(&l) {
+                Ok(mut l) => {
+                    self.bench("beta redex", || {
+                        l.beta_redex();
+                        println!("{l}");
+                    });
+                    l
+                }
+                Err(e) => {
+                    eprintln!("error: {e:?}");
+                    return;
+                }
+            }
+        };
+        if repl.show_alias {
+            self.bench("alias matching", || {
+                if let Some(alias) = repl.scope.get_from_alpha_key(&l) {
+                    println!("{alias}");
+                }
+            });
+        }
+    }
 }
 
 impl Default for Repl {
@@ -34,7 +130,7 @@ impl Default for Repl {
             scope: Scope::default(),
             loaded_files: Vec::default(),
             show_alias: true,
-            trace: false,
+            mode: Mode::default(),
             prompt: String::from("λ> "),
             rl,
         }
@@ -66,31 +162,8 @@ impl Repl {
     }
 
     pub fn run(&mut self, input: &str) {
-        let mut input = input.to_string();
-        self.scope.delta_redex(&mut input);
-        let lex = church::parser::lexer(&input);
-        match church::parser::parse(lex) {
-            Ok(expr) => {
-                let normal = if self.trace {
-                    let mut expr = expr.clone();
-                    println!("{expr}");
-                    while expr.beta_redex() != false {
-                        println!("{expr}");
-                    }
-                    expr
-                } else {
-                    expr.clone().beta_reduced()
-                };
-                if self.show_alias {
-                    if let Some(k) = self.scope.get_from_alpha_key(&normal) {
-                        println!("{k}");
-                        return;
-                    }
-                }
-                println!("{normal}");
-            }
-            Err(e) => eprintln!("error: {e:?}"),
-        }
+        self.mode
+            .bench("total", || self.mode.run(self, input.to_string()));
     }
 
     pub fn alias(&mut self, input: &str) {
@@ -104,7 +177,7 @@ impl Repl {
         for (prefix, h) in HANDLERS.iter() {
             if input.starts_with(prefix) {
                 let stripped = input.strip_prefix(prefix).unwrap();
-                return h(self, stripped);
+                return self.mode.clone().bench(prefix, || h(self, stripped));
             }
         }
         eprintln!("error: command {input:?} not found");
@@ -151,11 +224,11 @@ impl Repl {
             }
         } else if let Some(value) = input.strip_prefix("prompt ") {
             self.prompt = value.to_string();
-        } else if let Some(value) = input.strip_prefix("trace ") {
-            match value {
-                "true" => self.trace = true,
-                "false" => self.trace = false,
-                _ => eprintln!("unknown value {value} for trace"),
+        } else if let Some(value) = input.strip_prefix("mode ") {
+            if let Ok(value) = Mode::from_str(value) {
+                self.mode = value;
+            } else {
+                eprintln!("unknown value {value} for mode");
             }
         } else {
             eprintln!("unknown option {input}");
@@ -188,6 +261,7 @@ impl Repl {
             Err(e) => eprintln!("error: {e:?}"),
         }
     }
+
     pub fn delta(&mut self, input: &str) {
         let mut input = input.to_string();
         self.scope.delta_redex(&mut input);
