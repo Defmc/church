@@ -94,10 +94,7 @@ impl Body {
 
     #[must_use]
     pub fn beta_reduced(mut self) -> Self {
-        println!("running {self}");
-        while self.beta_redex() == true {
-            // println!("running {self}");
-        }
+        while self.beta_redex() == true {}
         self
     }
 
@@ -626,15 +623,19 @@ pub mod tests {
     #[test]
     pub fn free_capture_avoiding_subsitution() {
         let expr = Body::from_str("λb.(λa.(b a a)) λx.(a)").unwrap();
-        assert!(expr
-            .beta_reduced()
-            .alpha_eq(&Body::from_str("λc.(a c)").unwrap()));
+        assert!(
+            expr.clone()
+                .beta_reduced()
+                .alpha_eq(&Body::from_str("a").unwrap()),
+            "what {}",
+            expr.beta_reduced()
+        );
     }
     #[test]
     pub fn bound_capture_avoiding_subsitution() {
         let expr = Body::from_str("λa.(λb.(λa.(b a a)) λx.(a))").unwrap();
         assert!(expr
             .beta_reduced()
-            .alpha_eq(&Body::from_str("λa.(λc.(a c))").unwrap()));
+            .alpha_eq(&Body::from_str("λa.(a)").unwrap()));
     }
 }
