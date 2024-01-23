@@ -2,7 +2,7 @@ Y = ^f.(^x.(f (x x)) ^x.(f (x x))) # recursive combinator: Y f = Y (f (f (f (...
 I = ^x.(x) # identity function: I x = x
 True = ^a.(^b.(a))
 False = ^a.(^b.(b))
-IfElse = ^c.(^i.(^e.(c i e))) # if c, then i, else e
+If = I # (if c, then i, else e) == c
 And = ^a.(^b.(a b a)) 
 Or = ^a.(^b.(a a b))
 Not = ^a.(a False True)
