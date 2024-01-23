@@ -9,7 +9,7 @@ pub struct Scope {
     // alias: definition
     pub aliases: Vec<String>,
     pub defs: Vec<String>,
-    pub index: HashMap<String, usize>,
+    pub indexes: HashMap<String, usize>,
     // post-processed definition: alias
     pub cached_defs: HashMap<String, String>,
 }
@@ -42,13 +42,39 @@ impl Scope {
     pub fn update(&mut self) {
         self.internal_delta();
         self.cache_defs();
-        self.index = self
+        self.indexes = self
             .aliases
             .clone()
             .into_iter()
             .enumerate()
             .map(|(i, a)| (a, i))
             .collect();
+        self.index();
+    }
+
+    pub fn index(&mut self) {
+        self.indexes
+            .reserve(self.aliases.len() - self.indexes.len());
+        self.indexes.clear();
+        for (i, (k, v)) in self
+            .aliases
+            .clone()
+            .into_iter()
+            .zip(self.defs.clone().into_iter())
+            .enumerate()
+        {
+            self.indexes
+                .entry(k.clone())
+                .and_modify(|iv| {
+                    if self.defs[*iv] != v {
+                        panic!(
+                            "shadowing {k:?}: the old value {:?} is different from the new {v:?}",
+                            self.defs[*iv]
+                        );
+                    }
+                })
+                .or_insert(i);
+        }
     }
 
     pub fn cache_defs(&mut self) {
@@ -92,7 +118,7 @@ impl FromStr for Scope {
             aliases: defs.keys().cloned().collect(),
             defs: defs.values().cloned().collect(),
             cached_defs: HashMap::new(),
-            index: HashMap::new(),
+            indexes: HashMap::new(),
         };
         Ok(s)
     }

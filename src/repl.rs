@@ -202,7 +202,7 @@ impl Repl {
                 }
             }
             _ => {
-                if let Some(def) = self.scope.index.get(input) {
+                if let Some(def) = self.scope.indexes.get(input) {
                     println!("{}", self.scope.defs[*def]);
                 } else {
                     eprintln!("unknown option {input:?}");
