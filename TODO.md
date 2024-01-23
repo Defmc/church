@@ -1,4 +1,4 @@
-### Impl matches
+### Impl matches (fixed)
 ```
 λ> ^x.(x)
 expr: ^x.(x)
@@ -20,6 +20,6 @@ expr: ^x.(x)
 
 ### Impl binary arithmetic
 
-### Beta-reduce scope expressions
+### Beta-reduce scope expressions (fixed)
 
 ### Allows IO with a Sys abstraction
