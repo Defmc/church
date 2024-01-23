@@ -66,11 +66,13 @@ impl Mode {
     pub fn run_show(&self, l: &mut Body) {
         let mut buf = String::new();
         println!("{l}");
+        let mut steps = 0;
         'redex: while l.beta_redex_step() {
             println!("{l}");
             if self == &Self::Debug {
                 loop {
-                    print!("(c)ontinue or (a)bort: ");
+                    print!("[step {steps}] (c)ontinue or (a)bort: ");
+                    steps += 1;
                     assert!(std::io::stdout().flush().is_ok());
                     buf.clear();
                     assert!(std::io::stdin().read_line(&mut buf).is_ok());
