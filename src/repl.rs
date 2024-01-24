@@ -315,7 +315,29 @@ impl Repl {
         if let Some(n) = Repl::natural_from_church_encoding(b) {
             return n.to_string();
         }
+        if let Some(v) = self.from_list(b) {
+            return format!("{v:?}");
+        }
         b.to_string()
+    }
+
+    pub fn from_list(&self, b: &Body) -> Option<Vec<String>> {
+        if let Body::Abs(wrapper, b) = b {
+            if let Body::App(b, rhs) = b.as_ref() {
+                if let Body::App(wrap, lhs) = b.as_ref() {
+                    if Body::Id(*wrapper) == **wrap {
+                        let mut v = vec![self.format_value(lhs)];
+                        if let Some(tail) = self.from_list(rhs) {
+                            v.extend(tail);
+                        } else {
+                            v.push(self.format_value(rhs))
+                        }
+                        return Some(v);
+                    }
+                }
+            }
+        }
+        None
     }
 
     pub fn gen_nats(&mut self, input: &str) {
