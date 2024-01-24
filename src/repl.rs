@@ -316,21 +316,21 @@ impl Repl {
             return n.to_string();
         }
         if let Some(v) = self.from_list(b) {
-            return format!("{v:?}");
+            return format!("[{v}]");
         }
         b.to_string()
     }
 
-    pub fn from_list(&self, b: &Body) -> Option<Vec<String>> {
+    pub fn from_list(&self, b: &Body) -> Option<String> {
         if let Body::Abs(wrapper, b) = b {
             if let Body::App(b, rhs) = b.as_ref() {
                 if let Body::App(wrap, lhs) = b.as_ref() {
                     if Body::Id(*wrapper) == **wrap {
-                        let mut v = vec![self.format_value(lhs)];
+                        let mut v = self.format_value(lhs);
                         if let Some(tail) = self.from_list(rhs) {
-                            v.extend(tail);
+                            v = format!("{v}, {tail}")
                         } else {
-                            v.push(self.format_value(rhs))
+                            v = format!("{v}, {}", self.format_value(rhs))
                         }
                         return Some(v);
                     }
