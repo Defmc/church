@@ -24,11 +24,11 @@ pub fn id_to_str(i: usize) -> String {
         "'".repeat(rotations)
     )
 }
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Term {
     pub body: Body,
-    pub frees: HashSet<VarId>,
-    pub bounds: HashSet<VarId>,
+    pub closed: bool,
 }
 
 impl PartialOrd for Term {
@@ -45,13 +45,8 @@ impl fmt::Display for Term {
 
 impl Term {
     pub fn new(body: Body) -> Self {
-        let frees = body.free_variables();
-        let bounds = body.bounded_variables();
-        Self {
-            body,
-            frees,
-            bounds,
-        }
+        let closed = body.free_variables().is_empty();
+        Self { body, closed }
     }
 
     #[must_use]
@@ -111,8 +106,8 @@ impl Term {
     }
 
     pub fn alpha_redex(&mut self) {
-        let frees = self.free_variables().iter();
-        self.redex_by_alpha(&mut frees.map(|&i| (i, i)).collect())
+        let frees = self.free_variables().into_iter();
+        self.redex_by_alpha(&mut frees.map(|i| (i, i)).collect())
     }
 
     #[must_use]
@@ -153,8 +148,8 @@ impl Term {
     }
 
     #[must_use]
-    pub fn bounded_variables(&self) -> &HashSet<VarId> {
-        &self.bounds
+    pub fn bounded_variables(&self) -> HashSet<VarId> {
+        self.body.bounded_variables()
     }
 
     /// returns all free variables, including the ones binded on one application
@@ -162,8 +157,8 @@ impl Term {
     /// FV(^x.(a) ^a.(a)) = { a }
     /// FV(a) = { a }
     #[must_use]
-    pub fn free_variables(&self) -> &HashSet<VarId> {
-        &self.frees
+    pub fn free_variables(&self) -> HashSet<VarId> {
+        self.body.free_variables()
     }
 
     /// α-equivalency refers to expressions with same implementation, disconsidering the variable
@@ -282,16 +277,20 @@ impl Term {
             Body::App(ref mut f, ref mut x) => f.apply_by(id, val) | x.apply_by(id, val),
         };
         if changed {
-            self.frees.extend(val.free_variables());
+            self.closed &= val.closed;
         }
         changed
     }
 
     pub fn fix_captures(&mut self, rhs: &Self) {
+        // closed terms don't have any free variable, so vars /\ free is always {}
+        if rhs.closed {
+            return;
+        }
         let vars = self.bounded_variables();
         let frees_val = rhs.free_variables();
         // if there's no free variable capturing (used vars on lhs /\ free vars on rhs), we just apply on the abstraction body
-        let captures: Vec<_> = frees_val.intersection(vars).collect(); // TODO: Use vec
+        let captures: Vec<_> = frees_val.intersection(&vars).collect(); // TODO: Use vec
         if !captures.is_empty() {
             // println!("debugging {self} and {rhs}");
             // println!(
@@ -457,7 +456,8 @@ impl Term {
     /// is bigger than the amount of expressions from debrejin_redex contradomain, as it treats
     /// ^a.(a b) ^a.(^b.(b)) as debrejin valid. While the true debrejin form is ^a.(a b) ^a.(^c.(c))
     pub fn is_debrejin(&self) -> bool {
-        self.check_is_debrejin(self.free_variables(), 0)
+        let frees = self.free_variables();
+        self.check_is_debrejin(&frees, 0)
     }
 
     pub fn check_is_debrejin(&self, frees: &HashSet<VarId>, lvl: usize) -> bool {
@@ -506,12 +506,12 @@ impl Body {
                 }
             }
             Self::App(lhs, rhs) => {
-                let cached = lhs.free_variables().union(rhs.free_variables());
-                frees.extend(cached);
+                lhs.body.get_free_variables(binds, frees);
+                rhs.body.get_free_variables(binds, frees);
             }
             Self::Abs(v, l) => {
                 binds.insert(*v);
-                frees.extend(l.free_variables());
+                l.body.get_free_variables(binds, frees);
             }
         }
     }
@@ -524,15 +524,15 @@ impl Body {
     }
 
     fn get_bounded_variables(&self, binds: &mut HashSet<VarId>) {
-        match &self {
+        match self {
             Self::Id(..) => (),
             Self::App(lhs, rhs) => {
-                let cache = lhs.bounded_variables().union(rhs.bounded_variables());
-                binds.extend(cache);
+                lhs.body.get_bounded_variables(binds);
+                rhs.body.get_bounded_variables(binds);
             }
             Self::Abs(v, l) => {
                 binds.insert(*v);
-                binds.extend(l.bounded_variables());
+                l.body.get_bounded_variables(binds);
             }
         }
     }
