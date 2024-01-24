@@ -1,0 +1,15 @@
+True = ^a.(^b.(a))
+False = ^a.(^b.(b))
+
+
+# Pairs: (x, y)
+Pair = ^x.(^y.(^z.(z x y)))
+Fst = ^z.(z True)
+Snd = ^z.(z False)
+
+# Lists: [x, y, z]
+Cons = Pair
+Nil = ^x.(True)
+IsNil = ^p.(p ^x.(^y.(False)))
+Head = Fst
+Tail = Snd
