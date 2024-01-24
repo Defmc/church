@@ -302,20 +302,20 @@ impl Repl {
         None
     }
 
-    /// prints the body and return if has used another print way (like alias, number, etc.)
-    pub fn print_value(&self, b: &Body) -> bool {
+    pub fn print_value(&self, b: &Body) {
+        println!("{}", self.format_value(b));
+    }
+
+    pub fn format_value(&self, b: &Body) -> String {
         if self.show_alias {
             if let Some(alias) = self.scope.get_from_alpha_key(b) {
-                println!("{alias}");
-                return true;
+                return alias.to_string();
             }
         }
         if let Some(n) = Repl::natural_from_church_encoding(b) {
-            println!("{n}");
-            return true;
+            return n.to_string();
         }
-        println!("{b}");
-        false
+        b.to_string()
     }
 
     pub fn gen_nats(&mut self, input: &str) {
