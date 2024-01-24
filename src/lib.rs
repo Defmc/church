@@ -506,12 +506,15 @@ impl Body {
                 }
             }
             Self::App(lhs, rhs) => {
-                lhs.body.get_free_variables(&mut binds.clone(), frees);
-                rhs.body.get_free_variables(&mut binds.clone(), frees);
+                lhs.body.get_free_variables(binds, frees);
+                rhs.body.get_free_variables(binds, frees);
             }
             Self::Abs(v, l) => {
-                binds.insert(*v);
+                let recent = binds.insert(*v);
                 l.body.get_free_variables(binds, frees);
+                if recent {
+                    binds.remove(v);
+                }
             }
         }
     }
