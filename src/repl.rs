@@ -317,6 +317,18 @@ impl Repl {
         }
         if let Some(v) = self.from_list(b) {
             return format!("[{v}]");
+        match b {
+            Body::Id(id) => church::id_to_str(*id),
+            Body::App(ref f, ref x) => format!(
+                "{} {}",
+                self.format_value(f),
+                if usize::from(x.len()) > 1 {
+                    format!("({})", self.format_value(x))
+                } else {
+                    format!("{}", self.format_value(x))
+                }
+            ),
+            Body::Abs(v, l) => format!("λ{}.({})", church::id_to_str(*v), self.format_value(l)),
         }
         b.to_string()
     }
