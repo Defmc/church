@@ -1,6 +1,8 @@
+Y = ^f.(^x.(f (x x)) ^x.(f (x x))) # recursive combinator: Y f = Y (f (f (f (...))))
+I = ^x.(x) # identity function: I x = x
+If = I
 True = ^a.(^b.(a))
 False = ^a.(^b.(b))
-
 
 # Pairs: (x, y)
 Pair = ^x.(^y.(^z.(z x y)))
@@ -13,3 +15,15 @@ Nil = ^x.(True)
 IsNil = ^p.(p ^x.(^y.(False)))
 Head = Fst
 Tail = Snd
+
+FoldR = Y ^g.(^f.(^z.(^l.(If (IsNil l) z (f (Head l) (g f z (Tail l)))))))
+Map = ^f.(FoldR (Comp Cons f) Nil)
+
+Comp = ^f.(^g.(^x.(f (g x))))
+
+Sum = FoldR Add 0
+Length = FoldR ^n.(^z.(Succ z)) 0
+
+
+All = ^f.(FoldR (Comp And f) True)
+Any = ^f.(FoldR (Comp Or f) False)
