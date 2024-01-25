@@ -22,7 +22,7 @@ pub struct Repl {
     scope: Scope,
     loaded_files: Vec<PathBuf>,
     prompt: String,
-    show_alias: bool,
+    readable: bool,
     mode: Mode,
     quit: bool,
     rl: DefaultEditor,
@@ -130,7 +130,7 @@ impl Default for Repl {
         Repl {
             scope: Scope::default(),
             loaded_files: Vec::default(),
-            show_alias: true,
+            readable: true,
             mode: Mode::default(),
             quit: false,
             prompt: String::from("λ> "),
@@ -222,11 +222,11 @@ impl Repl {
     }
 
     pub fn set(&mut self, input: &str) {
-        if let Some(value) = input.strip_prefix("show_alias ") {
+        if let Some(value) = input.strip_prefix("readable ") {
             match value {
-                "true" => self.show_alias = true,
-                "false" => self.show_alias = false,
-                _ => eprintln!("unknown value {value} for show_alias"),
+                "true" => self.readable = true,
+                "false" => self.readable = false,
+                _ => eprintln!("unknown value {value} for readable"),
             }
         } else if let Some(value) = input.strip_prefix("prompt ") {
             self.prompt = value.to_string();
@@ -307,16 +307,17 @@ impl Repl {
     }
 
     pub fn format_value(&self, b: &Body) -> String {
-        if self.show_alias {
+        if self.readable {
             if let Some(alias) = self.scope.get_from_alpha_key(b) {
                 return alias.to_string();
             }
+            if let Some(n) = Repl::natural_from_church_encoding(b) {
+                return n.to_string();
+            }
+            if let Some(v) = self.from_list(b) {
+                return format!("[{v}]");
+            }
         }
-        if let Some(n) = Repl::natural_from_church_encoding(b) {
-            return n.to_string();
-        }
-        if let Some(v) = self.from_list(b) {
-            return format!("[{v}]");
         match b {
             Body::Id(id) => church::id_to_str(*id),
             Body::App(ref f, ref x) => format!(
@@ -330,7 +331,6 @@ impl Repl {
             ),
             Body::Abs(v, l) => format!("λ{}.({})", church::id_to_str(*v), self.format_value(l)),
         }
-        b.to_string()
     }
 
     pub fn from_list(&self, b: &Body) -> Option<String> {
