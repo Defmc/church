@@ -3,6 +3,7 @@ I = ^x.(x) # identity function: I x = x
 If = I
 True = ^a.(^b.(a))
 False = ^a.(^b.(b))
+IsZero = ^n.(n ^x.(False) True)
 
 # Pairs: (x, y)
 Pair = ^x.(^y.(^z.(z x y)))
@@ -23,7 +24,7 @@ Comp = ^f.(^g.(^x.(f (g x))))
 
 Sum = FoldR Add 0
 Length = FoldR ^n.(^z.(Succ z)) 0
-
+Take = ^n.(^l.(Or (IsNil l) (IsZero n) Nil (Cons (Head l) (Take (Pred n) (Tail l)))))
 
 All = ^f.(FoldR (Comp And f) True)
 Any = ^f.(FoldR (Comp Or f) False)
