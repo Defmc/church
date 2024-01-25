@@ -326,7 +326,7 @@ impl Repl {
                 if usize::from(x.len()) > 1 {
                     format!("({})", self.format_value(x))
                 } else {
-                    format!("{}", self.format_value(x))
+                    self.format_value(x)
                 }
             ),
             Body::Abs(v, l) => format!("λ{}.({})", church::id_to_str(*v), self.format_value(l)),
