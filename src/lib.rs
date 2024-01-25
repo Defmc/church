@@ -320,8 +320,7 @@ impl Body {
         let vars = self.bounded_variables();
         let frees_val = rhs.free_variables();
         // if there's no free variable capturing (used vars on lhs /\ free vars on rhs), we just apply on the abstraction body
-        let mut captures: Vec<_> = frees_val.intersection(&vars).collect(); // TODO: Use vec
-        captures.sort();
+        let captures: Vec<_> = frees_val.intersection(&vars).collect(); // TODO: Use vec
         if !captures.is_empty() {
             // println!("debugging {self} and {rhs}");
             // println!(
@@ -342,13 +341,7 @@ impl Body {
             //         .map(|s| id_to_str(**s))
             //         .collect::<HashSet<_>>()
             // );
-            let reserveds: HashSet<_> = rhs.variables().union(&self.variables()).copied().collect();
-            let safes = (0..).filter(|n| !reserveds.contains(n)).take(vars.len());
-            let news = captures.into_iter().zip(safes);
-            for (&from, to) in news {
-                // println!("origin: {self}");
-                self.rename_vars(from, to, false);
-            }
+            self.redex_by_alpha(&mut captures.into_iter().map(|&i| (i, i)).collect());
             // println!("final: {self} | {rhs}");
         }
     }
