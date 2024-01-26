@@ -12,10 +12,16 @@ pub struct Scope {
     pub indexes: HashMap<String, usize>,
     // post-processed definition: alias
     pub cached_defs: HashMap<String, String>,
+    pub need_update: bool,
 }
 
 impl Scope {
-    pub fn delta_redex(&self, b: &str) -> (String, bool) {
+    pub fn delta_redex(&mut self, b: &str) -> (String, bool) {
+        self.update();
+        self.redex_by_delta(b)
+    }
+
+    pub fn redex_by_delta(&self, b: &str) -> (String, bool) {
         let ac = AhoCorasick::builder()
             .match_kind(aho_corasick::MatchKind::LeftmostLongest)
             .build(&self.aliases)
@@ -27,19 +33,25 @@ impl Scope {
 
     pub fn internal_delta(&mut self) {
         let mut changed = true;
+        let need = self.need_update;
+        self.need_update = false;
         while changed {
             changed = false;
             for i in 0..self.defs.len() {
-                let (result, diff) = self.delta_redex(&self.defs[i]);
+                let (result, diff) = self.redex_by_delta(&self.defs[i]);
                 if diff {
                     self.defs[i] = result;
                     changed = true;
                 }
             }
         }
+        self.need_update = need;
     }
 
     pub fn update(&mut self) {
+        if !self.need_update {
+            return;
+        }
         self.internal_delta();
         self.cache_defs();
         self.indexes = self
@@ -50,6 +62,7 @@ impl Scope {
             .map(|(i, a)| (a, i))
             .collect();
         self.index();
+        self.need_update = false;
     }
 
     pub fn index(&mut self) {
@@ -90,8 +103,7 @@ impl Scope {
     pub fn extend(&mut self, rhs: Self) {
         self.defs.extend(rhs.defs);
         self.aliases.extend(rhs.aliases);
-        // TODO: Check for dedups
-        self.update();
+        self.need_update = true;
     }
 
     pub fn get_from_alpha_key(&self, key: &Body) -> Option<&str> {
@@ -119,6 +131,7 @@ impl FromStr for Scope {
             defs: defs.values().cloned().collect(),
             cached_defs: HashMap::new(),
             indexes: HashMap::new(),
+            need_update: true,
         };
         Ok(s)
     }
