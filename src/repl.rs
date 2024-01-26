@@ -160,7 +160,6 @@ impl Repl {
 
     pub fn parse(&mut self, input: &str) {
         let input = input.trim();
-        println!("on {input}");
         if input.starts_with(':') {
             self.handle(input.strip_prefix(':').unwrap())
         } else if input.contains('=') {
