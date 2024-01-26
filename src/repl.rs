@@ -15,6 +15,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     ("delta", Repl::delta),
     ("gen_nats ", Repl::gen_nats),
     ("quit", Repl::quit),
+    ("reload", Repl::reload),
 ];
 
 #[derive(Debug)]
@@ -377,6 +378,18 @@ impl Repl {
             self.scope.extend(numbers);
         } else {
             eprintln!("missing two values (start end)");
+        }
+    }
+
+    pub fn reload(&mut self, input: &str) {
+        if input.is_empty() {
+            self.scope = Scope::default();
+            let loaded = self.loaded_files.clone();
+            loaded.into_iter().for_each(|f| match read_to_string(f) {
+                Ok(s) => s.lines().for_each(|l| self.parse(l)),
+                Err(e) => eprintln!("error: {e:?}"),
+            });
+            self.scope.update();
         }
     }
 
