@@ -88,7 +88,7 @@ impl Mode {
         }
     }
 
-    pub fn run(&self, repl: &Repl, mut l: String) {
+    pub fn run(&self, repl: &mut Repl, mut l: String) {
         self.bench("delta redex", || {
             l = repl.scope.delta_redex(&l).0;
         });
@@ -153,21 +153,26 @@ impl Repl {
                     };
                 }
             };
-            let buf = buf.trim();
-            if buf.starts_with(':') {
-                self.handle(buf.strip_prefix(':').unwrap())
-            } else if buf.contains('=') {
-                self.alias(buf);
-            } else {
-                self.run(buf);
-            }
+            self.parse(&buf);
         }
         Ok(())
     }
 
+    pub fn parse(&mut self, input: &str) {
+        let input = input.trim();
+        println!("on {input}");
+        if input.starts_with(':') {
+            self.handle(input.strip_prefix(':').unwrap())
+        } else if input.contains('=') {
+            self.alias(input);
+        } else if !input.is_empty() && !input.starts_with('#') {
+            self.run(input);
+        }
+    }
+
     pub fn run(&mut self, input: &str) {
-        self.mode
-            .bench("total", || self.mode.run(self, input.to_string()));
+        let mode = self.mode;
+        mode.bench("total", || mode.run(self, input.to_string()));
     }
 
     pub fn alias(&mut self, input: &str) {
@@ -215,8 +220,9 @@ impl Repl {
     pub fn load(&mut self, input: &str) {
         match read_to_string(input) {
             Ok(s) => {
-                self.alias(&s);
+                s.lines().for_each(|l| self.parse(l));
                 self.loaded_files.push(input.into());
+                self.scope.update();
             }
             Err(e) => eprintln!("error: {e:?}"),
         }
