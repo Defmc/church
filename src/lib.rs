@@ -32,6 +32,7 @@ pub fn id_to_str(i: usize) -> String {
 pub struct Term {
     pub body: Body,
     pub frees: HashSet<VarId>,
+    pub bounds: HashSet<VarId>,
 }
 
 impl PartialOrd for Term {
@@ -49,7 +50,12 @@ impl fmt::Display for Term {
 impl Term {
     pub fn new(body: Body) -> Self {
         let frees = body.free_variables();
-        Self { body, frees }
+        let bounds = body.bounded_variables();
+        Self {
+            body,
+            frees,
+            bounds,
+        }
     }
 
     #[must_use]
@@ -499,6 +505,30 @@ impl Body {
             Self::Abs(v, l) => {
                 binds.insert(*v);
                 frees.extend(l.free_variables());
+            }
+        }
+    }
+
+    #[must_use]
+    pub fn bounded_variables(&self) -> HashSet<VarId> {
+        let mut binds = HashSet::new();
+        self.get_bounded_variables(&mut binds);
+        binds
+    }
+
+    fn get_bounded_variables(&self, binds: &mut HashSet<VarId>) {
+        match &self {
+            Body::Id(..) => (),
+            Body::App(lhs, rhs) => {
+                let lhs = &lhs.bounded_variables();
+                let rhs = &rhs.bounded_variables();
+                let cache = lhs.union(rhs);
+                binds.extend(cache);
+            }
+            Body::Abs(v, l) => {
+                binds.insert(*v);
+                let l = &l.bounded_variables();
+                binds.extend(l);
             }
         }
     }
