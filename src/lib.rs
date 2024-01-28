@@ -10,9 +10,6 @@ pub type VarId = usize;
 
 pub const ALPHABET: &str = "abcdefghijklmnopqrstuvwxyz";
 
-/// Church encoding
-pub mod enc;
-
 /// Parsing lib
 pub mod parser;
 
@@ -46,55 +43,61 @@ impl Term {
     pub fn new(body: Body) -> Self {
         Self { body }
     }
-}
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Body {
-    /* identity */ Id(VarId),
-    /* application */ App(Box<Term>, /* ( */ Box<Term> /* ) */),
-    /* abstraction */ Abs(VarId, Box<Self>),
-}
-
-impl Body {
     #[must_use]
     pub fn id() -> Self {
-        Self::Abs(0, Body::Id(0).into())
+        let id = Self::new(Body::Id(0));
+        Self::new(Body::Abs(0, id.into()))
     }
 
     /// Create a lambda abstraction from left-to-right arguments
     /// `from_args` f x y (f x y) = ^f^x^y . f x y
     /// # Panics
     /// Never.
-    pub fn from_args<I: Iterator<Item = VarId>>(mut it: Peekable<I>, body: Body) -> Option<Self> {
+    pub fn from_args<I: Iterator<Item = VarId>>(mut it: Peekable<I>, term: Self) -> Option<Self> {
         let next = it.next()?;
         if it.peek().is_some() {
-            let abs = Self::from_args(it, body).unwrap();
-            Some(Body::Abs(next, abs.into()))
+            let abs = Self::from_args(it, term).unwrap();
+            let body = Self::new(abs.body);
+            let abs = Body::Abs(next, body.into());
+            Some(Self::new(abs))
         } else {
-            Some(Body::Abs(next, body.into()))
+            let abs = Body::Abs(next, term.into());
+            Some(Self::new(abs))
         }
     }
 
-    /// Returns the order (how many abstractions) this term have
+    /// Returns the order (how many abstractions) this body have
     #[must_use]
     pub fn order(&self) -> usize {
-        match self {
-            Self::Abs(_, ref a) => 1 + a.order(),
+        match self.body {
+            Body::Abs(_, ref a) => 1 + a.order(),
             _ => 0,
         }
     }
 
     pub fn as_mut_abs(&mut self) -> Option<(&mut VarId, &mut Self)> {
-        if let Self::Abs(v, b) = self {
-            Some((v, b))
+        if let Body::Abs(ref mut v, ref mut b) = self.body {
+            Some((v, b.as_mut()))
         } else {
             None
         }
     }
 
-    #[must_use]
-    pub fn in_app(self, s: Self) -> Body {
-        Body::App(Term::new(self).into(), Term::new(s).into())
+    pub fn as_mut_app(&mut self) -> Option<(&mut Self, &mut Self)> {
+        if let Body::App(ref mut lhs, ref mut rhs) = self.body {
+            Some((lhs.as_mut(), rhs))
+        } else {
+            None
+        }
+    }
+
+    pub fn as_mut_id(&mut self) -> Option<&mut VarId> {
+        if let Body::Id(ref mut id) = self.body {
+            Some(id)
+        } else {
+            None
+        }
     }
 
     pub fn alpha_redex(&mut self) {
@@ -117,17 +120,17 @@ impl Body {
     /// # Panics
     /// Never.
     pub fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
-        match self {
-            Self::Id(id) => {
+        match self.body {
+            Body::Id(ref mut id) => {
                 if let Some(mid) = map.get(id) {
                     *id = *mid;
                 }
             }
-            Self::App(f, x) => {
-                f.body.redex_by_alpha(&mut map.clone());
-                x.body.redex_by_alpha(&mut map.clone());
+            Body::App(ref mut f, ref mut x) => {
+                f.redex_by_alpha(&mut map.clone());
+                x.redex_by_alpha(&mut map.clone());
             }
-            Self::Abs(i, l) => {
+            Body::Abs(ref mut i, ref mut l) => {
                 let (mut maybe_map, bind) = Self::try_alpha_redex(*i, map);
                 *i = bind;
                 if let Some(ref mut new_map) = maybe_map {
@@ -162,15 +165,15 @@ impl Body {
     }
 
     fn get_variables(&self, binds: &mut HashSet<VarId>) {
-        match self {
-            Self::Id(id) => {
+        match &self.body {
+            Body::Id(id) => {
                 binds.insert(*id);
             }
-            Self::App(lhs, rhs) => {
-                lhs.body.get_variables(binds);
-                rhs.body.get_variables(binds);
+            Body::App(lhs, rhs) => {
+                lhs.get_variables(binds);
+                rhs.get_variables(binds);
             }
-            Self::Abs(v, l) => {
+            Body::Abs(v, l) => {
                 binds.insert(*v);
                 l.get_variables(binds);
             }
@@ -185,13 +188,13 @@ impl Body {
     }
 
     fn get_bounded_variables(&self, binds: &mut HashSet<VarId>) {
-        match self {
-            Self::Id(..) => (),
-            Self::App(lhs, rhs) => {
-                lhs.body.get_bounded_variables(binds);
-                rhs.body.get_bounded_variables(binds);
+        match &self.body {
+            Body::Id(..) => (),
+            Body::App(lhs, rhs) => {
+                lhs.get_bounded_variables(binds);
+                rhs.get_bounded_variables(binds);
             }
-            Self::Abs(v, l) => {
+            Body::Abs(v, l) => {
                 binds.insert(*v);
                 l.get_bounded_variables(binds);
             }
@@ -199,17 +202,17 @@ impl Body {
     }
 
     pub fn get_free_variables(&self, binds: &mut HashSet<VarId>, frees: &mut HashSet<VarId>) {
-        match self {
-            Self::Id(id) => {
-                if !binds.contains(id) {
+        match &self.body {
+            Body::Id(id) => {
+                if !binds.contains(&id) {
                     frees.insert(*id);
                 }
             }
-            Self::App(lhs, rhs) => {
-                lhs.body.get_free_variables(&mut binds.clone(), frees);
-                rhs.body.get_free_variables(&mut binds.clone(), frees);
+            Body::App(lhs, rhs) => {
+                lhs.get_free_variables(&mut binds.clone(), frees);
+                rhs.get_free_variables(&mut binds.clone(), frees);
             }
-            Self::Abs(v, l) => {
+            Body::Abs(v, l) => {
                 binds.insert(*v);
                 l.get_free_variables(binds, frees)
             }
@@ -266,41 +269,41 @@ impl Body {
         rhs_map: &mut HashMap<VarId, VarId>,
         rhs_binds: usize,
     ) -> bool {
-        match (self, rhs) {
-            (Self::Id(s_id), Self::Id(r_id)) => self_map.get(s_id) == rhs_map.get(r_id),
-            (Self::App(s_f, s_x), Self::App(r_f, r_x)) => {
-                s_f.body.eq_by_alpha(
-                    &r_f.body,
+        match (&self.body, &rhs.body) {
+            (Body::Id(s_id), Body::Id(r_id)) => self_map.get(&s_id) == rhs_map.get(&r_id),
+            (Body::App(s_f, s_x), Body::App(r_f, r_x)) => {
+                s_f.eq_by_alpha(
+                    &r_f,
                     &mut self_map.clone(),
                     self_binds,
                     &mut rhs_map.clone(),
                     rhs_binds,
-                ) && s_x.body.eq_by_alpha(
-                    &r_x.body,
+                ) && s_x.eq_by_alpha(
+                    &r_x,
                     &mut self_map.clone(),
                     self_binds,
                     &mut rhs_map.clone(),
                     rhs_binds,
                 )
             }
-            (Self::Abs(s_v, s_l), Self::Abs(r_v, r_l)) => {
+            (Body::Abs(s_v, s_l), Body::Abs(r_v, r_l)) => {
                 let mut edits = (None, None);
-                if self_map.contains_key(s_v) {
+                if self_map.contains_key(&s_v) {
                     let mut map = self_map.clone();
-                    *map.get_mut(s_v).unwrap() = self_binds;
+                    *map.get_mut(&s_v).unwrap() = self_binds;
                     edits.0 = Some(map);
                 } else {
                     self_map.insert(*s_v, self_binds);
                 }
-                if rhs_map.contains_key(r_v) {
+                if rhs_map.contains_key(&r_v) {
                     let mut map = rhs_map.clone();
-                    *map.get_mut(r_v).unwrap() = rhs_binds;
+                    *map.get_mut(&r_v).unwrap() = rhs_binds;
                     edits.1 = Some(map);
                 } else {
                     rhs_map.insert(*r_v, rhs_binds);
                 }
                 s_l.eq_by_alpha(
-                    r_l,
+                    &r_l,
                     edits.0.as_mut().map_or_else(|| self_map, |m| m),
                     self_binds + 1,
                     edits.1.as_mut().map_or_else(|| rhs_map, |m| m),
@@ -312,22 +315,22 @@ impl Body {
     }
 
     pub fn apply_by(&mut self, id: VarId, val: &Self) {
-        match self {
-            Self::Id(s_id) => {
-                if *s_id == id {
+        match self.body {
+            Body::Id(s_id) => {
+                if s_id == id {
                     *self = val.clone();
                 }
             }
-            Self::Abs(..) => {
+            Body::Abs(..) => {
                 let v = *self.as_mut_abs().unwrap().0;
                 if v != id {
                     self.fix_captures(val);
                     self.as_mut_abs().unwrap().1.apply_by(id, val);
                 }
             }
-            Self::App(f, x) => {
-                f.body.apply_by(id, val);
-                x.body.apply_by(id, val);
+            Body::App(ref mut f, ref mut x) => {
+                f.apply_by(id, val);
+                x.apply_by(id, val);
             }
         }
     }
@@ -366,14 +369,14 @@ impl Body {
     /// `force` makes all ocurrences of to be renamed, desconsidering the context.
     /// rename_vars ^x.(x y) 'x' 'a' false = ^a.(a y)
     pub fn rename_vars(&mut self, from: VarId, to: VarId, force: bool) {
-        match self {
-            Self::Id(ref mut i) => {
+        match self.body {
+            Body::Id(ref mut i) => {
                 assert_ne!(*i, to);
                 if *i == from && force {
                     *i = to;
                 }
             }
-            Self::Abs(ref mut v, ref mut l) => {
+            Body::Abs(ref mut v, ref mut l) => {
                 assert_ne!(*v, to);
                 let force = *v == from || force;
                 if *v == from && force {
@@ -381,9 +384,9 @@ impl Body {
                 }
                 l.rename_vars(from, to, force);
             }
-            Self::App(ref mut lhs, ref mut rhs) => {
-                lhs.body.rename_vars(from, to, force);
-                rhs.body.rename_vars(from, to, force);
+            Body::App(ref mut lhs, ref mut rhs) => {
+                lhs.rename_vars(from, to, force);
+                rhs.rename_vars(from, to, force);
             }
         }
     }
@@ -412,24 +415,24 @@ impl Body {
     }
 
     pub fn beta_redex_step(&mut self) -> bool {
-        match self {
-            Self::Id(..) => false,
-            Self::App(f, x) => {
-                return if matches!(&f.body, Self::Abs(..)) {
+        match self.body {
+            Body::Id(..) => false,
+            Body::App(ref mut f, ref mut x) => {
+                return if matches!(&f.body, Body::Abs(..)) {
                     let mut f = f.clone();
-                    f.body.fix_captures(&x.body);
-                    let (id, l) = f.body.as_mut_abs().unwrap();
-                    l.apply_by(*id, &x.body);
+                    f.fix_captures(&x);
+                    let (id, l) = f.as_mut_abs().unwrap();
+                    l.apply_by(*id, &x);
                     *self = l.clone();
                     true
                 } else {
-                    f.body.beta_redex_step() || x.body.beta_redex_step()
+                    f.beta_redex_step() || x.beta_redex_step()
                 };
             }
-            Self::Abs(..) => {
+            Body::Abs(..) => {
                 if self.eta_redex_step() {
                     true
-                } else if let Self::Abs(_, l) = self {
+                } else if let Body::Abs(_, ref mut l) = self.body {
                     l.beta_redex_step()
                 } else {
                     unreachable!()
@@ -446,10 +449,10 @@ impl Body {
     /// Never.
     #[must_use]
     pub fn len(&self) -> NonZeroUsize {
-        match self {
-            Self::Id(..) => 1.try_into().unwrap(),
-            Self::App(ref f, ref x) => f.body.len().saturating_add(x.body.len().into()),
-            Self::Abs(_, ref b) => b.len().saturating_add(1),
+        match self.body {
+            Body::Id(..) => 1.try_into().unwrap(),
+            Body::App(ref f, ref x) => f.len().saturating_add(x.len().into()),
+            Body::Abs(_, ref b) => b.len().saturating_add(1),
         }
     }
 
@@ -462,10 +465,10 @@ impl Body {
     }
 
     pub fn eta_redex_step(&mut self) -> bool {
-        if let Self::Abs(v, app) = self {
-            if let Self::App(lhs, rhs) = app.as_ref() {
-                if &rhs.body == &Self::Id(*v) && !lhs.body.contains(&Body::Id(*v)) {
-                    *self = lhs.body.clone();
+        if let Body::Abs(v, ref mut app) = self.body {
+            if let Body::App(ref mut lhs, ref mut rhs) = app.body {
+                if &rhs.body == &Body::Id(v) && !lhs.contains(&Body::Id(v)) {
+                    *self = *lhs.clone();
                     return true;
                 }
             }
@@ -475,19 +478,36 @@ impl Body {
 
     /// returns if, at any depth, starting from the outmost expression, there's the passed
     /// expression.
-    pub fn contains(&self, what: &Self) -> bool {
-        match self {
-            Self::Id(..) => self == what,
-            Self::App(lhs, rhs) => {
-                self == &lhs.body
-                    || self == &rhs.body
-                    || lhs.body.contains(what)
-                    || rhs.body.contains(what)
+    pub fn contains(&self, what: &Body) -> bool {
+        match &self.body {
+            Body::Id(..) => self.body == *what,
+            Body::App(lhs, rhs) => {
+                self.body == lhs.body
+                    || self.body == rhs.body
+                    || lhs.contains(what)
+                    || rhs.contains(what)
             }
-            Self::Abs(_, l) => self == what || l.contains(what),
+            Body::Abs(_, l) => self.body == *what || l.contains(what),
         }
     }
 }
+
+impl FromStr for Term {
+    type Err = lrp::Error<parser::Sym>;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let lex = parser::lexer(s);
+        parser::parse(lex)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Body {
+    /* identity */ Id(VarId),
+    /* application */ App(Box<Term>, /* ( */ Box<Term> /* ) */),
+    /* abstraction */ Abs(VarId, Box<Term>),
+}
+
+impl Body {}
 
 impl fmt::Display for Body {
     fn fmt(&self, w: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -495,7 +515,7 @@ impl fmt::Display for Body {
             Self::Id(id) => w.write_fmt(format_args!("{}", id_to_str(*id))),
             Self::App(ref f, ref x) => w.write_fmt(format_args!(
                 "{f} {}",
-                if usize::from(x.body.len()) > 1 {
+                if usize::from(x.len()) > 1 {
                     format!("({x})")
                 } else {
                     format!("{x}")
@@ -506,146 +526,5 @@ impl fmt::Display for Body {
     }
 }
 
-impl FromStr for Body {
-    type Err = lrp::Error<parser::Sym>;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let lex = parser::lexer(s);
-        parser::parse(lex)
-    }
-}
-
 #[cfg(test)]
-pub mod tests {
-    use std::str::FromStr;
-
-    use crate::{enc::naturals::natural, Body, VarId};
-
-    fn flip(y_id: VarId, x_id: VarId, f_id: VarId) -> Body {
-        // flip f x y = f y x
-        // flip = ^f^x^y . (f y x)
-        let fy /* f -> y -> x -> (fy -> x) */ = Body::App(
-            Body::Id(f_id).into(),
-            Body::Id(y_id).into(),
-            );
-        let body = Body::App(fy.into(), Body::Id(x_id).into());
-        Body::from_args([f_id, x_id, y_id].into_iter().peekable(), body).unwrap()
-    }
-
-    #[test]
-    fn flip_format() {
-        assert_eq!(flip(0, 1, 2).to_string(), "λc.(λb.(λa.(c a b)))");
-    }
-
-    #[test]
-    fn id_format() {
-        assert_eq!(Body::id().to_string(), "λa.(a)");
-    }
-
-    #[test]
-    fn flip_alpha_redex() {
-        let mut flip = flip(10, 5, 0);
-        flip.alpha_redex();
-        assert!(
-            flip.alpha_eq(&Body::from_str("λa.(λb.(λc.(a c b)))").unwrap()),
-            "{flip}"
-        );
-    }
-
-    #[test]
-    fn flip_alpha_eq() {
-        let flip = flip(VarId::MAX, VarId::MAX / 2, 0);
-        let alpha_redexed = {
-            let mut flip = flip.clone();
-            flip.alpha_redex();
-            flip
-        };
-        assert!(flip.alpha_eq(&alpha_redexed));
-    }
-
-    #[test]
-    fn flip_application() {
-        let mut flip = flip(1, 2, 3);
-        flip.alpha_redex();
-
-        assert!(flip.alpha_eq(&Body::from_str("λa.(λb.(λc.(a c b)))").unwrap()));
-        flip.curry(&Body::Id(5));
-        assert!(flip.alpha_eq(&Body::from_str("λb.(λc.(f c b))").unwrap()));
-        flip.curry(&Body::Id(6));
-        assert!(flip.alpha_eq(&Body::from_str("λc.(f c g)").unwrap()));
-        let body = flip.curry(&Body::Id(7));
-        assert!(body.alpha_eq(&Body::from_str("f h g").unwrap()));
-    }
-
-    #[test]
-    fn id_of_id_reduction() {
-        const F_ID: usize = 1;
-        const X_ID: usize = F_ID + 1;
-        // id_f = ^f^x . f x
-        let mut id_f = Body::from_args(
-            [F_ID, X_ID].into_iter().peekable(),
-            Body::App(Body::Id(F_ID).into(), Body::Id(X_ID).into()),
-        )
-        .unwrap();
-        // id = ^x . x
-        let id = Body::id();
-        id_f.curry(&id);
-        id_f.beta_redex();
-        assert!(id_f.alpha_eq(&Body::id()), "{id_f}");
-    }
-
-    #[test]
-    fn id_id_alpha_redex() {
-        let mut abs = Body::Abs(0, Body::App(Body::id().into(), Body::Id(0).into()).into());
-        abs.alpha_redex();
-        abs.beta_redex();
-        assert!(abs.alpha_eq(&Body::id()));
-    }
-
-    #[test]
-    fn flip_flip_alpha_redex() {
-        let mut fliper = flip(0, 1, 2);
-        let fliper_f = {
-            // flip f x y = f y x
-            // flip = ^f^x^y . (f y x)
-            const F_ID: usize = 2;
-            const X_ID: usize = 1;
-            const Y_ID: usize = 0;
-            let fy /* f -> y -> x -> (fy -> x) */ = Body::App(
-            Body::Id(F_ID).into(),
-            Body::Id(Y_ID).into(),
-            );
-            let body = Body::App(fy.into(), Body::Id(X_ID).into());
-            Body::from_args([X_ID, Y_ID, F_ID].into_iter().peekable(), body).unwrap()
-        };
-        fliper.curry(&fliper_f);
-        fliper.alpha_redex();
-        fliper.beta_redex();
-    }
-
-    #[test]
-    fn right_associative_format() {
-        assert_eq!(natural(0).to_string(), "λa.(λb.(b))");
-        assert_eq!(natural(1).to_string(), "λa.(λb.(a b))");
-        assert_eq!(natural(5).to_string(), "λa.(λb.(a (a (a (a (a b))))))");
-        assert_eq!(
-            natural(10).to_string(),
-            "λa.(λb.(a (a (a (a (a (a (a (a (a (a b)))))))))))"
-        );
-    }
-
-    #[test]
-    pub fn free_capture_avoiding_subsitution() {
-        let expr = Body::from_str("λb.(λa.(b a a)) λx.(a)").unwrap();
-        assert!(expr
-            .clone()
-            .beta_reduced()
-            .alpha_eq(&Body::from_str("a").unwrap()),);
-    }
-    #[test]
-    pub fn bound_capture_avoiding_subsitution() {
-        let expr = Body::from_str("λa.(λb.(λa.(b a a)) λx.(a))").unwrap();
-        assert!(expr
-            .beta_reduced()
-            .alpha_eq(&Body::from_str("λa.(a)").unwrap()));
-    }
-}
+pub mod tests {}

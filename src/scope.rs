@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use aho_corasick::AhoCorasick;
 
-use crate::{parser, Body};
+use crate::{parser, Term};
 
 #[derive(Debug, Clone, Default)]
 pub struct Scope {
@@ -93,7 +93,7 @@ impl Scope {
     pub fn cache_defs(&mut self) {
         self.cached_defs.clear();
         for (k, v) in self.aliases.iter().zip(self.defs.iter()) {
-            if let Ok(l) = Body::from_str(v) {
+            if let Ok(l) = Term::from_str(v) {
                 self.cached_defs
                     .insert(l.alpha_reduced().to_string(), k.clone());
             }
@@ -106,7 +106,7 @@ impl Scope {
         self.need_update = true;
     }
 
-    pub fn get_from_alpha_key(&self, key: &Body) -> Option<&str> {
+    pub fn get_from_alpha_key(&self, key: &Term) -> Option<&str> {
         self.cached_defs.get(&key.to_string()).map(|s| s.as_str())
     }
 }
