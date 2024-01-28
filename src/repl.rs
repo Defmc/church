@@ -335,7 +335,7 @@ impl Repl {
                     self.format_value(x)
                 }
             ),
-            Body::Abs(v, l) => format!("λ{}.({})", church::id_to_str(*v), self.format_value(&l)),
+            Body::Abs(v, l) => format!("λ{}.({})", church::id_to_str(*v), self.format_value(l)),
         }
     }
 
@@ -344,11 +344,11 @@ impl Repl {
             if let Body::App(b, rhs) = &b.body {
                 if let Body::App(wrap, lhs) = &b.body {
                     if Body::Id(*wrapper) == wrap.body {
-                        let mut v = self.format_value(&lhs);
-                        if let Some(tail) = self.from_list(&rhs) {
+                        let mut v = self.format_value(lhs);
+                        if let Some(tail) = self.from_list(rhs) {
                             v = format!("{v}, {tail}")
                         } else {
-                            v = format!("{v}, {}", self.format_value(&rhs))
+                            v = format!("{v}, {}", self.format_value(rhs))
                         }
                         return Some(v);
                     }

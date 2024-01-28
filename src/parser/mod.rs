@@ -1,4 +1,4 @@
-use crate::{Body, Term, VarId};
+use crate::{Term, VarId};
 use logos::Logos;
 use lrp::{Dfa, Meta, Parser, Slr, Token};
 
