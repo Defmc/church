@@ -1,17 +1,17 @@
-use crate::{Body, VarId};
+use crate::{Body, Term, VarId};
 use logos::Logos;
 use lrp::{Dfa, Meta, Parser, Slr, Token};
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord)]
 pub enum Ast {
-    Expr(Body),
+    Expr(Term),
     Token(Sym),
     Var(VarId),
 }
 
 impl Ast {
     #[must_use]
-    pub fn as_expr(&self) -> &Body {
+    pub fn as_expr(&self) -> &Term {
         match self {
             Self::Expr(e) => e,
             Self::Token(_) | Self::Var(_) => unreachable!(),
@@ -82,7 +82,7 @@ pub fn build<I: Iterator<Item = Gramem>>(buffer: I) -> Dfa<Meta<Ast>, Sym, I> {
 
 /// # Errors
 /// Same as `lrp::Dfa`.
-pub fn parse<I: Iterator<Item = Gramem>>(buffer: I) -> Result<Body, lrp::Error<Sym>> {
+pub fn parse<I: Iterator<Item = Gramem>>(buffer: I) -> Result<Term, lrp::Error<Sym>> {
     let mut parser = build(buffer);
     match parser.start() {
         Err(e) => Err(e),
