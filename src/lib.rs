@@ -109,8 +109,8 @@ impl Term {
     }
 
     pub fn alpha_redex(&mut self) {
-        let frees = self.free_variables().into_iter();
-        self.redex_by_alpha(&mut frees.map(|i| (i, i)).collect())
+        let frees = self.free_variables().iter();
+        self.redex_by_alpha(&mut frees.map(|&i| (i, i)).collect())
     }
 
     #[must_use]
@@ -203,11 +203,10 @@ impl Term {
     /// FV(^x.(a) ^a.(a)) = { a }
     /// FV(a) = { a }
     #[must_use]
-    pub fn free_variables(&self) -> HashSet<VarId> {
-        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
-        self.get_free_variables(&mut binds, &mut frees);
-        frees
+    pub fn free_variables(&self) -> &HashSet<VarId> {
+        &self.frees
     }
+
     pub fn get_free_variables(&self, binds: &mut HashSet<VarId>, frees: &mut HashSet<VarId>) {
         match &self.body {
             Body::Id(id) => {
@@ -233,11 +232,9 @@ impl Term {
     /// ^f^x . f (f x) α!= ^f^x . f x and ^f^x . f (f x) != ^f^x . f x
     #[must_use]
     pub fn alpha_eq(&self, rhs: &Self) -> bool {
-        let mut self_frees: HashMap<_, _> =
-            self.free_variables().into_iter().map(|i| (i, i)).collect();
+        let mut self_frees: HashMap<_, _> = self.free_variables().iter().map(|&i| (i, i)).collect();
         let self_binds = self_frees.len();
-        let mut rhs_frees: HashMap<_, _> =
-            rhs.free_variables().into_iter().map(|i| (i, i)).collect();
+        let mut rhs_frees: HashMap<_, _> = rhs.free_variables().iter().map(|&i| (i, i)).collect();
         let rhs_binds = rhs_frees.len();
         self.eq_by_alpha(rhs, &mut self_frees, self_binds, &mut rhs_frees, rhs_binds)
     }
@@ -321,25 +318,32 @@ impl Term {
         }
     }
 
-    pub fn apply_by(&mut self, id: VarId, val: &Self) {
-        match self.body {
+    /// Replaces the terms with same `id` with `val`, returning if there was any application
+    pub fn apply_by(&mut self, id: VarId, val: &Self) -> bool {
+        let changed = match self.body {
             Body::Id(s_id) => {
                 if s_id == id {
                     *self = val.clone();
+                    true
+                } else {
+                    false
                 }
             }
             Body::Abs(..) => {
                 let v = *self.as_mut_abs().unwrap().0;
                 if v != id {
                     self.fix_captures(val);
-                    self.as_mut_abs().unwrap().1.apply_by(id, val);
+                    self.as_mut_abs().unwrap().1.apply_by(id, val)
+                } else {
+                    false
                 }
             }
-            Body::App(ref mut f, ref mut x) => {
-                f.apply_by(id, val);
-                x.apply_by(id, val);
-            }
+            Body::App(ref mut f, ref mut x) => f.apply_by(id, val) | x.apply_by(id, val),
+        };
+        if changed {
+            self.frees.extend(val.free_variables());
         }
+        changed
     }
 
     pub fn fix_captures(&mut self, rhs: &Self) {
@@ -370,51 +374,6 @@ impl Term {
             self.redex_by_alpha(&mut captures.into_iter().map(|&i| (i, i)).collect());
             // println!("final: {self} | {rhs}");
         }
-    }
-
-    /// renames a bounded variable over an expression, fixing the bind abstraction.
-    /// `force` makes all ocurrences of to be renamed, desconsidering the context.
-    /// rename_vars ^x.(x y) 'x' 'a' false = ^a.(a y)
-    pub fn rename_vars(&mut self, from: VarId, to: VarId, force: bool) {
-        match self.body {
-            Body::Id(ref mut i) => {
-                assert_ne!(*i, to);
-                if *i == from && force {
-                    *i = to;
-                }
-            }
-            Body::Abs(ref mut v, ref mut l) => {
-                assert_ne!(*v, to);
-                let force = *v == from || force;
-                if *v == from && force {
-                    *v = to;
-                }
-                l.rename_vars(from, to, force);
-            }
-            Body::App(ref mut lhs, ref mut rhs) => {
-                lhs.rename_vars(from, to, force);
-                rhs.rename_vars(from, to, force);
-            }
-        }
-    }
-
-    /// "Curries" the function, turning it into the next term
-    /// `curry` (^x.^f . f x) c == ^f . f c
-    /// # Panics
-    /// If it isn't a lambda abstraction.
-    pub fn curry(&mut self, val: &Self) -> &mut Self {
-        let (v, l) = self.as_mut_abs().expect("currying a non-abstraction");
-        l.apply_by(*v, val);
-        *self = l.clone();
-        self
-    }
-
-    #[must_use]
-    pub fn applied<'a>(mut self, vals: impl IntoIterator<Item = &'a Self>) -> Self {
-        for v in vals {
-            self.curry(v);
-        }
-        self
     }
 
     pub fn beta_redex(&mut self) {
@@ -534,15 +493,12 @@ impl Body {
                 }
             }
             Self::App(lhs, rhs) => {
-                let rhs_free = rhs.free_variables();
-                let lhs_free = lhs.free_variables();
-                let cached = lhs_free.union(&rhs_free);
+                let cached = lhs.free_variables().union(rhs.free_variables());
                 frees.extend(cached);
             }
             Self::Abs(v, l) => {
                 binds.insert(*v);
-                let l_free = l.free_variables();
-                frees.extend(l_free);
+                frees.extend(l.free_variables());
             }
         }
     }
