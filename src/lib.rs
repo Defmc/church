@@ -31,11 +31,27 @@ pub fn id_to_str(i: usize) -> String {
         "'".repeat(rotations)
     )
 }
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Term {
+    pub body: Body,
+}
+
+impl fmt::Display for Term {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.body.fmt(f)
+    }
+}
+
+impl Term {
+    pub fn new(body: Body) -> Self {
+        Self { body }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Body {
     /* identity */ Id(VarId),
-    /* application */ App(Box<Body>, /* ( */ Box<Body> /* ) */),
+    /* application */ App(Box<Term>, /* ( */ Box<Term> /* ) */),
     /* abstraction */ Abs(VarId, Box<Self>),
 }
 
@@ -78,7 +94,7 @@ impl Body {
 
     #[must_use]
     pub fn in_app(self, s: Self) -> Body {
-        Body::App(self.into(), s.into())
+        Body::App(Term::new(self).into(), Term::new(s).into())
     }
 
     pub fn alpha_redex(&mut self) {
@@ -108,8 +124,8 @@ impl Body {
                 }
             }
             Self::App(f, x) => {
-                f.redex_by_alpha(&mut map.clone());
-                x.redex_by_alpha(&mut map.clone());
+                f.body.redex_by_alpha(&mut map.clone());
+                x.body.redex_by_alpha(&mut map.clone());
             }
             Self::Abs(i, l) => {
                 let (mut maybe_map, bind) = Self::try_alpha_redex(*i, map);
@@ -151,8 +167,8 @@ impl Body {
                 binds.insert(*id);
             }
             Self::App(lhs, rhs) => {
-                lhs.get_variables(binds);
-                rhs.get_variables(binds);
+                lhs.body.get_variables(binds);
+                rhs.body.get_variables(binds);
             }
             Self::Abs(v, l) => {
                 binds.insert(*v);
@@ -172,8 +188,8 @@ impl Body {
         match self {
             Self::Id(..) => (),
             Self::App(lhs, rhs) => {
-                lhs.get_bounded_variables(binds);
-                rhs.get_bounded_variables(binds);
+                lhs.body.get_bounded_variables(binds);
+                rhs.body.get_bounded_variables(binds);
             }
             Self::Abs(v, l) => {
                 binds.insert(*v);
@@ -190,8 +206,8 @@ impl Body {
                 }
             }
             Self::App(lhs, rhs) => {
-                lhs.get_free_variables(&mut binds.clone(), frees);
-                rhs.get_free_variables(&mut binds.clone(), frees);
+                lhs.body.get_free_variables(&mut binds.clone(), frees);
+                rhs.body.get_free_variables(&mut binds.clone(), frees);
             }
             Self::Abs(v, l) => {
                 binds.insert(*v);
@@ -253,14 +269,14 @@ impl Body {
         match (self, rhs) {
             (Self::Id(s_id), Self::Id(r_id)) => self_map.get(s_id) == rhs_map.get(r_id),
             (Self::App(s_f, s_x), Self::App(r_f, r_x)) => {
-                s_f.eq_by_alpha(
-                    r_f,
+                s_f.body.eq_by_alpha(
+                    &r_f.body,
                     &mut self_map.clone(),
                     self_binds,
                     &mut rhs_map.clone(),
                     rhs_binds,
-                ) && s_x.eq_by_alpha(
-                    r_x,
+                ) && s_x.body.eq_by_alpha(
+                    &r_x.body,
                     &mut self_map.clone(),
                     self_binds,
                     &mut rhs_map.clone(),
@@ -310,8 +326,8 @@ impl Body {
                 }
             }
             Self::App(f, x) => {
-                f.apply_by(id, val);
-                x.apply_by(id, val);
+                f.body.apply_by(id, val);
+                x.body.apply_by(id, val);
             }
         }
     }
@@ -366,8 +382,8 @@ impl Body {
                 l.rename_vars(from, to, force);
             }
             Self::App(ref mut lhs, ref mut rhs) => {
-                lhs.rename_vars(from, to, force);
-                rhs.rename_vars(from, to, force);
+                lhs.body.rename_vars(from, to, force);
+                rhs.body.rename_vars(from, to, force);
             }
         }
     }
@@ -399,15 +415,15 @@ impl Body {
         match self {
             Self::Id(..) => false,
             Self::App(f, x) => {
-                return if matches!(f.as_ref(), Self::Abs(..)) {
+                return if matches!(&f.body, Self::Abs(..)) {
                     let mut f = f.clone();
-                    f.fix_captures(x);
-                    let (id, l) = f.as_mut_abs().unwrap();
-                    l.apply_by(*id, x);
+                    f.body.fix_captures(&x.body);
+                    let (id, l) = f.body.as_mut_abs().unwrap();
+                    l.apply_by(*id, &x.body);
                     *self = l.clone();
                     true
                 } else {
-                    f.beta_redex_step() || x.beta_redex_step()
+                    f.body.beta_redex_step() || x.body.beta_redex_step()
                 };
             }
             Self::Abs(..) => {
@@ -432,7 +448,7 @@ impl Body {
     pub fn len(&self) -> NonZeroUsize {
         match self {
             Self::Id(..) => 1.try_into().unwrap(),
-            Self::App(ref f, ref x) => f.len().saturating_add(x.len().into()),
+            Self::App(ref f, ref x) => f.body.len().saturating_add(x.body.len().into()),
             Self::Abs(_, ref b) => b.len().saturating_add(1),
         }
     }
@@ -448,8 +464,8 @@ impl Body {
     pub fn eta_redex_step(&mut self) -> bool {
         if let Self::Abs(v, app) = self {
             if let Self::App(lhs, rhs) = app.as_ref() {
-                if rhs.as_ref() == &Self::Id(*v) && !lhs.contains(&Body::Id(*v)) {
-                    *self = *lhs.clone();
+                if &rhs.body == &Self::Id(*v) && !lhs.body.contains(&Body::Id(*v)) {
+                    *self = lhs.body.clone();
                     return true;
                 }
             }
@@ -463,10 +479,10 @@ impl Body {
         match self {
             Self::Id(..) => self == what,
             Self::App(lhs, rhs) => {
-                self == lhs.as_ref()
-                    || self == rhs.as_ref()
-                    || lhs.contains(what)
-                    || rhs.contains(what)
+                self == &lhs.body
+                    || self == &rhs.body
+                    || lhs.body.contains(what)
+                    || rhs.body.contains(what)
             }
             Self::Abs(_, l) => self == what || l.contains(what),
         }
@@ -479,7 +495,7 @@ impl fmt::Display for Body {
             Self::Id(id) => w.write_fmt(format_args!("{}", id_to_str(*id))),
             Self::App(ref f, ref x) => w.write_fmt(format_args!(
                 "{f} {}",
-                if usize::from(x.len()) > 1 {
+                if usize::from(x.body.len()) > 1 {
                     format!("({x})")
                 } else {
                     format!("{x}")
