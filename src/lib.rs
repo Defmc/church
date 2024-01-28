@@ -534,12 +534,15 @@ impl Body {
                 }
             }
             Self::App(lhs, rhs) => {
-                lhs.get_free_variables(&mut binds.clone(), frees);
-                rhs.get_free_variables(&mut binds.clone(), frees);
+                let rhs_free = rhs.free_variables();
+                let lhs_free = lhs.free_variables();
+                let cached = lhs_free.union(&rhs_free);
+                frees.extend(cached);
             }
             Self::Abs(v, l) => {
                 binds.insert(*v);
-                l.get_free_variables(binds, frees)
+                let l_free = l.free_variables();
+                frees.extend(l_free);
             }
         }
     }
