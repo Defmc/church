@@ -28,9 +28,16 @@ pub fn id_to_str(i: usize) -> String {
         "'".repeat(rotations)
     )
 }
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Term {
     pub body: Body,
+    pub frees: HashSet<VarId>,
+}
+
+impl PartialOrd for Term {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.body.partial_cmp(&other.body)
+    }
 }
 
 impl fmt::Display for Term {
@@ -41,7 +48,8 @@ impl fmt::Display for Term {
 
 impl Term {
     pub fn new(body: Body) -> Self {
-        Self { body }
+        let frees = body.free_variables();
+        Self { body, frees }
     }
 
     #[must_use]
@@ -142,17 +150,6 @@ impl Term {
         }
     }
 
-    /// returns all free variables, including the ones binded on one application
-    /// FV(^x.(x a x) b) = { a, b }
-    /// FV(^x.(a) ^a.(a)) = { a }
-    /// FV(a) = { a }
-    #[must_use]
-    pub fn free_variables(&self) -> HashSet<VarId> {
-        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
-        self.get_free_variables(&mut binds, &mut frees);
-        frees
-    }
-
     /// return all variables used
     /// FV(^x.(x a x) b) = { x, a, b }
     /// FV(^x.(a) ^a.(a)) = { x, a }
@@ -201,6 +198,16 @@ impl Term {
         }
     }
 
+    /// returns all free variables, including the ones binded on one application
+    /// FV(^x.(x a x) b) = { a, b }
+    /// FV(^x.(a) ^a.(a)) = { a }
+    /// FV(a) = { a }
+    #[must_use]
+    pub fn free_variables(&self) -> HashSet<VarId> {
+        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
+        self.get_free_variables(&mut binds, &mut frees);
+        frees
+    }
     pub fn get_free_variables(&self, binds: &mut HashSet<VarId>, frees: &mut HashSet<VarId>) {
         match &self.body {
             Body::Id(id) => {
@@ -500,14 +507,43 @@ impl FromStr for Term {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub enum Body {
     /* identity */ Id(VarId),
     /* application */ App(Box<Term>, /* ( */ Box<Term> /* ) */),
     /* abstraction */ Abs(VarId, Box<Term>),
 }
 
-impl Body {}
+impl Body {
+    /// returns all free variables, including the ones binded on one application
+    /// FV(^x.(x a x) b) = { a, b }
+    /// FV(^x.(a) ^a.(a)) = { a }
+    /// FV(a) = { a }
+    #[must_use]
+    pub fn free_variables(&self) -> HashSet<VarId> {
+        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
+        self.get_free_variables(&mut binds, &mut frees);
+        frees
+    }
+
+    pub fn get_free_variables(&self, binds: &mut HashSet<VarId>, frees: &mut HashSet<VarId>) {
+        match self {
+            Self::Id(id) => {
+                if !binds.contains(id) {
+                    frees.insert(*id);
+                }
+            }
+            Self::App(lhs, rhs) => {
+                lhs.get_free_variables(&mut binds.clone(), frees);
+                rhs.get_free_variables(&mut binds.clone(), frees);
+            }
+            Self::Abs(v, l) => {
+                binds.insert(*v);
+                l.get_free_variables(binds, frees)
+            }
+        }
+    }
+}
 
 impl fmt::Display for Body {
     fn fmt(&self, w: &mut fmt::Formatter<'_>) -> fmt::Result {

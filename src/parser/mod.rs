@@ -2,7 +2,7 @@ use crate::{Term, VarId};
 use logos::Logos;
 use lrp::{Dfa, Meta, Parser, Slr, Token};
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Eq)]
 pub enum Ast {
     Expr(Term),
     Token(Sym),
