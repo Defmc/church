@@ -112,7 +112,7 @@ impl Scope {
 
     pub fn get_from_alpha_key(&self, key: &Term) -> Option<&str> {
         self.cached_defs
-            .get(&dbg!(key.clone().alpha_reduced().to_string()))
+            .get(&key.clone().alpha_reduced().to_string())
             .map(|s| s.as_str())
     }
 }
