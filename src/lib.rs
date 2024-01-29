@@ -402,6 +402,47 @@ impl Term {
         let lex = parser::try_lexer(s.as_ref())?;
         parser::parse(lex)
     }
+
+    pub fn debrejin_reduced(mut self) -> Self {
+        self.debrejin_redex();
+        self
+    }
+
+    pub fn debrejin_redex(&mut self) {
+        let mut binds = self.free_variables().iter().map(|&i| (i, i)).collect();
+        self.redex_by_debrejin(&mut binds, 0);
+    }
+
+    pub fn redex_by_debrejin(&mut self, binds: &mut HashMap<VarId, VarId>, lvl: usize) {
+        match self.body {
+            Body::Id(ref mut id) => *id = binds[id],
+            Body::App(ref mut lhs, ref mut rhs) => {
+                lhs.redex_by_debrejin(binds, lvl + 1);
+                rhs.redex_by_debrejin(binds, lvl + 1);
+            }
+            Body::Abs(ref mut v, ref mut l) => {
+                let lvl = Self::get_next_free(lvl, binds);
+                let old_v = *v;
+                *v = lvl;
+                let old = binds.insert(old_v, lvl);
+                l.redex_by_debrejin(binds, lvl + 1);
+                if let Some(old) = old {
+                    *binds.get_mut(&old_v).unwrap() = old;
+                } else {
+                    binds.remove(&lvl);
+                }
+            }
+        }
+    }
+
+    pub fn get_next_free(start: VarId, binds: &HashMap<VarId, VarId>) -> VarId {
+        for k in start.. {
+            if !binds.contains_key(&k) {
+                return k;
+            }
+        }
+        unreachable!("how the 2^64 - 1 possible var ids was used, my man?");
+    }
 }
 
 impl FromStr for Term {
@@ -458,12 +499,12 @@ impl Body {
 
     fn get_bounded_variables(&self, binds: &mut HashSet<VarId>) {
         match &self {
-            Body::Id(..) => (),
-            Body::App(lhs, rhs) => {
+            Self::Id(..) => (),
+            Self::App(lhs, rhs) => {
                 let cache = lhs.bounded_variables().union(rhs.bounded_variables());
                 binds.extend(cache);
             }
-            Body::Abs(v, l) => {
+            Self::Abs(v, l) => {
                 binds.insert(*v);
                 binds.extend(l.bounded_variables());
             }
