@@ -1,10 +1,6 @@
 use core::fmt;
-use std::{
-    collections::{HashMap, HashSet},
-    iter::Peekable,
-    num::NonZeroUsize,
-    str::FromStr,
-};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use std::{iter::Peekable, num::NonZeroUsize, str::FromStr};
 
 pub type VarId = usize;
 
@@ -156,52 +152,9 @@ impl Term {
         }
     }
 
-    /// return all variables used
-    /// FV(^x.(x a x) b) = { x, a, b }
-    /// FV(^x.(a) ^a.(a)) = { x, a }
-    /// FV(a) = { a }
     #[must_use]
-    pub fn variables(&self) -> HashSet<VarId> {
-        let mut binds = HashSet::new();
-        self.get_variables(&mut binds);
-        binds
-    }
-
-    fn get_variables(&self, binds: &mut HashSet<VarId>) {
-        match &self.body {
-            Body::Id(id) => {
-                binds.insert(*id);
-            }
-            Body::App(lhs, rhs) => {
-                lhs.get_variables(binds);
-                rhs.get_variables(binds);
-            }
-            Body::Abs(v, l) => {
-                binds.insert(*v);
-                l.get_variables(binds);
-            }
-        }
-    }
-
-    #[must_use]
-    pub fn bounded_variables(&self) -> HashSet<VarId> {
-        let mut binds = HashSet::new();
-        self.get_bounded_variables(&mut binds);
-        binds
-    }
-
-    fn get_bounded_variables(&self, binds: &mut HashSet<VarId>) {
-        match &self.body {
-            Body::Id(..) => (),
-            Body::App(lhs, rhs) => {
-                lhs.get_bounded_variables(binds);
-                rhs.get_bounded_variables(binds);
-            }
-            Body::Abs(v, l) => {
-                binds.insert(*v);
-                l.get_bounded_variables(binds);
-            }
-        }
+    pub fn bounded_variables(&self) -> &HashSet<VarId> {
+        &self.bounds
     }
 
     /// returns all free variables, including the ones binded on one application
@@ -211,24 +164,6 @@ impl Term {
     #[must_use]
     pub fn free_variables(&self) -> &HashSet<VarId> {
         &self.frees
-    }
-
-    pub fn get_free_variables(&self, binds: &mut HashSet<VarId>, frees: &mut HashSet<VarId>) {
-        match &self.body {
-            Body::Id(id) => {
-                if !binds.contains(id) {
-                    frees.insert(*id);
-                }
-            }
-            Body::App(lhs, rhs) => {
-                lhs.get_free_variables(&mut binds.clone(), frees);
-                rhs.get_free_variables(&mut binds.clone(), frees);
-            }
-            Body::Abs(v, l) => {
-                binds.insert(*v);
-                l.get_free_variables(binds, frees)
-            }
-        }
     }
 
     /// α-equivalency refers to expressions with same implementation, disconsidering the variable
@@ -462,6 +397,11 @@ impl Term {
             Body::Abs(_, l) => self.body == *what || l.contains(what),
         }
     }
+
+    pub fn try_from_str<T: AsRef<str>>(s: T) -> Result<Self, lrp::Error<parser::Sym>> {
+        let lex = parser::try_lexer(s.as_ref())?;
+        parser::parse(lex)
+    }
 }
 
 impl FromStr for Term {
@@ -486,7 +426,7 @@ impl Body {
     /// FV(a) = { a }
     #[must_use]
     pub fn free_variables(&self) -> HashSet<VarId> {
-        let (mut binds, mut frees) = (HashSet::new(), HashSet::new());
+        let (mut binds, mut frees) = (HashSet::default(), HashSet::default());
         self.get_free_variables(&mut binds, &mut frees);
         frees
     }
@@ -511,7 +451,7 @@ impl Body {
 
     #[must_use]
     pub fn bounded_variables(&self) -> HashSet<VarId> {
-        let mut binds = HashSet::new();
+        let mut binds = HashSet::default();
         self.get_bounded_variables(&mut binds);
         binds
     }
@@ -520,15 +460,12 @@ impl Body {
         match &self {
             Body::Id(..) => (),
             Body::App(lhs, rhs) => {
-                let lhs = &lhs.bounded_variables();
-                let rhs = &rhs.bounded_variables();
-                let cache = lhs.union(rhs);
+                let cache = lhs.bounded_variables().union(rhs.bounded_variables());
                 binds.extend(cache);
             }
             Body::Abs(v, l) => {
                 binds.insert(*v);
-                let l = &l.bounded_variables();
-                binds.extend(l);
+                binds.extend(l.bounded_variables());
             }
         }
     }
