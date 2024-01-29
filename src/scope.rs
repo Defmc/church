@@ -97,7 +97,7 @@ impl Scope {
             match Term::try_from_str(v) {
                 Ok(l) => {
                     self.cached_defs
-                        .insert(l.alpha_reduced().to_string(), k.clone());
+                        .insert(l.debrejin_reduced().to_string(), k.clone());
                 }
                 Err(e) => eprintln!("error: {e:?}"),
             }
@@ -112,7 +112,7 @@ impl Scope {
 
     pub fn get_from_alpha_key(&self, key: &Term) -> Option<&str> {
         self.cached_defs
-            .get(&key.clone().alpha_reduced().to_string())
+            .get(&key.clone().debrejin_reduced().to_string())
             .map(|s| s.as_str())
     }
 }
