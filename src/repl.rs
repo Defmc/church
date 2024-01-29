@@ -418,7 +418,7 @@ impl Repl {
     pub fn debrejin(&mut self, input: &str) {
         let mut o = String::new();
         self.mode.bench("delta redex", || {
-            o = self.scope.delta_redex(&input).0;
+            o = self.scope.delta_redex(input).0;
         });
         match Term::try_from_str(&o) {
             Ok(l) => {
@@ -429,7 +429,6 @@ impl Repl {
             }
             Err(e) => {
                 eprintln!("error: {e:?}");
-                return;
             }
         }
     }
