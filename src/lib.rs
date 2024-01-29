@@ -408,6 +408,15 @@ impl Term {
         self
     }
 
+    /// DeBrejin alpha-reduce the expression, renaming variables according to the depth level, starting
+    /// from 0 and skipping when there's a free variable with same id
+    /// debrejin_redex(^x.(x b) ^b.(b b)) = ^a.(a b) ^c.(c c)
+    /// Sounds like a worthless method, but actually, it turns every expression into a same alpha
+    /// expression. I.e:
+    /// (^x.(x b) ^b.(b b)) (^y.(y b) ^l.(l l)) == false, and
+    /// alpha_eq (^x.(x b) ^b.(b b)) (^y.(y b) ^l.(l l)) == true, but
+    /// eq alpha(^x.(x b) ^b.(b b)) alpha(^y.(y b) ^l.(l l)) == false, while
+    /// eq debrejin(^x.(x b) ^b.(b b)) debrejin(^y.(y b) ^l.(l l)) == true
     pub fn debrejin_redex(&mut self) {
         let mut binds = self.free_variables().iter().map(|&i| (i, i)).collect();
         self.redex_by_debrejin(&mut binds, 0);
@@ -442,6 +451,20 @@ impl Term {
             }
         }
         unreachable!("how the 2^64 - 1 possible var ids was used, my man?");
+    }
+
+    pub fn is_debrejin(&self) -> bool {
+        self.check_is_debrejin(self.free_variables(), 0)
+    }
+
+    pub fn check_is_debrejin(&self, frees: &HashSet<VarId>, lvl: usize) -> bool {
+        match &self.body {
+            Body::Id(..) => true,
+            Body::App(lhs, rhs) => {
+                lhs.check_is_debrejin(frees, lvl + 1) && rhs.check_is_debrejin(frees, lvl + 1)
+            }
+            Body::Abs(v, l) => *v == lvl && l.check_is_debrejin(frees, lvl + 1),
+        }
     }
 }
 
