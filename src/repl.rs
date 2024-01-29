@@ -93,7 +93,7 @@ impl Mode {
             l = repl.scope.delta_redex(&l).0;
         });
         let l = if self.should_show() {
-            match Term::from_str(&l) {
+            match Term::try_from_str(&l) {
                 Ok(mut l) => {
                     self.bench("beta redex", || self.run_show(&mut l));
                     l
@@ -104,7 +104,7 @@ impl Mode {
                 }
             }
         } else {
-            match Term::from_str(&l) {
+            match Term::try_from_str(&l) {
                 Ok(mut l) => {
                     self.bench("beta redex", || {
                         l.beta_redex();
@@ -323,20 +323,21 @@ impl Repl {
             if let Some(v) = self.from_list(b) {
                 return format!("[{v}]");
             }
+            return match &b.body {
+                Body::Id(id) => church::id_to_str(*id),
+                Body::App(ref f, ref x) => format!(
+                    "{} {}",
+                    self.format_value(f),
+                    if usize::from(x.len()) > 1 {
+                        format!("({})", self.format_value(x))
+                    } else {
+                        self.format_value(x)
+                    }
+                ),
+                Body::Abs(v, l) => format!("λ{}.({})", church::id_to_str(*v), self.format_value(l)),
+            };
         }
-        match &b.body {
-            Body::Id(id) => church::id_to_str(*id),
-            Body::App(ref f, ref x) => format!(
-                "{} {}",
-                self.format_value(f),
-                if usize::from(x.len()) > 1 {
-                    format!("({})", self.format_value(x))
-                } else {
-                    self.format_value(x)
-                }
-            ),
-            Body::Abs(v, l) => format!("λ{}.({})", church::id_to_str(*v), self.format_value(l)),
-        }
+        format!("{b}")
     }
 
     pub fn from_list(&self, b: &Term) -> Option<String> {

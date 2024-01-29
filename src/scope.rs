@@ -93,9 +93,12 @@ impl Scope {
     pub fn cache_defs(&mut self) {
         self.cached_defs.clear();
         for (k, v) in self.aliases.iter().zip(self.defs.iter()) {
-            if let Ok(l) = Term::from_str(v) {
-                self.cached_defs
-                    .insert(l.alpha_reduced().to_string(), k.clone());
+            match Term::try_from_str(v) {
+                Ok(l) => {
+                    self.cached_defs
+                        .insert(l.alpha_reduced().to_string(), k.clone());
+                }
+                Err(e) => eprintln!("error: {e:?}"),
             }
         }
     }
