@@ -16,6 +16,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     ("gen_nats ", Repl::gen_nats),
     ("quit", Repl::quit),
     ("reload", Repl::reload),
+    ("debrejin", Repl::debrejin),
 ];
 
 #[derive(Debug)]
@@ -412,5 +413,24 @@ impl Repl {
             Term::new(body)
         }
         natural_body(n).with([0, 1])
+    }
+
+    pub fn debrejin(&mut self, input: &str) {
+        let mut o = String::new();
+        self.mode.bench("delta redex", || {
+            o = self.scope.delta_redex(&input).0;
+        });
+        match Term::try_from_str(&o) {
+            Ok(l) => {
+                println!("{}", l.clone().debrejin_reduced());
+                self.mode.bench("printing", || {
+                    self.print_value(&l);
+                });
+            }
+            Err(e) => {
+                eprintln!("error: {e:?}");
+                return;
+            }
+        }
     }
 }
