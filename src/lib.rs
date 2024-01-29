@@ -453,6 +453,9 @@ impl Term {
         unreachable!("how the 2^64 - 1 possible var ids was used, my man?");
     }
 
+    /// Checks if an expression is debrejin alpha compatible. Notice that, the set of `is_debrejin`
+    /// is bigger than the amount of expressions from debrejin_redex contradomain, as it treats
+    /// ^a.(a b) ^a.(^b.(b)) as debrejin valid. While the true debrejin form is ^a.(a b) ^a.(^c.(c))
     pub fn is_debrejin(&self) -> bool {
         self.check_is_debrejin(self.free_variables(), 0)
     }
