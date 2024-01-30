@@ -1,4 +1,5 @@
-use std::{collections::HashMap, str::FromStr};
+use rustc_hash::FxHashMap as HashMap;
+use std::str::FromStr;
 
 use aho_corasick::AhoCorasick;
 
@@ -93,9 +94,12 @@ impl Scope {
     pub fn cache_defs(&mut self) {
         self.cached_defs.clear();
         for (k, v) in self.aliases.iter().zip(self.defs.iter()) {
-            if let Ok(l) = Term::from_str(v) {
-                self.cached_defs
-                    .insert(l.alpha_reduced().to_string(), k.clone());
+            match Term::try_from_str(v) {
+                Ok(l) => {
+                    self.cached_defs
+                        .insert(l.debrejin_reduced().to_string(), k.clone());
+                }
+                Err(e) => eprintln!("error: {e:?}"),
             }
         }
     }
@@ -107,14 +111,16 @@ impl Scope {
     }
 
     pub fn get_from_alpha_key(&self, key: &Term) -> Option<&str> {
-        self.cached_defs.get(&key.to_string()).map(|s| s.as_str())
+        self.cached_defs
+            .get(&key.clone().debrejin_reduced().to_string())
+            .map(|s| s.as_str())
     }
 }
 
 impl FromStr for Scope {
     type Err = lrp::Error<parser::Sym>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut defs = HashMap::new();
+        let mut defs = HashMap::default();
         for l in s.lines() {
             let end = l.find(|c| c == '#').unwrap_or(l.len());
             let l = &l[..end];
@@ -129,8 +135,8 @@ impl FromStr for Scope {
         let s = Scope {
             aliases: defs.keys().cloned().collect(),
             defs: defs.values().cloned().collect(),
-            cached_defs: HashMap::new(),
-            indexes: HashMap::new(),
+            cached_defs: HashMap::default(),
+            indexes: HashMap::default(),
             need_update: true,
         };
         Ok(s)
