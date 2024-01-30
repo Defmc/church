@@ -1,3 +1,4 @@
+:load assets/nat.ac
 Fact = Y ^f.(^n.(If (IsZero n) 1 (Mult n (f (Pred n)))))
-Fibo = Y ^f.(^n.(If (IsZero (Pred n)) 1 (Plus (f (Pred n)) (f (Pred (Pred n))))))
+Fibo = Y ^f.(^n.(If (IsZero (Pred n)) 1 (Add (f (Pred n)) (f (Pred (Pred n))))))
 Ack = ^p.((p (^a.(^q.(a (q a 1)))) Succ))

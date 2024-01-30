@@ -1,4 +1,4 @@
-use church::{scope::Scope, Body, VarId};
+use church::{scope::Scope, Body, Term, VarId};
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
 use std::{fs::read_to_string, io::Write, path::PathBuf, str::FromStr, time::Instant};
 
@@ -16,6 +16,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     ("gen_nats ", Repl::gen_nats),
     ("quit", Repl::quit),
     ("reload", Repl::reload),
+    ("debrejin", Repl::debrejin),
 ];
 
 #[derive(Debug)]
@@ -64,7 +65,7 @@ impl Mode {
         };
     }
 
-    pub fn run_show(&self, l: &mut Body) {
+    pub fn run_show(&self, l: &mut Term) {
         let mut buf = String::new();
         println!("{l}");
         let mut steps = 0;
@@ -93,7 +94,7 @@ impl Mode {
             l = repl.scope.delta_redex(&l).0;
         });
         let l = if self.should_show() {
-            match Body::from_str(&l) {
+            match Term::try_from_str(&l) {
                 Ok(mut l) => {
                     self.bench("beta redex", || self.run_show(&mut l));
                     l
@@ -104,7 +105,7 @@ impl Mode {
                 }
             }
         } else {
-            match Body::from_str(&l) {
+            match Term::try_from_str(&l) {
                 Ok(mut l) => {
                     self.bench("beta redex", || {
                         l.beta_redex();
@@ -251,7 +252,7 @@ impl Repl {
         let input = self.scope.delta_redex(input).0;
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
-            Ok(expr) => match expr {
+            Ok(expr) => match expr.body {
                 Body::App(ref lhs, ref rhs) => {
                     println!("{}", if lhs.alpha_eq(rhs) { "true" } else { "false" });
                 }
@@ -266,7 +267,7 @@ impl Repl {
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
             Ok(expr) => {
-                println!("{}", expr.clone().alpha_reduced());
+                println!("{}", expr.alpha_reduced());
             }
             Err(e) => eprintln!("error: {e:?}"),
         }
@@ -283,23 +284,23 @@ impl Repl {
         }
     }
 
-    pub fn natural_from_church_encoding(s: &Body) -> Option<usize> {
-        fn get_natural(f: VarId, x: VarId, s: &Body) -> Option<usize> {
-            if let Body::App(lhs, rhs) = s {
-                if **lhs == Body::Id(f) {
+    pub fn natural_from_church_encoding(s: &Term) -> Option<usize> {
+        fn get_natural(f: VarId, x: VarId, s: &Term) -> Option<usize> {
+            if let Body::App(lhs, rhs) = &s.body {
+                if lhs.body == Body::Id(f) {
                     return get_natural(f, x, rhs).map(|n| n + 1);
                 }
-            } else if let Body::Id(v) = s {
-                return (*v == x).then_some(0);
+            } else if let Body::Id(v) = s.body {
+                return (v == x).then_some(0);
             }
 
             None
         }
 
-        if let Body::Abs(f, l) = s {
-            if let Body::Abs(x, l) = l.as_ref() {
+        if let Body::Abs(f, l) = &s.body {
+            if let Body::Abs(x, l) = &l.body {
                 return get_natural(*f, *x, l);
-            } else if *l.as_ref() == Body::Id(*f) {
+            } else if l.body == Body::Id(*f) {
                 // λf.(λx.(f x))
                 // λf.(f) # eta-reduced version of 1
                 return Some(1);
@@ -308,11 +309,11 @@ impl Repl {
         None
     }
 
-    pub fn print_value(&self, b: &Body) {
+    pub fn print_value(&self, b: &Term) {
         println!("{}", self.format_value(b));
     }
 
-    pub fn format_value(&self, b: &Body) -> String {
+    pub fn format_value(&self, b: &Term) -> String {
         if self.readable {
             if let Some(alias) = self.scope.get_from_alpha_key(b) {
                 return alias.to_string();
@@ -323,27 +324,28 @@ impl Repl {
             if let Some(v) = self.from_list(b) {
                 return format!("[{v}]");
             }
+            return match &b.body {
+                Body::Id(id) => church::id_to_str(*id),
+                Body::App(ref f, ref x) => format!(
+                    "{} {}",
+                    self.format_value(f),
+                    if usize::from(x.len()) > 1 {
+                        format!("({})", self.format_value(x))
+                    } else {
+                        self.format_value(x)
+                    }
+                ),
+                Body::Abs(v, l) => format!("λ{}.({})", church::id_to_str(*v), self.format_value(l)),
+            };
         }
-        match b {
-            Body::Id(id) => church::id_to_str(*id),
-            Body::App(ref f, ref x) => format!(
-                "{} {}",
-                self.format_value(f),
-                if usize::from(x.len()) > 1 {
-                    format!("({})", self.format_value(x))
-                } else {
-                    self.format_value(x)
-                }
-            ),
-            Body::Abs(v, l) => format!("λ{}.({})", church::id_to_str(*v), self.format_value(l)),
-        }
+        format!("{b}")
     }
 
-    pub fn from_list(&self, b: &Body) -> Option<String> {
-        if let Body::Abs(wrapper, b) = b {
-            if let Body::App(b, rhs) = b.as_ref() {
-                if let Body::App(wrap, lhs) = b.as_ref() {
-                    if Body::Id(*wrapper) == **wrap {
+    pub fn from_list(&self, b: &Term) -> Option<String> {
+        if let Body::Abs(wrapper, b) = &b.body {
+            if let Body::App(b, rhs) = &b.body {
+                if let Body::App(wrap, lhs) = &b.body {
+                    if Body::Id(*wrapper) == wrap.body {
                         let mut v = self.format_value(lhs);
                         if let Some(tail) = self.from_list(rhs) {
                             v = format!("{v}, {tail}")
@@ -375,9 +377,7 @@ impl Repl {
             let mut numbers = Scope::default();
             for i in s..e {
                 numbers.aliases.push(i.to_string());
-                numbers
-                    .defs
-                    .push(church::enc::naturals::natural(i).to_string());
+                numbers.defs.push(Self::natural(i).to_string());
             }
             numbers.update();
             self.scope.extend(numbers);
@@ -400,5 +400,36 @@ impl Repl {
 
     pub fn quit(&mut self, _input: &str) {
         self.quit = true;
+    }
+
+    #[must_use]
+    pub fn natural(n: usize) -> Term {
+        fn natural_body(n: usize) -> Term {
+            let body = if n == 0 {
+                Body::Id(1)
+            } else {
+                Body::App(Term::new(Body::Id(0)).into(), natural_body(n - 1).into())
+            };
+            Term::new(body)
+        }
+        natural_body(n).with([0, 1])
+    }
+
+    pub fn debrejin(&mut self, input: &str) {
+        let mut o = String::new();
+        self.mode.bench("delta redex", || {
+            o = self.scope.delta_redex(input).0;
+        });
+        match Term::try_from_str(&o) {
+            Ok(l) => {
+                println!("{}", l.clone().debrejin_reduced());
+                self.mode.bench("printing", || {
+                    self.print_value(&l);
+                });
+            }
+            Err(e) => {
+                eprintln!("error: {e:?}");
+            }
+        }
     }
 }

@@ -9,6 +9,7 @@ pub fn grammar() -> Grammar<Sym> {
         {
             use super::Sym::*;
             use crate::Body;
+            use crate::Term;
             let mut map = lrp::RuleMap::new();
             map.insert(
                 EntryPoint,
@@ -29,10 +30,6 @@ pub fn grammar() -> Grammar<Sym> {
                 ),
             );
             map.insert(
-                App,
-                lrp::grammar::Rule::new(App, vec![vec![App, Expr], vec![Expr]]),
-            );
-            map.insert(
                 Expr,
                 lrp::grammar::Rule::new(
                     Expr,
@@ -42,6 +39,10 @@ pub fn grammar() -> Grammar<Sym> {
                         vec![Sym::Var],
                     ],
                 ),
+            );
+            map.insert(
+                App,
+                lrp::grammar::Rule::new(App, vec![vec![App, Expr], vec![Expr]]),
             );
 
             map
@@ -61,6 +62,7 @@ pub fn grammar() -> Grammar<Sym> {
 pub fn reduct_map() -> ReductMap<Meta<Ast>, Sym> {
     use super::Sym::*;
     use crate::Body;
+    use crate::Term;
     let mut map = lrp::ReductMap::new();
 
     fn lrp_wop_EntryPoint_0(toks: &[Gramem]) -> lrp::Meta<Ast> {
@@ -82,44 +84,16 @@ pub fn reduct_map() -> ReductMap<Meta<Ast>, Sym> {
                 let i = toks[1].clone();
                 let a = toks[4].clone();
                 {
-                    Ast::Expr(Body::Abs(
+                    Ast::Expr(Term::new(Body::Abs(
                         i.item.item.as_var(),
                         a.item.item.as_expr().clone().into(),
-                    ))
+                    )))
                 }
             },
             lrp::Span::new(toks[0].item.span.start, toks.last().unwrap().item.span.end),
         )
     }
     map.insert(Lambda, vec![lrp_wop_Lambda_0]);
-
-    fn lrp_wop_App_0(toks: &[Gramem]) -> lrp::Meta<Ast> {
-        lrp::Meta::new(
-            {
-                let a = toks[0].clone();
-                let e = toks[1].clone();
-                {
-                    Ast::Expr(Body::App(
-                        a.item.item.as_expr().clone().into(),
-                        e.item.item.as_expr().clone().into(),
-                    ))
-                }
-            },
-            lrp::Span::new(toks[0].item.span.start, toks.last().unwrap().item.span.end),
-        )
-    }
-    fn lrp_wop_App_1(toks: &[Gramem]) -> lrp::Meta<Ast> {
-        lrp::Meta::new(
-            {
-                let e = toks[0].clone();
-                {
-                    Ast::Expr(e.item.item.as_expr().clone())
-                }
-            },
-            lrp::Span::new(toks[0].item.span.start, toks.last().unwrap().item.span.end),
-        )
-    }
-    map.insert(App, vec![lrp_wop_App_0, lrp_wop_App_1]);
 
     fn lrp_wop_Expr_0(toks: &[Gramem]) -> lrp::Meta<Ast> {
         lrp::Meta::new(
@@ -148,13 +122,41 @@ pub fn reduct_map() -> ReductMap<Meta<Ast>, Sym> {
             {
                 let i = toks[0].clone();
                 {
-                    Ast::Expr(Body::Id(i.item.item.as_var()))
+                    Ast::Expr(Term::new(Body::Id(i.item.item.as_var())))
                 }
             },
             lrp::Span::new(toks[0].item.span.start, toks.last().unwrap().item.span.end),
         )
     }
     map.insert(Expr, vec![lrp_wop_Expr_0, lrp_wop_Expr_1, lrp_wop_Expr_2]);
+
+    fn lrp_wop_App_0(toks: &[Gramem]) -> lrp::Meta<Ast> {
+        lrp::Meta::new(
+            {
+                let a = toks[0].clone();
+                let e = toks[1].clone();
+                {
+                    Ast::Expr(Term::new(Body::App(
+                        a.item.item.as_expr().clone().into(),
+                        e.item.item.as_expr().clone().into(),
+                    )))
+                }
+            },
+            lrp::Span::new(toks[0].item.span.start, toks.last().unwrap().item.span.end),
+        )
+    }
+    fn lrp_wop_App_1(toks: &[Gramem]) -> lrp::Meta<Ast> {
+        lrp::Meta::new(
+            {
+                let e = toks[0].clone();
+                {
+                    Ast::Expr(e.item.item.as_expr().clone())
+                }
+            },
+            lrp::Span::new(toks[0].item.span.start, toks.last().unwrap().item.span.end),
+        )
+    }
+    map.insert(App, vec![lrp_wop_App_0, lrp_wop_App_1]);
 
     map
 }
