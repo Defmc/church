@@ -456,17 +456,14 @@ impl Term {
     /// is bigger than the amount of expressions from debrejin_redex contradomain, as it treats
     /// ^a.(a b) ^a.(^b.(b)) as debrejin valid. While the true debrejin form is ^a.(a b) ^a.(^c.(c))
     pub fn is_debrejin(&self) -> bool {
-        let frees = self.free_variables();
-        self.check_is_debrejin(&frees, 0)
+        self.check_is_debrejin(0)
     }
 
-    pub fn check_is_debrejin(&self, frees: &HashSet<VarId>, lvl: usize) -> bool {
+    pub fn check_is_debrejin(&self, lvl: usize) -> bool {
         match &self.body {
             Body::Id(..) => true,
-            Body::App(lhs, rhs) => {
-                lhs.check_is_debrejin(frees, lvl + 1) && rhs.check_is_debrejin(frees, lvl + 1)
-            }
-            Body::Abs(v, l) => *v == lvl && l.check_is_debrejin(frees, lvl + 1),
+            Body::App(lhs, rhs) => lhs.check_is_debrejin(lvl + 1) && rhs.check_is_debrejin(lvl + 1),
+            Body::Abs(v, l) => *v == lvl && l.check_is_debrejin(lvl + 1),
         }
     }
 }
