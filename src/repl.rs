@@ -1,4 +1,5 @@
 use church::{scope::Scope, Body, Term, VarId};
+use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
 use std::{fs::read_to_string, io::Write, path::PathBuf, str::FromStr, time::Instant};
 
@@ -22,7 +23,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
 #[derive(Debug)]
 pub struct Repl {
     scope: Scope,
-    loaded_files: Vec<PathBuf>,
+    loaded_files: HashSet<PathBuf>,
     prompt: String,
     readable: bool,
     mode: Mode,
@@ -131,7 +132,7 @@ impl Default for Repl {
         rl.set_history_ignore_space(true);
         Repl {
             scope: Scope::default(),
-            loaded_files: Vec::default(),
+            loaded_files: HashSet::default(),
             readable: true,
             mode: Mode::default(),
             quit: false,
@@ -218,11 +219,16 @@ impl Repl {
     }
 
     pub fn load(&mut self, input: &str) {
-        match read_to_string(input) {
+        let input = input.into();
+        println!("loading {input:?}");
+        if self.loaded_files.contains(&input) {
+            eprintln!("warn: already loaded {input:?}");
+            return;
+        }
+        match read_to_string(&input) {
             Ok(s) => {
                 s.lines().for_each(|l| self.parse(l));
-                self.loaded_files.push(input.into());
-                self.scope.update();
+                self.loaded_files.insert(input);
             }
             Err(e) => eprintln!("error: {e:?}"),
         }
@@ -386,16 +392,16 @@ impl Repl {
         }
     }
 
-    pub fn reload(&mut self, input: &str) {
-        if input.is_empty() {
-            self.scope = Scope::default();
-            let loaded = self.loaded_files.clone();
-            loaded.into_iter().for_each(|f| match read_to_string(f) {
-                Ok(s) => s.lines().for_each(|l| self.parse(l)),
-                Err(e) => eprintln!("error: {e:?}"),
-            });
-            self.scope.update();
-        }
+    pub fn reload(&mut self, _input: &str) {
+        self.scope = Scope::default();
+        let loaded = self.loaded_files.clone();
+        println!("carregando {loaded:?}");
+        self.loaded_files.clear();
+        loaded
+            .into_iter()
+            .for_each(|f| self.load(&f.to_string_lossy()));
+
+        self.scope.update();
     }
 
     pub fn quit(&mut self, _input: &str) {
