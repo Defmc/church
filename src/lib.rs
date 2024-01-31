@@ -214,16 +214,16 @@ impl Term {
         rhs_binds: usize,
     ) -> bool {
         match (self.body.as_ref(), rhs.body.as_ref()) {
-            (Body::Id(s_id), Body::Id(r_id)) => self_map.get(&s_id) == rhs_map.get(&r_id),
+            (Body::Id(s_id), Body::Id(r_id)) => self_map.get(s_id) == rhs_map.get(r_id),
             (Body::App(s_f, s_x), Body::App(r_f, r_x)) => {
                 s_f.eq_by_alpha(
-                    &r_f,
+                    r_f,
                     &mut self_map.clone(),
                     self_binds,
                     &mut rhs_map.clone(),
                     rhs_binds,
                 ) && s_x.eq_by_alpha(
-                    &r_x,
+                    r_x,
                     &mut self_map.clone(),
                     self_binds,
                     &mut rhs_map.clone(),
@@ -232,22 +232,22 @@ impl Term {
             }
             (Body::Abs(s_v, s_l), Body::Abs(r_v, r_l)) => {
                 let mut edits = (None, None);
-                if self_map.contains_key(&s_v) {
+                if self_map.contains_key(s_v) {
                     let mut map = self_map.clone();
-                    *map.get_mut(&s_v).unwrap() = self_binds;
+                    *map.get_mut(s_v).unwrap() = self_binds;
                     edits.0 = Some(map);
                 } else {
                     self_map.insert(*s_v, self_binds);
                 }
-                if rhs_map.contains_key(&r_v) {
+                if rhs_map.contains_key(r_v) {
                     let mut map = rhs_map.clone();
-                    *map.get_mut(&r_v).unwrap() = rhs_binds;
+                    *map.get_mut(r_v).unwrap() = rhs_binds;
                     edits.1 = Some(map);
                 } else {
                     rhs_map.insert(*r_v, rhs_binds);
                 }
                 s_l.eq_by_alpha(
-                    &r_l,
+                    r_l,
                     edits.0.as_mut().map_or_else(|| self_map, |m| m),
                     self_binds + 1,
                     edits.1.as_mut().map_or_else(|| rhs_map, |m| m),
