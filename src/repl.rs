@@ -93,7 +93,7 @@ impl Mode {
         let mut buf = String::new();
         println!("{l}");
         let mut steps = 0;
-        'redex: while l.beta_redex_step() {
+        while l.beta_redex_step() {
             println!("{l}");
             if self == &Self::Debug {
                 loop {
@@ -104,7 +104,7 @@ impl Mode {
                     assert!(std::io::stdin().read_line(&mut buf).is_ok());
                     match buf.trim() {
                         "c" => break,
-                        "a" => break 'redex,
+                        "a" => return,
                         "" => break,
                         _ => eprintln!("unknown option"),
                     }
@@ -244,7 +244,6 @@ impl Repl {
 
     pub fn load(&mut self, args: &[&str]) {
         let input = args[1].into();
-        println!("loading {input:?}");
         if self.loaded_files.contains(&input) {
             eprintln!("warn: already loaded {input:?}");
             return;
@@ -255,6 +254,9 @@ impl Repl {
                 self.loaded_files.insert(input);
             }
             Err(e) => eprintln!("error: {e:?}"),
+        }
+        if args.contains(&"-s") {
+            self.scope.update();
         }
     }
 
@@ -419,16 +421,17 @@ impl Repl {
         self.scope.extend(numbers);
     }
 
-    pub fn reload(&mut self, _input: &[&str]) {
+    pub fn reload(&mut self, args: &[&str]) {
         self.scope = Scope::default();
         let loaded = self.loaded_files.clone();
-        println!("carregando {loaded:?}");
         self.loaded_files.clear();
         loaded
             .into_iter()
             .for_each(|f| self.load(&[&f.to_string_lossy()]));
 
-        self.scope.update();
+        if args.contains(&"-s") {
+            self.scope.update();
+        }
     }
 
     pub fn quit(&mut self, _args: &[&str]) {
