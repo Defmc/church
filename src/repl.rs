@@ -1,4 +1,5 @@
 use church::{scope::Scope, Body, Term, VarId};
+use logos::Logos;
 use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
 use std::{fs::read_to_string, io::Write, path::PathBuf, str::FromStr, time::Instant};
@@ -19,6 +20,18 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     ("reload", Repl::reload),
     ("debrejin", Repl::debrejin),
 ];
+
+#[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord, Logos, Copy)]
+pub enum Arg {
+    #[regex(r#""([^\\]|\\.)*""#)]
+    StrLit,
+    #[regex(r#".*"#)]
+    Arg,
+    #[regex(r"[ \t\n\r]+", logos::skip)]
+    Ws,
+    #[regex(r#"#.*"#)]
+    Comment,
+}
 
 #[derive(Debug)]
 pub struct Repl {
@@ -392,7 +405,7 @@ impl Repl {
         }
     }
 
-    pub fn reload(&mut self, input: &str) {
+    pub fn reload(&mut self, _input: &str) {
         self.scope = Scope::default();
         let loaded = self.loaded_files.clone();
         println!("carregando {loaded:?}");
