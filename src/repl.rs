@@ -6,19 +6,19 @@ use std::{fs::read_to_string, io::Write, path::PathBuf, str::FromStr, time::Inst
 
 pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
-pub type Handler = fn(&mut Repl, &str);
+pub type Handler = fn(&mut Repl, &[&str]);
 
 pub const HANDLERS: &[(&str, Handler)] = &[
-    ("show ", Repl::show),
-    ("load ", Repl::load),
-    ("set ", Repl::set),
-    ("alpha_eq ", Repl::alpha_eq),
-    ("alpha ", Repl::alpha),
-    ("delta", Repl::delta),
-    ("gen_nats ", Repl::gen_nats),
-    ("quit", Repl::quit),
-    ("reload", Repl::reload),
-    ("debrejin", Repl::debrejin),
+    (":show", Repl::show),
+    (":load", Repl::load),
+    (":set", Repl::set),
+    (":alpha_eq", Repl::alpha_eq),
+    (":alpha", Repl::alpha),
+    (":delta", Repl::delta),
+    (":gen_nats", Repl::gen_nats),
+    (":quit", Repl::quit),
+    (":reload", Repl::reload),
+    (":debrejin", Repl::debrejin),
 ];
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord, Logos, Copy)]
@@ -186,7 +186,8 @@ impl Repl {
     pub fn parse(&mut self, input: &str) {
         let input = input.trim();
         if input.starts_with(':') {
-            self.handle(input.strip_prefix(':').unwrap())
+            let args: Vec<_> = Arg::parse(&input).collect();
+            self.handle(&args);
         } else if input.contains('=') {
             self.alias(input);
         } else if !input.is_empty() && !input.starts_with('#') {
@@ -206,18 +207,18 @@ impl Repl {
         }
     }
 
-    pub fn handle(&mut self, input: &str) {
+    pub fn handle(&mut self, args: &[&str]) {
+        println!("params: {args:?}");
         for (prefix, h) in HANDLERS.iter() {
-            if input.starts_with(prefix) {
-                let stripped = input.strip_prefix(prefix).unwrap();
-                return self.mode.clone().bench(prefix, || h(self, stripped));
+            if args[0] == *prefix {
+                return self.mode.clone().bench(prefix, || h(self, args));
             }
         }
-        eprintln!("error: command {input:?} not found");
+        eprintln!("error: command {:?} not found", args[0]);
     }
 
-    pub fn show(&mut self, input: &str) {
-        match input {
+    pub fn show(&mut self, args: &[&str]) {
+        match args[1] {
             "scope" => {
                 for (k, v) in self.scope.aliases.iter().zip(self.scope.defs.iter()) {
                     println!("{k} = {v}");
@@ -232,17 +233,17 @@ impl Repl {
                 }
             }
             _ => {
-                if let Some(def) = self.scope.indexes.get(input) {
+                if let Some(def) = self.scope.indexes.get(args[1]) {
                     println!("{}", self.scope.defs[*def]);
                 } else {
-                    eprintln!("unknown option {input:?}");
+                    eprintln!("unknown option {args:?}");
                 }
             }
         }
     }
 
-    pub fn load(&mut self, input: &str) {
-        let input = input.into();
+    pub fn load(&mut self, args: &[&str]) {
+        let input = args[1].into();
         println!("loading {input:?}");
         if self.loaded_files.contains(&input) {
             eprintln!("warn: already loaded {input:?}");
@@ -257,28 +258,33 @@ impl Repl {
         }
     }
 
-    pub fn set(&mut self, input: &str) {
-        if let Some(value) = input.strip_prefix("readable ") {
-            match value {
-                "true" => self.readable = true,
-                "false" => self.readable = false,
-                _ => eprintln!("unknown value {value} for readable"),
+    pub fn set(&mut self, args: &[&str]) {
+        match args[1] {
+            "readable" => {
+                self.readable = match args[2] {
+                    "true" => true,
+                    "false" => false,
+                    _ => {
+                        eprintln!("unknown value {:?} for {:?}", args[2], args[1]);
+                        return;
+                    }
+                }
             }
-        } else if let Some(value) = input.strip_prefix("prompt ") {
-            self.prompt = value.to_string();
-        } else if let Some(value) = input.strip_prefix("mode ") {
-            if let Ok(value) = Mode::from_str(value) {
-                self.mode = value;
-            } else {
-                eprintln!("unknown value {value} for mode");
+            "prompt" => self.prompt = args[2].to_string(),
+            "mode" => {
+                if let Ok(mode) = Mode::from_str(args[2]) {
+                    self.mode = mode;
+                } else {
+                    eprintln!("unknown value {:?} for {:?}", args[2], args[1])
+                }
             }
-        } else {
-            eprintln!("unknown option {input}");
+            _ => eprintln!("unknonwn option {}", args[1]),
         }
     }
 
-    pub fn alpha_eq(&mut self, input: &str) {
-        let input = self.scope.delta_redex(input).0;
+    pub fn alpha_eq(&mut self, args: &[&str]) {
+        let input = args[1..].join(" ");
+        let input = self.scope.delta_redex(&input).0;
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
             Ok(expr) => match expr.body.as_ref() {
@@ -291,8 +297,9 @@ impl Repl {
         }
     }
 
-    pub fn alpha(&mut self, input: &str) {
-        let input = self.scope.delta_redex(input).0;
+    pub fn alpha(&mut self, args: &[&str]) {
+        let input = args[1..].join(" ");
+        let input = self.scope.delta_redex(&input).0;
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
             Ok(expr) => {
@@ -302,8 +309,9 @@ impl Repl {
         }
     }
 
-    pub fn delta(&mut self, input: &str) {
-        let input = self.scope.delta_redex(input).0;
+    pub fn delta(&mut self, args: &[&str]) {
+        let input = args[1..].join("");
+        let input = self.scope.delta_redex(&input).0;
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
             Ok(expr) => {
@@ -389,45 +397,41 @@ impl Repl {
         None
     }
 
-    pub fn gen_nats(&mut self, input: &str) {
-        if let Some((s, e)) = input.split_once(' ') {
-            let s = if let Ok(s) = usize::from_str(s) {
-                s
-            } else {
-                println!("{s:?} is not a valid range start");
-                return;
-            };
-            let e = if let Ok(e) = usize::from_str(e) {
-                e
-            } else {
-                println!("{e:?} is not a valid range end");
-                return;
-            };
-            let mut numbers = Scope::default();
-            for i in s..e {
-                numbers.aliases.push(i.to_string());
-                numbers.defs.push(Self::natural(i).to_string());
-            }
-            numbers.update();
-            self.scope.extend(numbers);
+    pub fn gen_nats(&mut self, args: &[&str]) {
+        let s = if let Ok(s) = usize::from_str(args[1]) {
+            s
         } else {
-            eprintln!("missing two values (start end)");
+            println!("{:?} is not a valid range start", args[1]);
+            return;
+        };
+        let e = if let Ok(e) = usize::from_str(args[2]) {
+            e
+        } else {
+            println!("{:?} is not a valid range end", args[2]);
+            return;
+        };
+        let mut numbers = Scope::default();
+        for i in s..e {
+            numbers.aliases.push(i.to_string());
+            numbers.defs.push(Self::natural(i).to_string());
         }
+        numbers.update();
+        self.scope.extend(numbers);
     }
 
-    pub fn reload(&mut self, _input: &str) {
+    pub fn reload(&mut self, _input: &[&str]) {
         self.scope = Scope::default();
         let loaded = self.loaded_files.clone();
         println!("carregando {loaded:?}");
         self.loaded_files.clear();
         loaded
             .into_iter()
-            .for_each(|f| self.load(&f.to_string_lossy()));
+            .for_each(|f| self.load(&[&f.to_string_lossy()]));
 
         self.scope.update();
     }
 
-    pub fn quit(&mut self, _input: &str) {
+    pub fn quit(&mut self, _args: &[&str]) {
         self.quit = true;
     }
 
@@ -444,10 +448,11 @@ impl Repl {
         natural_body(n).with([0, 1])
     }
 
-    pub fn debrejin(&mut self, input: &str) {
+    pub fn debrejin(&mut self, args: &[&str]) {
         let mut o = String::new();
+        let input = args.join(" ");
         self.mode.bench("delta redex", || {
-            o = self.scope.delta_redex(input).0;
+            o = self.scope.delta_redex(&input).0;
         });
         match Term::try_from_str(&o) {
             Ok(l) => {
