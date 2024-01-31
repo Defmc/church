@@ -1,5 +1,6 @@
 use core::fmt;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use std::rc::Rc;
 use std::{iter::Peekable, num::NonZeroUsize, str::FromStr};
 
 pub type VarId = usize;
@@ -27,7 +28,7 @@ pub fn id_to_str(i: usize) -> String {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Term {
-    pub body: Body,
+    pub body: Rc<Body>,
     pub closed: bool,
 }
 
@@ -46,7 +47,10 @@ impl fmt::Display for Term {
 impl Term {
     pub fn new(body: Body) -> Self {
         let closed = body.free_variables().is_empty();
-        Self { body, closed }
+        Self {
+            body: Rc::new(body),
+            closed,
+        }
     }
 
     #[must_use]
@@ -63,7 +67,7 @@ impl Term {
         let next = it.next()?;
         if it.peek().is_some() {
             let abs = Self::from_args(it, term).unwrap();
-            let body = Self::new(abs.body);
+            let body = abs.clone();
             let abs = Body::Abs(next, body.into());
             Some(Self::new(abs))
         } else {
@@ -75,30 +79,30 @@ impl Term {
     /// Returns the order (how many abstractions) this body have
     #[must_use]
     pub fn order(&self) -> usize {
-        match self.body {
+        match *self.body {
             Body::Abs(_, ref a) => 1 + a.order(),
             _ => 0,
         }
     }
 
     pub fn as_mut_abs(&mut self) -> Option<(&mut VarId, &mut Self)> {
-        if let Body::Abs(ref mut v, ref mut b) = self.body {
-            Some((v, b.as_mut()))
+        if let Body::Abs(ref mut v, ref mut b) = Rc::make_mut(&mut self.body) {
+            Some((v, Rc::make_mut(b)))
         } else {
             None
         }
     }
 
     pub fn as_mut_app(&mut self) -> Option<(&mut Self, &mut Self)> {
-        if let Body::App(ref mut lhs, ref mut rhs) = self.body {
-            Some((lhs.as_mut(), rhs))
+        if let Body::App(ref mut lhs, ref mut rhs) = Rc::make_mut(&mut self.body) {
+            Some((Rc::make_mut(lhs), Rc::make_mut(rhs)))
         } else {
             None
         }
     }
 
     pub fn as_mut_id(&mut self) -> Option<&mut VarId> {
-        if let Body::Id(ref mut id) = self.body {
+        if let Body::Id(ref mut id) = Rc::make_mut(&mut self.body) {
             Some(id)
         } else {
             None
@@ -125,23 +129,23 @@ impl Term {
     /// # Panics
     /// Never.
     pub fn redex_by_alpha(&mut self, map: &mut HashMap<VarId, VarId>) {
-        match self.body {
+        match Rc::make_mut(&mut self.body) {
             Body::Id(ref mut id) => {
                 if let Some(mid) = map.get(id) {
                     *id = *mid;
                 }
             }
             Body::App(ref mut f, ref mut x) => {
-                f.redex_by_alpha(&mut map.clone());
-                x.redex_by_alpha(&mut map.clone());
+                Rc::make_mut(f).redex_by_alpha(&mut map.clone());
+                Rc::make_mut(x).redex_by_alpha(&mut map.clone());
             }
             Body::Abs(ref mut i, ref mut l) => {
                 let (mut maybe_map, bind) = Self::try_alpha_redex(*i, map);
                 *i = bind;
                 if let Some(ref mut new_map) = maybe_map {
-                    l.redex_by_alpha(new_map)
+                    Rc::make_mut(l).redex_by_alpha(new_map)
                 } else {
-                    l.redex_by_alpha(map)
+                    Rc::make_mut(l).redex_by_alpha(map)
                 }
             }
         }
@@ -209,17 +213,17 @@ impl Term {
         rhs_map: &mut HashMap<VarId, VarId>,
         rhs_binds: usize,
     ) -> bool {
-        match (&self.body, &rhs.body) {
-            (Body::Id(s_id), Body::Id(r_id)) => self_map.get(s_id) == rhs_map.get(r_id),
+        match (self.body.as_ref(), rhs.body.as_ref()) {
+            (Body::Id(s_id), Body::Id(r_id)) => self_map.get(&s_id) == rhs_map.get(&r_id),
             (Body::App(s_f, s_x), Body::App(r_f, r_x)) => {
                 s_f.eq_by_alpha(
-                    r_f,
+                    &r_f,
                     &mut self_map.clone(),
                     self_binds,
                     &mut rhs_map.clone(),
                     rhs_binds,
                 ) && s_x.eq_by_alpha(
-                    r_x,
+                    &r_x,
                     &mut self_map.clone(),
                     self_binds,
                     &mut rhs_map.clone(),
@@ -228,22 +232,22 @@ impl Term {
             }
             (Body::Abs(s_v, s_l), Body::Abs(r_v, r_l)) => {
                 let mut edits = (None, None);
-                if self_map.contains_key(s_v) {
+                if self_map.contains_key(&s_v) {
                     let mut map = self_map.clone();
-                    *map.get_mut(s_v).unwrap() = self_binds;
+                    *map.get_mut(&s_v).unwrap() = self_binds;
                     edits.0 = Some(map);
                 } else {
                     self_map.insert(*s_v, self_binds);
                 }
-                if rhs_map.contains_key(r_v) {
+                if rhs_map.contains_key(&r_v) {
                     let mut map = rhs_map.clone();
-                    *map.get_mut(r_v).unwrap() = rhs_binds;
+                    *map.get_mut(&r_v).unwrap() = rhs_binds;
                     edits.1 = Some(map);
                 } else {
                     rhs_map.insert(*r_v, rhs_binds);
                 }
                 s_l.eq_by_alpha(
-                    r_l,
+                    &r_l,
                     edits.0.as_mut().map_or_else(|| self_map, |m| m),
                     self_binds + 1,
                     edits.1.as_mut().map_or_else(|| rhs_map, |m| m),
@@ -256,9 +260,9 @@ impl Term {
 
     /// Replaces the terms with same `id` with `val`, returning if there was any application
     pub fn apply_by(&mut self, id: VarId, val: &Self) -> bool {
-        let changed = match self.body {
+        let changed = match Rc::make_mut(&mut self.body) {
             Body::Id(s_id) => {
-                if s_id == id {
+                if *s_id == id {
                     *self = val.clone();
                     true
                 } else {
@@ -274,7 +278,9 @@ impl Term {
                     false
                 }
             }
-            Body::App(ref mut f, ref mut x) => f.apply_by(id, val) | x.apply_by(id, val),
+            Body::App(ref mut f, ref mut x) => {
+                Rc::make_mut(f).apply_by(id, val) | Rc::make_mut(x).apply_by(id, val)
+            }
         };
         if changed {
             self.closed &= val.closed;
@@ -321,25 +327,25 @@ impl Term {
     }
 
     pub fn beta_redex_step(&mut self) -> bool {
-        match self.body {
+        match Rc::make_mut(&mut self.body) {
             Body::Id(..) => false,
             Body::App(ref mut f, ref mut x) => {
-                return if matches!(&f.body, Body::Abs(..)) {
-                    let mut f = f.clone();
+                return if matches!(*f.body, Body::Abs(..)) {
+                    let f = Rc::make_mut(f);
                     f.fix_captures(x);
                     let (id, l) = f.as_mut_abs().unwrap();
                     l.apply_by(*id, x);
                     *self = l.clone();
                     true
                 } else {
-                    f.beta_redex_step() || x.beta_redex_step()
+                    Rc::make_mut(f).beta_redex_step() || Rc::make_mut(x).beta_redex_step()
                 };
             }
             Body::Abs(..) => {
                 if self.eta_redex_step() {
                     true
-                } else if let Body::Abs(_, ref mut l) = self.body {
-                    l.beta_redex_step()
+                } else if let Body::Abs(_, ref mut l) = Rc::make_mut(&mut self.body) {
+                    Rc::make_mut(l).beta_redex_step()
                 } else {
                     unreachable!()
                 }
@@ -355,7 +361,7 @@ impl Term {
     /// Never.
     #[must_use]
     pub fn len(&self) -> NonZeroUsize {
-        match self.body {
+        match *self.body {
             Body::Id(..) => 1.try_into().unwrap(),
             Body::App(ref f, ref x) => f.len().saturating_add(x.len().into()),
             Body::Abs(_, ref b) => b.len().saturating_add(1),
@@ -371,10 +377,10 @@ impl Term {
     }
 
     pub fn eta_redex_step(&mut self) -> bool {
-        if let Body::Abs(v, ref mut app) = self.body {
-            if let Body::App(ref mut lhs, ref mut rhs) = app.body {
-                if rhs.body == Body::Id(v) && !lhs.contains(&Body::Id(v)) {
-                    *self = *lhs.clone();
+        if let Body::Abs(v, ref mut app) = Rc::make_mut(&mut self.body) {
+            if let Body::App(ref mut lhs, ref mut rhs) = Rc::make_mut(&mut Rc::make_mut(app).body) {
+                if rhs.body.as_ref() == &Body::Id(*v) && !lhs.contains(&Body::Id(*v)) {
+                    *self = (**lhs).clone();
                     return true;
                 }
             }
@@ -385,15 +391,15 @@ impl Term {
     /// returns if, at any depth, starting from the outmost expression, there's the passed
     /// expression.
     pub fn contains(&self, what: &Body) -> bool {
-        match &self.body {
-            Body::Id(..) => self.body == *what,
+        match self.body.as_ref() {
+            Body::Id(..) => *self.body == *what,
             Body::App(lhs, rhs) => {
                 self.body == lhs.body
                     || self.body == rhs.body
                     || lhs.contains(what)
                     || rhs.contains(what)
             }
-            Body::Abs(_, l) => self.body == *what || l.contains(what),
+            Body::Abs(_, l) => *self.body == *what || l.contains(what),
         }
     }
 
@@ -422,18 +428,18 @@ impl Term {
     }
 
     pub fn redex_by_debrejin(&mut self, binds: &mut HashMap<VarId, VarId>, lvl: usize) {
-        match self.body {
+        match Rc::make_mut(&mut self.body) {
             Body::Id(ref mut id) => *id = binds[id],
             Body::App(ref mut lhs, ref mut rhs) => {
-                lhs.redex_by_debrejin(binds, lvl + 1);
-                rhs.redex_by_debrejin(binds, lvl + 1);
+                Rc::make_mut(lhs).redex_by_debrejin(binds, lvl + 1);
+                Rc::make_mut(rhs).redex_by_debrejin(binds, lvl + 1);
             }
             Body::Abs(ref mut v, ref mut l) => {
                 let lvl = Self::get_next_free(lvl, binds);
                 let old_v = *v;
                 *v = lvl;
                 let old = binds.insert(old_v, lvl);
-                l.redex_by_debrejin(binds, lvl + 1);
+                Rc::make_mut(l).redex_by_debrejin(binds, lvl + 1);
                 if let Some(old) = old {
                     *binds.get_mut(&old_v).unwrap() = old;
                 } else {
@@ -460,7 +466,7 @@ impl Term {
     }
 
     pub fn check_is_debrejin(&self, lvl: usize) -> bool {
-        match &self.body {
+        match self.body.as_ref() {
             Body::Id(..) => true,
             Body::App(lhs, rhs) => lhs.check_is_debrejin(lvl + 1) && rhs.check_is_debrejin(lvl + 1),
             Body::Abs(v, l) => *v == lvl && l.check_is_debrejin(lvl + 1),
@@ -479,8 +485,8 @@ impl FromStr for Term {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub enum Body {
     /* identity */ Id(VarId),
-    /* application */ App(Box<Term>, /* ( */ Box<Term> /* ) */),
-    /* abstraction */ Abs(VarId, Box<Term>),
+    /* application */ App(Rc<Term>, /* ( */ Rc<Term> /* ) */),
+    /* abstraction */ Abs(VarId, Rc<Term>),
 }
 
 impl Body {

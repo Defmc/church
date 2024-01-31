@@ -258,7 +258,7 @@ impl Repl {
         let input = self.scope.delta_redex(input).0;
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
-            Ok(expr) => match expr.body {
+            Ok(expr) => match expr.body.as_ref() {
                 Body::App(ref lhs, ref rhs) => {
                     println!("{}", if lhs.alpha_eq(rhs) { "true" } else { "false" });
                 }
@@ -292,21 +292,21 @@ impl Repl {
 
     pub fn natural_from_church_encoding(s: &Term) -> Option<usize> {
         fn get_natural(f: VarId, x: VarId, s: &Term) -> Option<usize> {
-            if let Body::App(lhs, rhs) = &s.body {
-                if lhs.body == Body::Id(f) {
+            if let Body::App(lhs, rhs) = s.body.as_ref() {
+                if *lhs.body == Body::Id(f) {
                     return get_natural(f, x, rhs).map(|n| n + 1);
                 }
-            } else if let Body::Id(v) = s.body {
-                return (v == x).then_some(0);
+            } else if let Body::Id(v) = s.body.as_ref() {
+                return (*v == x).then_some(0);
             }
 
             None
         }
 
-        if let Body::Abs(f, l) = &s.body {
-            if let Body::Abs(x, l) = &l.body {
+        if let Body::Abs(f, l) = s.body.as_ref() {
+            if let Body::Abs(x, l) = l.body.as_ref() {
                 return get_natural(*f, *x, l);
-            } else if l.body == Body::Id(*f) {
+            } else if *l.body == Body::Id(*f) {
                 // λf.(λx.(f x))
                 // λf.(f) # eta-reduced version of 1
                 return Some(1);
@@ -330,7 +330,7 @@ impl Repl {
             if let Some(v) = self.from_list(b) {
                 return format!("[{v}]");
             }
-            return match &b.body {
+            return match b.body.as_ref() {
                 Body::Id(id) => church::id_to_str(*id),
                 Body::App(ref f, ref x) => format!(
                     "{} {}",
@@ -348,10 +348,10 @@ impl Repl {
     }
 
     pub fn from_list(&self, b: &Term) -> Option<String> {
-        if let Body::Abs(wrapper, b) = &b.body {
-            if let Body::App(b, rhs) = &b.body {
-                if let Body::App(wrap, lhs) = &b.body {
-                    if Body::Id(*wrapper) == wrap.body {
+        if let Body::Abs(wrapper, b) = b.body.as_ref() {
+            if let Body::App(b, rhs) = b.body.as_ref() {
+                if let Body::App(wrap, lhs) = b.body.as_ref() {
+                    if &Body::Id(*wrapper) == wrap.body.as_ref() {
                         let mut v = self.format_value(lhs);
                         if let Some(tail) = self.from_list(rhs) {
                             v = format!("{v}, {tail}")
@@ -392,7 +392,7 @@ impl Repl {
         }
     }
 
-    pub fn reload(&mut self, _input: &str) {
+    pub fn reload(&mut self, input: &str) {
         self.scope = Scope::default();
         let loaded = self.loaded_files.clone();
         println!("carregando {loaded:?}");
