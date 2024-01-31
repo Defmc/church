@@ -25,12 +25,22 @@ pub const HANDLERS: &[(&str, Handler)] = &[
 pub enum Arg {
     #[regex(r#""([^\\]|\\.)*""#)]
     StrLit,
-    #[regex(r#".*"#)]
+    #[regex(r#"[^ ]*"#)]
     Arg,
+    #[token("=")]
+    Assign,
     #[regex(r"[ \t\n\r]+", logos::skip)]
     Ws,
-    #[regex(r#"#.*"#)]
+    #[regex(r#"#.*"#, logos::skip)]
     Comment,
+}
+
+impl Arg {
+    pub fn parse<'a>(s: &'a impl AsRef<str>) -> impl Iterator<Item = &'a str> {
+        Self::lexer(s.as_ref())
+            .spanned()
+            .map(move |(_, span)| &s.as_ref()[span])
+    }
 }
 
 #[derive(Debug)]
