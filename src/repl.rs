@@ -2,7 +2,7 @@ use church::{scope::Scope, Body, Term, VarId};
 use logos::Logos;
 use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
-use std::{fs::read_to_string, io::Write, path::PathBuf, str::FromStr, time::Instant};
+use std::{fmt, fs::read_to_string, io::Write, path::PathBuf, str::FromStr, time::Instant};
 
 pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
@@ -289,6 +289,16 @@ impl Repl {
     }
 
     pub fn set(&mut self, args: &[&str]) {
+        fn set_with<T: FromStr>(opt: &mut T, s: &str)
+        where
+            <T as FromStr>::Err: fmt::Debug,
+        {
+            match T::from_str(s) {
+                Ok(v) => *opt = v,
+                Err(e) => println!("unknown value {:?}: {e:?}", s),
+            }
+        }
+
         match args.len() {
             1 => {
                 eprintln!("missing option and value");
@@ -301,30 +311,16 @@ impl Repl {
             _ => (),
         };
         match args[1] {
-            "readable" => {
-                self.readable = match args[2] {
-                    "true" => true,
-                    "false" => false,
-                    _ => {
-                        eprintln!("unknown value {:?} for {:?}", args[2], args[1]);
-                        return;
-                    }
-                }
-            }
-            "prompt" => {
-                if let Some(prompt) = Arg::format(args[2]) {
-                    self.prompt = prompt;
-                } else {
-                    eprintln!("bad format {:?} for {:?}", args[2], args[1]);
-                }
-            }
-            "mode" => {
-                if let Ok(mode) = Mode::from_str(args[2]) {
-                    self.mode = mode;
-                } else {
-                    eprintln!("unknown value {:?} for {:?}", args[2], args[1])
-                }
-            }
+            "readable" => set_with(&mut self.readable, args[2]),
+            "prompt" => match Arg::format(args[2]) {
+                Some(v) => set_with(&mut self.prompt, &v),
+                None => eprintln!("bad format string {:?}", args[2]),
+            },
+            "mode" => set_with(&mut self.mode, args[2]),
+            "history" => match bool::from_str(args[2]) {
+                Ok(opt) => self.rl.set_auto_add_history(opt),
+                Err(e) => eprintln!("unknown value {:?}: {e:?}", args[2]),
+            },
             _ => eprintln!("unknonwn option {:?}", args[1]),
         }
     }
