@@ -332,7 +332,7 @@ impl Repl {
         match church::parser::parse(lex) {
             Ok(expr) => match expr.body.as_ref() {
                 Body::App(ref lhs, ref rhs) => {
-                    println!("{}", if lhs.alpha_eq(rhs) { "true" } else { "false" });
+                    println!("{}", lhs.alpha_eq(rhs));
                 }
                 _ => eprintln!("missing the second expression"),
             },
