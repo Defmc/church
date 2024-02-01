@@ -23,7 +23,8 @@ pub const HANDLERS: &[(&str, Handler)] = &[
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord, Logos, Copy)]
 pub enum Arg {
-    #[regex(r#""([^\\]|\\.)*""#)]
+    // #[regex(r#""([^\\]|\\.)*""#)]
+    #[regex(r#""([^"]|\\.)*""#)]
     StrLit,
     #[regex(r#"[^ ]*"#)]
     Arg,
@@ -37,9 +38,37 @@ pub enum Arg {
 
 impl Arg {
     pub fn parse<'a>(s: &'a impl AsRef<str>) -> impl Iterator<Item = &'a str> {
-        Self::lexer(s.as_ref())
-            .spanned()
-            .map(move |(_, span)| &s.as_ref()[span])
+        Self::lexer(s.as_ref()).spanned().map(move |(arg, span)| {
+            if arg == Ok(Arg::StrLit) {
+                &s.as_ref()[span.start + 1..span.end - 1]
+            } else {
+                &s.as_ref()[span]
+            }
+        })
+    }
+
+    pub fn format(s: &str) -> Option<String> {
+        let mut buf = String::with_capacity(s.len());
+        let mut it = s.chars();
+        while let Some(c) = it.next() {
+            if c == '\\' {
+                let next = it.next().unwrap();
+                let to_push = match next {
+                    '0' => '\0',
+                    'n' => '\n',
+                    'r' => '\r',
+                    't' => '\t',
+                    '\\' => '\\',
+                    '\'' => '\'',
+                    '"' => '"',
+                    _ => return None,
+                };
+                buf.push(to_push);
+            } else {
+                buf.push(c);
+            }
+        }
+        Some(buf)
     }
 }
 
@@ -261,6 +290,17 @@ impl Repl {
     }
 
     pub fn set(&mut self, args: &[&str]) {
+        match args.len() {
+            1 => {
+                eprintln!("missing option and value");
+                return;
+            }
+            2 => {
+                eprintln!("missing value");
+                return;
+            }
+            _ => (),
+        };
         match args[1] {
             "readable" => {
                 self.readable = match args[2] {
@@ -272,7 +312,13 @@ impl Repl {
                     }
                 }
             }
-            "prompt" => self.prompt = args[2].to_string(),
+            "prompt" => {
+                if let Some(prompt) = Arg::format(args[2]) {
+                    self.prompt = prompt;
+                } else {
+                    eprintln!("bad format {:?} for {:?}", args[2], args[1]);
+                }
+            }
             "mode" => {
                 if let Ok(mode) = Mode::from_str(args[2]) {
                     self.mode = mode;
@@ -280,7 +326,7 @@ impl Repl {
                     eprintln!("unknown value {:?} for {:?}", args[2], args[1])
                 }
             }
-            _ => eprintln!("unknonwn option {}", args[1]),
+            _ => eprintln!("unknonwn option {:?}", args[1]),
         }
     }
 
