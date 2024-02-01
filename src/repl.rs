@@ -237,7 +237,6 @@ impl Repl {
     }
 
     pub fn handle(&mut self, args: &[&str]) {
-        println!("params: {args:?}");
         for (prefix, h) in HANDLERS.iter() {
             if args[0] == *prefix {
                 return self.mode.clone().bench(prefix, || h(self, args));
@@ -358,7 +357,7 @@ impl Repl {
     }
 
     pub fn delta(&mut self, args: &[&str]) {
-        let input = args[1..].join("");
+        let input = args[1..].join(" ");
         let input = self.scope.delta_redex(&input).0;
         let lex = church::parser::lexer(&input);
         match church::parser::parse(lex) {
@@ -473,7 +472,7 @@ impl Repl {
         self.loaded_files.clear();
         loaded
             .into_iter()
-            .for_each(|f| self.load(&[&f.to_string_lossy()]));
+            .for_each(|f| self.load(&["load", &f.to_string_lossy()]));
 
         if args.contains(&"-s") {
             self.scope.update();
