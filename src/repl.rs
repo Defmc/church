@@ -19,6 +19,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     (":quit", Repl::quit),
     (":reload", Repl::reload),
     (":debrejin", Repl::debrejin),
+    (":fix_point", Repl::fix_point),
 ];
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord, Logos, Copy)]
@@ -494,7 +495,7 @@ impl Repl {
 
     pub fn debrejin(&mut self, args: &[&str]) {
         let mut o = String::new();
-        let input = args.join(" ");
+        let input = args[1..].join(" ");
         self.mode.bench("delta redex", || {
             o = self.scope.delta_redex(&input).0;
         });
@@ -509,5 +510,19 @@ impl Repl {
                 eprintln!("error: {e:?}");
             }
         }
+    }
+
+    pub fn fix_point(&mut self, args: &[&str]) {
+        let input = args[1..].join(" ");
+        self.mode
+            .bench("fix point", || match Scope::from_str(&input) {
+                Ok(s) => {
+                    Scope::solve_recursion(&s.aliases[0], &s.defs[0]).map_or_else(
+                        || println!("{} = {}", s.aliases[0], s.defs[0]),
+                        |imp| println!("{} = {imp}", s.aliases[0]),
+                    );
+                }
+                Err(e) => eprintln!("error while parsing scope: {e:?}"),
+            })
     }
 }
