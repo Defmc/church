@@ -1,7 +1,7 @@
 use rustc_hash::FxHashMap as HashMap;
 use std::str::FromStr;
 
-use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
+use aho_corasick::{AhoCorasick};
 
 use crate::{id_to_str, parser, Term, VarId};
 
