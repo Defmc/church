@@ -1,9 +1,9 @@
 use rustc_hash::FxHashMap as HashMap;
 use std::str::FromStr;
 
-use aho_corasick::AhoCorasick;
+use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 
-use crate::{parser, Term};
+use crate::{id_to_str, parser, Term, VarId};
 
 #[derive(Debug, Clone, Default)]
 pub struct Scope {
@@ -114,6 +114,35 @@ impl Scope {
         self.cached_defs
             .get(&key.clone().debrejin_reduced().to_string())
             .map(|s| s.as_str())
+    }
+
+    pub fn solve_recursion(def: &str, imp: &str) -> Option<String> {
+        if imp.contains(def) {
+            let free_name = Self::get_free_name(imp);
+            let aho = AhoCorasick::builder()
+                .match_kind(aho_corasick::MatchKind::LeftmostLongest)
+                .build([def])
+                .unwrap();
+            let s = aho.replace_all(imp, &[id_to_str(free_name)]);
+            Some(format!("Y ^{}.({s})", id_to_str(free_name)))
+        } else {
+            None
+        }
+    }
+
+    pub fn get_free_name(imp: &str) -> VarId {
+        let mut free = 0;
+        loop {
+            let aho = AhoCorasick::builder()
+                .match_kind(aho_corasick::MatchKind::LeftmostLongest)
+                .build([id_to_str(free)])
+                .unwrap();
+            if !aho.is_match(imp) {
+                return free;
+            } else {
+                free += 1;
+            }
+        }
     }
 }
 
