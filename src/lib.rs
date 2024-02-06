@@ -47,9 +47,34 @@ impl fmt::Display for Term {
 impl Term {
     pub fn new(body: Body) -> Self {
         let closed = body.free_variables().is_empty();
+        // println!("{body} is closed? {closed}");
+        let mut body = body;
+        Self::set_closed(&mut body, closed);
         Self {
             body: Rc::new(body),
             closed,
+        }
+    }
+
+    pub fn set_closed(b: &mut Body, v: bool) {
+        match b {
+            Body::Id(..) => (),
+            Body::App(ref mut lhs, ref mut rhs) => {
+                let lhs = Rc::make_mut(lhs);
+                let rhs = Rc::make_mut(rhs);
+                lhs.closed = v;
+                rhs.closed = v;
+                let lhs_b = Rc::make_mut(&mut lhs.body);
+                let rhs_b = Rc::make_mut(&mut rhs.body);
+                Self::set_closed(lhs_b, v);
+                Self::set_closed(rhs_b, v);
+            }
+            Body::Abs(_, ref mut l) => {
+                let l = Rc::make_mut(l);
+                l.closed = v;
+                let l_b = Rc::make_mut(&mut l.body);
+                Self::set_closed(l_b, v);
+            }
         }
     }
 
@@ -292,6 +317,8 @@ impl Term {
         // closed terms don't have any free variable, so vars /\ free is always {}
         if rhs.closed {
             return;
+        } else {
+            println!("ops. Checking...");
         }
         let vars = self.bounded_variables();
         let frees_val = rhs.free_variables();
@@ -319,6 +346,8 @@ impl Term {
             // );
             self.redex_by_alpha(&mut captures.into_iter().map(|&i| (i, i)).collect());
             // println!("final: {self} | {rhs}");
+        } else {
+            println!("WHY THE F* ARE WE HERE?");
         }
     }
 
