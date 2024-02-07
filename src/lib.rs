@@ -68,20 +68,12 @@ impl Term {
         match b {
             Body::Id(..) => (),
             Body::App(ref mut lhs, ref mut rhs) => {
-                let lhs = Rc::make_mut(lhs);
-                let rhs = Rc::make_mut(rhs);
-                lhs.closed = v;
-                rhs.closed = v;
-                let lhs_b = Rc::make_mut(&mut lhs.body);
-                let rhs_b = Rc::make_mut(&mut rhs.body);
-                Self::set_closed(lhs_b, v);
-                Self::set_closed(rhs_b, v);
+                lhs.set_closeds(frees);
+                rhs.set_closeds(frees);
             }
-            Body::Abs(_, ref mut l) => {
-                let l = Rc::make_mut(l);
-                l.closed = v;
-                let l_b = Rc::make_mut(&mut l.body);
-                Self::set_closed(l_b, v);
+            Body::Abs(v, ref mut l) => {
+                frees.remove(v);
+                l.set_closeds(frees)
             }
         }
     }
@@ -120,7 +112,7 @@ impl Term {
 
     pub fn as_mut_abs(&mut self) -> Option<(&mut VarId, &mut Self)> {
         if let Body::Abs(ref mut v, ref mut b) = Rc::make_mut(&mut self.body) {
-            Some((v, Rc::make_mut(b)))
+            Some((v, b))
         } else {
             None
         }
@@ -128,7 +120,7 @@ impl Term {
 
     pub fn as_mut_app(&mut self) -> Option<(&mut Self, &mut Self)> {
         if let Body::App(ref mut lhs, ref mut rhs) = Rc::make_mut(&mut self.body) {
-            Some((Rc::make_mut(lhs), Rc::make_mut(rhs)))
+            Some((lhs, rhs))
         } else {
             None
         }
@@ -169,16 +161,16 @@ impl Term {
                 }
             }
             Body::App(ref mut f, ref mut x) => {
-                Rc::make_mut(f).redex_by_alpha(&mut map.clone());
-                Rc::make_mut(x).redex_by_alpha(&mut map.clone());
+                f.redex_by_alpha(&mut map.clone());
+                x.redex_by_alpha(&mut map.clone());
             }
             Body::Abs(ref mut i, ref mut l) => {
                 let (mut maybe_map, bind) = Self::try_alpha_redex(*i, map);
                 *i = bind;
                 if let Some(ref mut new_map) = maybe_map {
-                    Rc::make_mut(l).redex_by_alpha(new_map)
+                    l.redex_by_alpha(new_map)
                 } else {
-                    Rc::make_mut(l).redex_by_alpha(map)
+                    l.redex_by_alpha(map)
                 }
             }
         }
@@ -315,9 +307,7 @@ impl Term {
                     false
                 }
             }
-            Body::App(ref mut f, ref mut x) => {
-                Rc::make_mut(f).apply_by(id, val) | Rc::make_mut(x).apply_by(id, val)
-            }
+            Body::App(ref mut f, ref mut x) => f.apply_by(id, val) | x.apply_by(id, val),
         };
         if changed {
             self.closed &= val.closed;
@@ -372,21 +362,20 @@ impl Term {
             Body::Id(..) => false,
             Body::App(ref mut f, ref mut x) => {
                 return if matches!(*f.body, Body::Abs(..)) {
-                    let f = Rc::make_mut(f);
                     f.fix_captures(x);
                     let (id, l) = f.as_mut_abs().unwrap();
                     l.apply_by(*id, x);
                     *self = l.clone();
                     true
                 } else {
-                    Rc::make_mut(f).beta_redex_step() || Rc::make_mut(x).beta_redex_step()
+                    f.beta_redex_step() || x.beta_redex_step()
                 };
             }
             Body::Abs(..) => {
                 if self.eta_redex_step() {
                     true
                 } else if let Body::Abs(_, ref mut l) = Rc::make_mut(&mut self.body) {
-                    Rc::make_mut(l).beta_redex_step()
+                    l.beta_redex_step()
                 } else {
                     unreachable!()
                 }
@@ -419,9 +408,9 @@ impl Term {
 
     pub fn eta_redex_step(&mut self) -> bool {
         if let Body::Abs(v, ref mut app) = Rc::make_mut(&mut self.body) {
-            if let Body::App(ref mut lhs, ref mut rhs) = Rc::make_mut(&mut Rc::make_mut(app).body) {
+            if let Body::App(ref mut lhs, ref mut rhs) = Rc::make_mut(&mut app.body) {
                 if rhs.body.as_ref() == &Body::Id(*v) && !lhs.contains(&Body::Id(*v)) {
-                    *self = (**lhs).clone();
+                    *self = lhs.clone();
                     return true;
                 }
             }
@@ -476,15 +465,15 @@ impl Term {
                 }
             }
             Body::App(ref mut lhs, ref mut rhs) => {
-                Rc::make_mut(lhs).redex_by_debrejin(binds, lvl + 1);
-                Rc::make_mut(rhs).redex_by_debrejin(binds, lvl + 1);
+                lhs.redex_by_debrejin(binds, lvl + 1);
+                rhs.redex_by_debrejin(binds, lvl + 1);
             }
             Body::Abs(ref mut v, ref mut l) => {
                 let lvl = Self::get_next_free(lvl, binds);
                 let old_v = *v;
                 *v = lvl;
                 let old = binds.insert(old_v, lvl);
-                Rc::make_mut(l).redex_by_debrejin(binds, lvl + 1);
+                l.redex_by_debrejin(binds, lvl + 1);
                 if let Some(old) = old {
                     *binds.get_mut(&old_v).unwrap() = old;
                 } else {
@@ -530,8 +519,8 @@ impl FromStr for Term {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub enum Body {
     /* identity */ Id(VarId),
-    /* application */ App(Rc<Term>, /* ( */ Rc<Term> /* ) */),
-    /* abstraction */ Abs(VarId, Rc<Term>),
+    /* application */ App(Term, /* ( */ Term /* ) */),
+    /* abstraction */ Abs(VarId, Term),
 }
 
 impl Body {
