@@ -195,7 +195,11 @@ impl Term {
     /// FV(a) = { a }
     #[must_use]
     pub fn free_variables(&self) -> HashSet<VarId> {
-        self.body.free_variables()
+        if !self.closed {
+            self.body.free_variables()
+        } else {
+            HashSet::default()
+        }
     }
 
     /// α-equivalency refers to expressions with same implementation, disconsidering the variable
@@ -546,8 +550,12 @@ impl Body {
                 }
             }
             Self::App(lhs, rhs) => {
-                lhs.body.get_free_variables(binds, frees);
-                rhs.body.get_free_variables(binds, frees);
+                if !lhs.closed {
+                    lhs.body.get_free_variables(binds, frees);
+                }
+                if !rhs.closed {
+                    rhs.body.get_free_variables(binds, frees);
+                }
             }
             Self::Abs(v, l) => {
                 let recent = binds.insert(*v);
