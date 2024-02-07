@@ -470,7 +470,11 @@ impl Term {
 
     pub fn redex_by_debrejin(&mut self, binds: &mut HashMap<VarId, VarId>, lvl: usize) {
         match Rc::make_mut(&mut self.body) {
-            Body::Id(ref mut id) => *id = binds[id],
+            Body::Id(ref mut id) => {
+                if binds.contains_key(id) {
+                    *id = binds[id]
+                }
+            }
             Body::App(ref mut lhs, ref mut rhs) => {
                 Rc::make_mut(lhs).redex_by_debrejin(binds, lvl + 1);
                 Rc::make_mut(rhs).redex_by_debrejin(binds, lvl + 1);
