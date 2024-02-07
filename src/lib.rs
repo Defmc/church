@@ -46,13 +46,21 @@ impl fmt::Display for Term {
 
 impl Term {
     pub fn new(body: Body) -> Self {
-        let closed = body.free_variables().is_empty();
+        let closed = Self::fast_closed_check(&body) || body.free_variables().is_empty();
         // println!("{body} is closed? {closed}");
         let mut body = body;
         Self::set_closed(&mut body, closed);
         Self {
             body: Rc::new(body),
             closed,
+        }
+    }
+
+    pub fn fast_closed_check(b: &Body) -> bool {
+        match b {
+            Body::Id(..) => false,
+            Body::App(lhs, rhs) => lhs.closed && rhs.closed,
+            Body::Abs(_, l) => l.closed,
         }
     }
 
