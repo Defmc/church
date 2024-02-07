@@ -20,6 +20,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     (":reload", Repl::reload),
     (":debrejin", Repl::debrejin),
     (":fix_point", Repl::fix_point),
+    (":prepare", Repl::prepare),
 ];
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord, Logos, Copy)]
@@ -524,5 +525,9 @@ impl Repl {
                 }
                 Err(e) => eprintln!("error while parsing scope: {e:?}"),
             })
+    }
+
+    pub fn prepare(&mut self, _input: &[&str]) {
+        self.scope.update();
     }
 }
