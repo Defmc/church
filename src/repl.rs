@@ -120,12 +120,13 @@ impl Mode {
         };
     }
 
-    pub fn run_show(&self, l: &mut Term) {
+    pub fn run_show(&self, repl: &mut Repl, l: &mut Term) {
         let mut buf = String::new();
         println!("{l}");
         let mut steps = 0;
+        l.update_closed();
         while l.beta_redex_step() {
-            println!("{l}");
+            println!("{}", repl.format_value(l));
             if self == &Self::Debug {
                 loop {
                     print!("[step {steps}] (c)ontinue or (a)bort: ");
@@ -151,7 +152,7 @@ impl Mode {
         let l = if self.should_show() {
             match Term::try_from_str(&l) {
                 Ok(mut l) => {
-                    self.bench("beta redex", || self.run_show(&mut l));
+                    self.bench("beta redex", || self.run_show(repl, &mut l));
                     l
                 }
                 Err(e) => {
