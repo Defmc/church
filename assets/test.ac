@@ -1,3 +1,7 @@
 :load assets/combs.ac
 Nand = ^a.(^b.(Not (And a b)))
 Nxor = ^a.(^b.(And (Or a b) (Nand a b)))
+
+set mode visual
+load assets/test.ac -s
+Nand True False

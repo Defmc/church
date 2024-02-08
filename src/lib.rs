@@ -61,7 +61,7 @@ impl Term {
     /// check for free_variables in combinators. For example, in `Fact 6`, without `update_closed`,
     /// the computation takes 11s, while when enabled, it's 3.04s.
     pub fn update_closed(&mut self) {
-        self.set_closeds(&mut self.free_variables())
+        self.set_closeds(&mut self.body.free_variables())
     }
 
     pub fn set_closeds(&mut self, frees: &mut HashSet<VarId>) {
@@ -189,7 +189,11 @@ impl Term {
     #[must_use]
     pub fn free_variables(&self) -> HashSet<VarId> {
         if self.closed {
-            // debug_assert!(self.body.free_variables().is_empty());
+            debug_assert!(
+                self.body.free_variables().is_empty(),
+                "{self} is marked as closed, without being: {:?} are free",
+                self.body.free_variables()
+            );
             self.body.free_variables()
         } else {
             self.body.free_variables()
@@ -312,7 +316,8 @@ impl Term {
             Body::App(ref mut f, ref mut x) => f.apply_by(id, val) | x.apply_by(id, val),
         };
         if changed {
-            // self.closed &= val.closed;
+            self.update_closed();
+            println!("now, {self} is {}", self.closed);
         }
         changed
     }
@@ -329,25 +334,6 @@ impl Term {
         // if there's no free variable capturing (used vars on lhs /\ free vars on rhs), we just apply on the abstraction body
         let captures: Vec<_> = frees_val.intersection(&vars).collect(); // TODO: Use vec
         if !captures.is_empty() {
-            // println!("debugging {self} and {rhs}");
-            // println!(
-            //     "frees_val: {:?}",
-            //     frees_val
-            //         .iter()
-            //         .map(|s| id_to_str(*s))
-            //         .collect::<HashSet<_>>()
-            // );
-            // println!(
-            //     "vars: {:?}",
-            //     vars.iter().map(|s| id_to_str(*s)).collect::<HashSet<_>>()
-            // );
-            // println!(
-            //     "captures founded: {:?}",
-            //     captures
-            //         .iter()
-            //         .map(|s| id_to_str(**s))
-            //         .collect::<HashSet<_>>()
-            // );
             self.redex_by_alpha(&mut captures.into_iter().map(|&i| (i, i)).collect());
             // println!("final: {self} | {rhs}");
         } else {
@@ -377,9 +363,15 @@ impl Term {
             }
             Body::Abs(..) => {
                 if self.eta_redex_step() {
+                    self.update_closed();
                     true
                 } else if let Body::Abs(_, ref mut l) = Rc::make_mut(&mut self.body) {
-                    l.beta_redex_step()
+                    if l.beta_redex_step() {
+                        self.update_closed();
+                        true
+                    } else {
+                        false
+                    }
                 } else {
                     unreachable!()
                 }
@@ -547,12 +539,12 @@ impl Body {
                 }
             }
             Self::App(lhs, rhs) => {
-                if !lhs.closed {
-                    lhs.body.get_free_variables(binds, frees);
-                }
-                if !rhs.closed {
-                    rhs.body.get_free_variables(binds, frees);
-                }
+                // if !lhs.closed {
+                lhs.body.get_free_variables(binds, frees);
+                // }
+                // if !rhs.closed {
+                rhs.body.get_free_variables(binds, frees);
+                // }
             }
             Self::Abs(v, l) => {
                 let recent = binds.insert(*v);
