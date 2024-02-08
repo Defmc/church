@@ -569,10 +569,12 @@ impl Body {
                 }
             }
             Self::Abs(v, l) => {
-                let recent = binds.insert(*v);
-                l.body.get_free_variables(binds, frees);
-                if recent {
-                    binds.remove(v);
+                if !l.closed {
+                    let recent = binds.insert(*v);
+                    l.body.get_free_variables(binds, frees);
+                    if recent {
+                        binds.remove(v);
+                    }
                 }
             }
         }
