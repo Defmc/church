@@ -39,7 +39,7 @@ pub enum Arg {
 }
 
 impl Arg {
-    pub fn parse<'a>(s: &'a impl AsRef<str>) -> impl Iterator<Item = &'a str> {
+    pub fn parse(s: &impl AsRef<str>) -> impl Iterator<Item = &'_ str> {
         Self::lexer(s.as_ref()).spanned().map(move |(arg, span)| {
             if arg == Ok(Arg::StrLit) {
                 &s.as_ref()[span.start + 1..span.end - 1]
@@ -488,7 +488,7 @@ impl Repl {
             let body = if n == 0 {
                 Body::Id(1)
             } else {
-                Body::App(Term::new(Body::Id(0)).into(), natural_body(n - 1).into())
+                Body::App(Term::new(Body::Id(0)), natural_body(n - 1))
             };
             Term::new(body)
         }

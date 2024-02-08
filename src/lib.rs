@@ -82,7 +82,7 @@ impl Term {
     #[must_use]
     pub fn id() -> Self {
         let id = Self::new(Body::Id(0));
-        Self::new(Body::Abs(0, id.into()))
+        Self::new(Body::Abs(0, id))
     }
 
     /// Create a lambda abstraction from left-to-right arguments
@@ -94,10 +94,10 @@ impl Term {
         if it.peek().is_some() {
             let abs = Self::from_args(it, term).unwrap();
             let body = abs.clone();
-            let abs = Body::Abs(next, body.into());
+            let abs = Body::Abs(next, body);
             Some(Self::new(abs))
         } else {
-            let abs = Body::Abs(next, term.into());
+            let abs = Body::Abs(next, term);
             Some(Self::new(abs))
         }
     }
