@@ -10,8 +10,8 @@ alias Ident Sym::Var;
 
 EntryPoint: Ast = App:&e -> { Ast::Expr(e.item.item.as_expr().clone()) }%;
 
-Lambda: Ast = "^" Ident:&i "." "(" App:&a ")" -> { Ast::Expr(Term::new(Body::Abs(i.item.item.as_var(), a.item.item.as_expr().clone().into()))) }%;
-App: Ast = App:&a Expr:&e -> { Ast::Expr(Term::new(Body::App(a.item.item.as_expr().clone().into(), e.item.item.as_expr().clone().into()))) }%
+Lambda: Ast = "^" Ident:&i "." "(" App:&a ")" -> { Ast::Expr(Term::new(Body::Abs(i.item.item.as_var(), a.item.item.as_expr().clone()))) }%;
+App: Ast = App:&a Expr:&e -> { Ast::Expr(Term::new(Body::App(a.item.item.as_expr().clone(), e.item.item.as_expr().clone()))) }%
             | Expr:&e -> { Ast::Expr(e.item.item.as_expr().clone()) }%;
 
 Expr: Ast = "(" App:&e ")" -> { Ast::Expr(e.item.item.as_expr().clone()) }% 
