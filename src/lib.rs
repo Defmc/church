@@ -46,15 +46,15 @@ impl fmt::Display for Term {
 
 impl Term {
     pub fn new(body: Body) -> Self {
-        // let closed = Self::fast_closed_check(&body) || body.free_variables().is_empty();
         // println!("{body} is closed? {closed}");
-        // Self::set_closed(&mut body, closed);
-        Self {
+        let mut s = Self {
             body: Rc::new(body),
             closed: false, // there's no problem to use it as always `false`, but it will always
                            // check for free variables and handle it as it have. Performance will
                            // decrease for big expressions.
-        }
+        };
+        s.update_closed();
+        s
     }
 
     /// An optional function to optimize beta reductions. It's not needed, but guarantees to never
@@ -65,7 +65,7 @@ impl Term {
     }
 
     pub fn set_closeds(&mut self, frees: &mut HashSet<VarId>) {
-        self.closed = frees.is_empty();
+        self.closed = self.fast_inner_closed_check() || frees.is_empty();
         match Rc::make_mut(&mut self.body) {
             Body::Id(..) => (),
             Body::App(ref mut lhs, ref mut rhs) => {
@@ -74,8 +74,17 @@ impl Term {
             }
             Body::Abs(v, ref mut l) => {
                 frees.remove(v);
-                l.set_closeds(frees)
+                l.set_closeds(frees);
+                frees.insert(*v);
             }
+        }
+    }
+
+    pub fn fast_inner_closed_check(&self) -> bool {
+        match self.body.as_ref() {
+            Body::Id(..) => false,
+            Body::App(lhs, rhs) => lhs.closed && rhs.closed,
+            Body::Abs(_, l) => l.closed,
         }
     }
 
@@ -194,7 +203,8 @@ impl Term {
                 "{self} is marked as closed, without being: {:?} are free",
                 self.body.free_variables()
             );
-            self.body.free_variables()
+            // self.body.free_variables()
+            HashSet::default()
         } else {
             self.body.free_variables()
         }
@@ -324,20 +334,15 @@ impl Term {
 
     pub fn fix_captures(&mut self, rhs: &Self) {
         // closed terms don't have any free variable, so vars /\ free is always {}
-        // if rhs.closed {
-        //     return;
-        // } else {
-        //     println!("ops. Checking...");
-        // }
+        if rhs.closed {
+            return;
+        }
         let vars = self.bounded_variables();
         let frees_val = rhs.free_variables();
         // if there's no free variable capturing (used vars on lhs /\ free vars on rhs), we just apply on the abstraction body
         let captures: Vec<_> = frees_val.intersection(&vars).collect(); // TODO: Use vec
         if !captures.is_empty() {
             self.redex_by_alpha(&mut captures.into_iter().map(|&i| (i, i)).collect());
-            // println!("final: {self} | {rhs}");
-        } else {
-            // println!("WHY THE F* ARE WE HERE?");
         }
     }
 
@@ -366,7 +371,7 @@ impl Term {
                     true
                 } else if let Body::Abs(_, ref mut l) = Rc::make_mut(&mut self.body) {
                     if l.beta_redex_step() {
-                        self.update_closed();
+                        // self.update_closed();
                         true
                     } else {
                         false
@@ -538,12 +543,12 @@ impl Body {
                 }
             }
             Self::App(lhs, rhs) => {
-                // if !lhs.closed {
-                lhs.body.get_free_variables(binds, frees);
-                // }
-                // if !rhs.closed {
-                rhs.body.get_free_variables(binds, frees);
-                // }
+                if !lhs.closed {
+                    lhs.body.get_free_variables(binds, frees);
+                }
+                if !rhs.closed {
+                    rhs.body.get_free_variables(binds, frees);
+                }
             }
             Self::Abs(v, l) => {
                 let recent = binds.insert(*v);
