@@ -316,8 +316,8 @@ impl Term {
             Body::App(ref mut f, ref mut x) => f.apply_by(id, val) | x.apply_by(id, val),
         };
         if changed {
-            self.update_closed();
-            println!("now, {self} is {}", self.closed);
+            self.closed &= val.closed;
+            // println!("now, {self} is {}", self.closed);
         }
         changed
     }
@@ -363,7 +363,6 @@ impl Term {
             }
             Body::Abs(..) => {
                 if self.eta_redex_step() {
-                    self.update_closed();
                     true
                 } else if let Body::Abs(_, ref mut l) = Rc::make_mut(&mut self.body) {
                     if l.beta_redex_step() {
