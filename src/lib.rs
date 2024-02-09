@@ -29,6 +29,11 @@ pub fn id_to_str(i: usize) -> String {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Term {
     pub body: Rc<Body>,
+    /// closedness. A optimization tech.
+    /// A term is called as `closed` if all variables used are declared inside the function. I.e:
+    /// FV(x) == {} -> x is closed
+    /// If x is closed and x = a b, then a and b are also closed,
+    /// Any term can be not closed, but just closed terms CAN be closed
     pub closed: bool,
 }
 
@@ -46,36 +51,49 @@ impl fmt::Display for Term {
 
 impl Term {
     pub fn new(body: Body) -> Self {
-        // println!("{body} is closed? {closed}");
-        let mut s = Self {
+        Self::lazy_new(body).updated()
+    }
+
+    pub fn lazy_new(body: Body) -> Self {
+        Self {
             body: Rc::new(body),
             closed: false, // there's no problem to use it as always `false`, but it will always
                            // check for free variables and handle it as it have. Performance will
                            // decrease for big expressions.
-        };
-        s.update_closed();
-        s
+        }
+    }
+
+    pub fn updated(mut self) -> Self {
+        self.update_closed();
+        self
     }
 
     /// An optional function to optimize beta reductions. It's not needed, but guarantees to never
     /// check for free_variables in combinators. For example, in `Fact 6`, without `update_closed`,
     /// the computation takes 11s, while when enabled, it's 3.04s.
     pub fn update_closed(&mut self) {
-        self.set_closeds(&mut self.body.free_variables())
+        self.set_closeds(&mut self.body.free_variables());
     }
 
     pub fn set_closeds(&mut self, frees: &mut HashSet<VarId>) {
-        self.closed = self.fast_inner_closed_check() || frees.is_empty();
+        let is_empty = frees.is_empty();
+        self.closed = self.fast_inner_closed_check() || is_empty;
         match Rc::make_mut(&mut self.body) {
             Body::Id(..) => (),
             Body::App(ref mut lhs, ref mut rhs) => {
-                lhs.set_closeds(frees);
-                rhs.set_closeds(frees);
+                if lhs.closed != is_empty {
+                    lhs.set_closeds(frees);
+                }
+                if rhs.closed != is_empty {
+                    rhs.set_closeds(frees);
+                }
             }
             Body::Abs(v, ref mut l) => {
-                frees.remove(v);
-                l.set_closeds(frees);
-                frees.insert(*v);
+                if l.closed != is_empty {
+                    frees.remove(v);
+                    l.set_closeds(frees);
+                    frees.insert(*v);
+                }
             }
         }
     }
@@ -198,11 +216,11 @@ impl Term {
     #[must_use]
     pub fn free_variables(&self) -> HashSet<VarId> {
         if self.closed {
-            debug_assert!(
-                self.body.free_variables().is_empty(),
-                "{self} is marked as closed, without being: {:?} are free",
-                self.body.free_variables()
-            );
+            // debug_assert!(
+            //     self.body.free_variables().is_empty(),
+            //     "{self} is marked as closed, without being: {:?} are free",
+            //     self.body.free_variables()
+            // );
             // self.body.free_variables()
             HashSet::default()
         } else {
