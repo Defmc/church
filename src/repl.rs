@@ -10,7 +10,6 @@ pub type Handler = fn(&mut Repl, &[&str]);
 
 pub const HANDLERS: &[(&str, Handler)] = &[
     (":gen_nats", Repl::gen_nats),
-    (":debrejin", Repl::debrejin),
     (":fix_point", Repl::fix_point),
     (":prepare", Repl::prepare),
 ];
@@ -92,6 +91,12 @@ pub const NEW_HANDLERS: &[Command] = &[
         help: "show the term's closedness structure",
         inputs_help: &[("<expr>", "the expression to be analyzed")],
         handler: closed
+    },
+    Command {
+        name: "debrejin",
+        help: "debrejin-alpha reduces the lambda expression",
+        inputs_help: &[("<expr>", "the expression to be reduced")],
+        handler: debrejin
     }
 ];
 
@@ -268,6 +273,20 @@ fn closed(mut e: CmdEntry) {
             e.repl.print_closed(&expr);
         }
         Err(e) => eprintln!("error: {e:?}"),
+    }
+}
+
+fn debrejin(mut e: CmdEntry) {
+    match e.into_expr() {
+        Ok(l) => {
+            println!("{}", l.clone().debrejin_reduced());
+            e.repl.mode.bench("printing", || {
+                e.repl.print_value(&l);
+            });
+        }
+        Err(e) => {
+            eprintln!("error: {e:?}");
+        }
     }
 }
 
@@ -649,25 +668,6 @@ impl Repl {
             Term::new(body)
         }
         natural_body(n).with([0, 1])
-    }
-
-    pub fn debrejin(&mut self, args: &[&str]) {
-        let mut o = String::new();
-        let input = args[1..].join(" ");
-        self.mode.bench("delta redex", || {
-            o = self.scope.delta_redex(&input).0;
-        });
-        match Term::try_from_str(&o) {
-            Ok(l) => {
-                println!("{}", l.clone().debrejin_reduced());
-                self.mode.bench("printing", || {
-                    self.print_value(&l);
-                });
-            }
-            Err(e) => {
-                eprintln!("error: {e:?}");
-            }
-        }
     }
 
     pub fn fix_point(&mut self, args: &[&str]) {
