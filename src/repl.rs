@@ -10,7 +10,6 @@ pub type Handler = fn(&mut Repl, &[&str]);
 
 pub const HANDLERS: &[(&str, Handler)] = &[
     (":load", Repl::load),
-    (":set", Repl::set),
     (":alpha_eq", Repl::alpha_eq),
     (":alpha", Repl::alpha),
     (":delta", Repl::delta),
@@ -33,8 +32,31 @@ pub const NEW_HANDLERS: &[Command] = &[
     Command {
         name: "show",
         help: "shows something from the repl",
-        inputs_help: &[("<thing>", "thing to me shown")],
-        handler: show,
+        inputs_help: &[("<thing>", "thing to be shown")],
+        handler: show_fn,
+    },
+    Command {
+        name: "help",
+        help: "show the help message of something",
+        inputs_help: &[("<thing>", "thing to be shown")],
+        handler: help_fn,
+    },
+    Command {
+        name: "set",
+        help: "configure something from the repl",
+        inputs_help: &[
+            (
+                "readable <true or false>",
+                "sets if the repl should format lambda expressions (default = true)",
+            ),
+            (
+                "prompt <str>",
+                "sets the prompt message before each repl line (default = \"λ> \")",
+            ),
+            ("mode <mode>", "sets the repl mode:\n\t\t\tnormal: it's the default\n\t\t\tdebug: allows you to check and stop every line\n\t\t\tvisual: shows you each step of beta reductions\n\t\t\tbench: benchmarks everything executed"),
+            ("history <true or false>", "enable or disable addition to history (default = true)" )
+        ],
+        handler: set,
     },
 ];
 
@@ -42,7 +64,7 @@ fn quit_fn(e: CmdEntry) {
     e.repl.quit = true;
 }
 
-fn show(e: CmdEntry) {
+fn show_fn(e: CmdEntry) {
     match e.inputs[0] {
         "scope" => {
             for (k, v) in e.repl.scope.aliases.iter().zip(e.repl.scope.defs.iter()) {
@@ -62,6 +84,57 @@ fn show(e: CmdEntry) {
                 println!("{}", e.repl.scope.defs[*def]);
             } else {
                 eprintln!("unknown option {:?}", e.inputs[0]);
+            }
+        }
+    }
+}
+
+fn set(e: CmdEntry) {
+    fn set_with<T: FromStr>(opt: &mut T, s: &str)
+    where
+        <T as FromStr>::Err: fmt::Debug,
+    {
+        match T::from_str(s) {
+            Ok(v) => *opt = v,
+            Err(e) => println!("unknown value {:?}: {e:?}", s),
+        }
+    }
+
+    match e.inputs.len() {
+        1 => {
+            eprintln!("missing option and value");
+            return;
+        }
+        2 => {
+            eprintln!("missing value");
+            return;
+        }
+        _ => (),
+    };
+    match e.inputs[0] {
+        "readable" => set_with(&mut e.repl.readable, e.inputs[1]),
+        "prompt" => match Arg::format(e.inputs[1]) {
+            Some(v) => set_with(&mut e.repl.prompt, &v),
+            None => eprintln!("bad format string {:?}", e.inputs[1]),
+        },
+        "mode" => set_with(&mut e.repl.mode, e.inputs[1]),
+        "history" => match bool::from_str(e.inputs[1]) {
+            Ok(opt) => e.repl.rl.set_auto_add_history(opt),
+            Err(err) => eprintln!("unknown value {:?}: {err:?}", e.inputs[1]),
+        },
+        _ => eprintln!("unknonwn option {:?}", e.inputs[0]),
+    }
+}
+
+fn help_fn(e: CmdEntry) {
+    for hs in NEW_HANDLERS.iter() {
+        if e.inputs[0] == hs.name {
+            println!("{}", hs.name);
+            println!("\tdescription:");
+            println!("\t\t{}", hs.help);
+            println!("\tinputs:");
+            for (i, h) in hs.inputs_help {
+                println!("\t\t{i}: {h}");
             }
         }
     }
@@ -342,43 +415,6 @@ impl Repl {
         }
         if args.contains(&"-s") {
             self.scope.update();
-        }
-    }
-
-    pub fn set(&mut self, args: &[&str]) {
-        fn set_with<T: FromStr>(opt: &mut T, s: &str)
-        where
-            <T as FromStr>::Err: fmt::Debug,
-        {
-            match T::from_str(s) {
-                Ok(v) => *opt = v,
-                Err(e) => println!("unknown value {:?}: {e:?}", s),
-            }
-        }
-
-        match args.len() {
-            1 => {
-                eprintln!("missing option and value");
-                return;
-            }
-            2 => {
-                eprintln!("missing value");
-                return;
-            }
-            _ => (),
-        };
-        match args[1] {
-            "readable" => set_with(&mut self.readable, args[2]),
-            "prompt" => match Arg::format(args[2]) {
-                Some(v) => set_with(&mut self.prompt, &v),
-                None => eprintln!("bad format string {:?}", args[2]),
-            },
-            "mode" => set_with(&mut self.mode, args[2]),
-            "history" => match bool::from_str(args[2]) {
-                Ok(opt) => self.rl.set_auto_add_history(opt),
-                Err(e) => eprintln!("unknown value {:?}: {e:?}", args[2]),
-            },
-            _ => eprintln!("unknonwn option {:?}", args[1]),
         }
     }
 
