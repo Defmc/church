@@ -9,7 +9,6 @@ pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 pub type Handler = fn(&mut Repl, &[&str]);
 
 pub const HANDLERS: &[(&str, Handler)] = &[
-    (":show", Repl::show),
     (":load", Repl::load),
     (":set", Repl::set),
     (":alpha_eq", Repl::alpha_eq),
@@ -26,7 +25,38 @@ pub const HANDLERS: &[(&str, Handler)] = &[
 ];
 
 pub const NEW_HANDLERS: &[Command] = &[
+    Command {
+        name: "show",
+        help: "shows something from the repl",
+        inputs_help: &[("<thing>", "thing to me shown")],
+        handler: show,
+    },
 ];
+
+fn show(e: CmdEntry) {
+    match e.inputs[0] {
+        "scope" => {
+            for (k, v) in e.repl.scope.aliases.iter().zip(e.repl.scope.defs.iter()) {
+                println!("{k} = {v}");
+            }
+        }
+        "env" => {
+            println!("{:?}", e.repl);
+        }
+        "loaded" => {
+            for p in e.repl.loaded_files.iter() {
+                println!("{p:?}");
+            }
+        }
+        _ => {
+            if let Some(def) = e.repl.scope.indexes.get(e.inputs[0]) {
+                println!("{}", e.repl.scope.defs[*def]);
+            } else {
+                eprintln!("unknown option {:?}", e.inputs[0]);
+            }
+        }
+    }
+}
 
 pub struct Command {
     pub name: &'static str,
@@ -286,31 +316,6 @@ impl Repl {
             }
         }
         eprintln!("error: command {:?} not found", args[0]);
-    }
-
-    pub fn show(&mut self, args: &[&str]) {
-        match args[1] {
-            "scope" => {
-                for (k, v) in self.scope.aliases.iter().zip(self.scope.defs.iter()) {
-                    println!("{k} = {v}");
-                }
-            }
-            "env" => {
-                println!("{self:?}");
-            }
-            "loaded" => {
-                for p in self.loaded_files.iter() {
-                    println!("{p:?}");
-                }
-            }
-            _ => {
-                if let Some(def) = self.scope.indexes.get(args[1]) {
-                    println!("{}", self.scope.defs[*def]);
-                } else {
-                    eprintln!("unknown option {args:?}");
-                }
-            }
-        }
     }
 
     pub fn load(&mut self, args: &[&str]) {
