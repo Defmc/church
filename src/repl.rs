@@ -9,8 +9,6 @@ pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 pub type Handler = fn(&mut Repl, &[&str]);
 
 pub const HANDLERS: &[(&str, Handler)] = &[
-    (":alpha_eq", Repl::alpha_eq),
-    (":alpha", Repl::alpha),
     (":gen_nats", Repl::gen_nats),
     (":debrejin", Repl::debrejin),
     (":fix_point", Repl::fix_point),
@@ -76,6 +74,19 @@ pub const NEW_HANDLERS: &[Command] = &[
         help: "reloads the environment",
         inputs_help: &[("-s", "strictly reload. Updating the lazy-scope after all files have been loaded")]
             ,handler: reload
+    },
+    Command {
+        name: "alpha_eq",
+        help: "check if two lambda expressions are alpha equivalent",
+            inputs_help: &[("<lhs-expr> <rhs-expr>", "the lambda expressions to be compared")],
+            handler: alpha_eq
+    }
+    ,Command {
+        name: "alpha",
+        help: "alpha reduces the lambda expression",
+        inputs_help: &[("<expr>", "the expression to be reduced")],
+        handler: alpha
+    },
     Command {
         name: "closed",
         help: "show the term's closedness structure",
@@ -228,6 +239,26 @@ fn reload(e: CmdEntry) {
 
     if e.flags.contains(&"-s") {
         e.repl.scope.update();
+    }
+}
+
+fn alpha_eq(mut e: CmdEntry) {
+    match e.into_expr() {
+        Ok(expr) => match expr.body.as_ref() {
+            Body::App(ref lhs, ref rhs) => {
+                println!("{}", lhs.alpha_eq(rhs));
+            }
+            _ => eprintln!("missing the second expression"),
+        },
+        Err(e) => eprintln!("error: {e:?}"),
+    }
+}
+fn alpha(mut e: CmdEntry) {
+    match e.into_expr() {
+        Ok(expr) => {
+            println!("{}", expr.alpha_reduced());
+        }
+        Err(e) => eprintln!("error: {e:?}"),
     }
 }
 
@@ -508,33 +539,6 @@ impl Repl {
         eprintln!("error: command {:?} not found", args[0]);
     }
 
-    pub fn alpha_eq(&mut self, args: &[&str]) {
-        let input = args[1..].join(" ");
-        let input = self.scope.delta_redex(&input).0;
-        let lex = church::parser::lexer(&input);
-        match church::parser::parse(lex) {
-            Ok(expr) => match expr.body.as_ref() {
-                Body::App(ref lhs, ref rhs) => {
-                    println!("{}", lhs.alpha_eq(rhs));
-                }
-                _ => eprintln!("missing the second expression"),
-            },
-            Err(e) => eprintln!("error: {e:?}"),
-        }
-    }
-
-    pub fn alpha(&mut self, args: &[&str]) {
-        let input = args[1..].join(" ");
-        let input = self.scope.delta_redex(&input).0;
-        let lex = church::parser::lexer(&input);
-        match church::parser::parse(lex) {
-            Ok(expr) => {
-                println!("{}", expr.alpha_reduced());
-            }
-            Err(e) => eprintln!("error: {e:?}"),
-        }
-    }
-
     pub fn natural_from_church_encoding(s: &Term) -> Option<usize> {
         fn get_natural(f: VarId, x: VarId, s: &Term) -> Option<usize> {
             if let Body::App(lhs, rhs) = s.body.as_ref() {
@@ -633,7 +637,6 @@ impl Repl {
         numbers.update();
         self.scope.extend(numbers);
     }
-
 
     #[must_use]
     pub fn natural(n: usize) -> Term {
