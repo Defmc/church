@@ -21,6 +21,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     (":debrejin", Repl::debrejin),
     (":fix_point", Repl::fix_point),
     (":prepare", Repl::prepare),
+    (":closed", Repl::closed),
 ];
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord, Logos, Copy)]
@@ -126,7 +127,12 @@ impl Mode {
         let mut steps = 0;
         l.update_closed();
         while l.beta_redex_step() {
-            println!("{}", repl.format_value(l));
+            println!(
+                "{}: {} ({:?})",
+                repl.format_value(l),
+                l.closed,
+                l.free_variables()
+            );
             if self == &Self::Debug {
                 loop {
                     print!("[step {steps}] (c)ontinue or (a)bort: ");
@@ -383,7 +389,8 @@ impl Repl {
         if let Body::Abs(f, l) = s.body.as_ref() {
             if let Body::Abs(x, l) = l.body.as_ref() {
                 return get_natural(*f, *x, l);
-            } else if *l.body == Body::Id(*f) {
+            }
+            if *l.body == Body::Id(*f) {
                 // λf.(λx.(f x))
                 // λf.(f) # eta-reduced version of 1
                 return Some(1);
@@ -530,5 +537,28 @@ impl Repl {
 
     pub fn prepare(&mut self, _input: &[&str]) {
         self.scope.update();
+    }
+
+    pub fn print_closed(&mut self, expr: &Term) {
+        println!("{expr}: {} ({:?})", expr.closed, expr.free_variables());
+        match expr.body.as_ref() {
+            Body::Id(..) => (),
+            Body::App(ref lhs, ref rhs) => {
+                self.print_closed(lhs);
+                self.print_closed(rhs);
+            }
+            Body::Abs(_, ref abs) => self.print_closed(abs),
+        }
+    }
+
+    pub fn closed(&mut self, input: &[&str]) {
+        let input = input[1..].join(" ");
+        let expr = self.scope.delta_redex(&input).0;
+        match Term::from_str(&expr) {
+            Ok(expr) => {
+                self.print_closed(&expr);
+            }
+            Err(e) => eprintln!("error: {e:?}"),
+        }
     }
 }
