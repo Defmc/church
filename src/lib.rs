@@ -72,28 +72,34 @@ impl Term {
     /// check for free_variables in combinators. For example, in `Fact 6`, without `update_closed`,
     /// the computation takes 11s, while when enabled, it's 3.04s.
     pub fn update_closed(&mut self) {
-        self.set_closeds(&mut self.body.free_variables());
+        let mut frees = self.body.free_variables();
+        let mut len = frees.len();
+        self.set_closeds(&mut frees, &mut len);
     }
 
-    pub fn set_closeds(&mut self, frees: &mut HashSet<VarId>) {
-        let is_empty = frees.is_empty();
+    pub fn set_closeds(&mut self, frees: &mut HashSet<VarId>, len: &mut usize) {
+        let is_empty = *len == 0;
         self.closed = self.fast_inner_closed_check() || is_empty;
         match Rc::make_mut(&mut self.body) {
             Body::Id(..) => (),
             Body::App(ref mut lhs, ref mut rhs) => {
-                    lhs.set_closeds(frees);
                 if !lhs.closed {
+                    lhs.set_closeds(frees, len);
                 }
-                    rhs.set_closeds(frees);
                 if !rhs.closed {
+                    rhs.set_closeds(frees, len);
                 }
             }
             Body::Abs(v, ref mut l) => {
                 if !l.closed {
                     let old = frees.remove(v);
-                    l.set_closeds(frees);
+                    if old {
+                        *len -= 1;
+                    }
+                    l.set_closeds(frees, len);
                     if old {
                         frees.insert(*v);
+                        *len += 1;
                     }
                 }
             }
