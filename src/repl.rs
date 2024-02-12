@@ -15,7 +15,6 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     (":debrejin", Repl::debrejin),
     (":fix_point", Repl::fix_point),
     (":prepare", Repl::prepare),
-    (":closed", Repl::closed),
 ];
 
 pub const NEW_HANDLERS: &[Command] = &[
@@ -77,6 +76,11 @@ pub const NEW_HANDLERS: &[Command] = &[
         help: "reloads the environment",
         inputs_help: &[("-s", "strictly reload. Updating the lazy-scope after all files have been loaded")]
             ,handler: reload
+    Command {
+        name: "closed",
+        help: "show the term's closedness structure",
+        inputs_help: &[("<expr>", "the expression to be analyzed")],
+        handler: closed
     }
 ];
 
@@ -224,6 +228,15 @@ fn reload(e: CmdEntry) {
 
     if e.flags.contains(&"-s") {
         e.repl.scope.update();
+    }
+}
+
+fn closed(mut e: CmdEntry) {
+    match e.into_expr() {
+        Ok(expr) => {
+            e.repl.print_closed(&expr);
+        }
+        Err(e) => eprintln!("error: {e:?}"),
     }
 }
 
@@ -621,9 +634,6 @@ impl Repl {
         self.scope.extend(numbers);
     }
 
-    pub fn quit(&mut self, _args: &[&str]) {
-        self.quit = true;
-    }
 
     #[must_use]
     pub fn natural(n: usize) -> Term {
@@ -684,17 +694,6 @@ impl Repl {
                 self.print_closed(rhs);
             }
             Body::Abs(_, ref abs) => self.print_closed(abs),
-        }
-    }
-
-    pub fn closed(&mut self, input: &[&str]) {
-        let input = input[1..].join(" ");
-        let expr = self.scope.delta_redex(&input).0;
-        match Term::from_str(&expr) {
-            Ok(expr) => {
-                self.print_closed(&expr);
-            }
-            Err(e) => eprintln!("error: {e:?}"),
         }
     }
 }
