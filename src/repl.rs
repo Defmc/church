@@ -9,7 +9,6 @@ pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 pub type Handler = fn(&mut Repl, &[&str]);
 
 pub const HANDLERS: &[(&str, Handler)] = &[
-    (":load", Repl::load),
     (":alpha_eq", Repl::alpha_eq),
     (":alpha", Repl::alpha),
     (":gen_nats", Repl::gen_nats),
@@ -67,6 +66,12 @@ pub const NEW_HANDLERS: &[Command] = &[
         help: "asserts equality between two lambda expressions. If they're different, panics.",
             inputs_help: &[("<lhs-expr> <rhs-expr>", "the lambda expressions to be compared")],
             handler: assert_eq
+    },
+    Command {
+        name: "load",
+        help: "runs a file inside repl",
+        inputs_help: &[("<filepath>", "file to be run"), ("-s", "strictly load. Updating the lazy-scope immediately")],
+        handler: load
     }
 ];
 
@@ -179,6 +184,24 @@ fn assert_eq(mut e: CmdEntry) {
             _ => eprintln!("error: missing another expression"),
         },
         Err(e) => eprintln!("error: {e:?}"),
+    }
+}
+
+fn load(e: CmdEntry) {
+    let input = e.inputs[0].into();
+    if e.repl.loaded_files.contains(&input) {
+        eprintln!("warn: already loaded {input:?}");
+        return;
+    }
+    match read_to_string(&input) {
+        Ok(s) => {
+            s.lines().for_each(|l| e.repl.parse(l));
+            e.repl.loaded_files.insert(input);
+        }
+        Err(e) => eprintln!("error: {e:?}"),
+    }
+    if e.flags.contains(&"-s") {
+        e.repl.scope.update();
     }
 }
 
@@ -450,24 +473,6 @@ impl Repl {
         eprintln!("error: command {:?} not found", args[0]);
     }
 
-    pub fn load(&mut self, args: &[&str]) {
-        let input = args[1].into();
-        if self.loaded_files.contains(&input) {
-            eprintln!("warn: already loaded {input:?}");
-            return;
-        }
-        match read_to_string(&input) {
-            Ok(s) => {
-                s.lines().for_each(|l| self.parse(l));
-                self.loaded_files.insert(input);
-            }
-            Err(e) => eprintln!("error: {e:?}"),
-        }
-        if args.contains(&"-s") {
-            self.scope.update();
-        }
-    }
-
     pub fn alpha_eq(&mut self, args: &[&str]) {
         let input = args[1..].join(" ");
         let input = self.scope.delta_redex(&input).0;
@@ -598,9 +603,13 @@ impl Repl {
         self.scope = Scope::default();
         let loaded = self.loaded_files.clone();
         self.loaded_files.clear();
-        loaded
-            .into_iter()
-            .for_each(|f| self.load(&["load", &f.to_string_lossy()]));
+        loaded.into_iter().for_each(|f| {
+            load(CmdEntry {
+                inputs: vec![&f.to_string_lossy()],
+                flags: HashSet::default(),
+                repl: self,
+            })
+        });
 
         if args.contains(&"-s") {
             self.scope.update();
