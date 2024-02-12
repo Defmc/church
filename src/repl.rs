@@ -12,7 +12,6 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     (":alpha_eq", Repl::alpha_eq),
     (":alpha", Repl::alpha),
     (":gen_nats", Repl::gen_nats),
-    (":reload", Repl::reload),
     (":debrejin", Repl::debrejin),
     (":fix_point", Repl::fix_point),
     (":prepare", Repl::prepare),
@@ -72,6 +71,12 @@ pub const NEW_HANDLERS: &[Command] = &[
         help: "runs a file inside repl",
         inputs_help: &[("<filepath>", "file to be run"), ("-s", "strictly load. Updating the lazy-scope immediately")],
         handler: load
+    },
+    Command {
+        name: "reload",
+        help: "reloads the environment",
+        inputs_help: &[("-s", "strictly reload. Updating the lazy-scope after all files have been loaded")]
+            ,handler: reload
     }
 ];
 
@@ -200,6 +205,23 @@ fn load(e: CmdEntry) {
         }
         Err(e) => eprintln!("error: {e:?}"),
     }
+    if e.flags.contains(&"-s") {
+        e.repl.scope.update();
+    }
+}
+
+fn reload(e: CmdEntry) {
+    e.repl.scope = Scope::default();
+    let loaded = e.repl.loaded_files.clone();
+    e.repl.loaded_files.clear();
+    loaded.into_iter().for_each(|f| {
+        load(CmdEntry {
+            inputs: vec![&f.to_string_lossy()],
+            flags: HashSet::default(),
+            repl: e.repl,
+        })
+    });
+
     if e.flags.contains(&"-s") {
         e.repl.scope.update();
     }
@@ -597,23 +619,6 @@ impl Repl {
         }
         numbers.update();
         self.scope.extend(numbers);
-    }
-
-    pub fn reload(&mut self, args: &[&str]) {
-        self.scope = Scope::default();
-        let loaded = self.loaded_files.clone();
-        self.loaded_files.clear();
-        loaded.into_iter().for_each(|f| {
-            load(CmdEntry {
-                inputs: vec![&f.to_string_lossy()],
-                flags: HashSet::default(),
-                repl: self,
-            })
-        });
-
-        if args.contains(&"-s") {
-            self.scope.update();
-        }
     }
 
     pub fn quit(&mut self, _args: &[&str]) {
