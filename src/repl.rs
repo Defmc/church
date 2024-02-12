@@ -6,9 +6,7 @@ use std::{fmt, fs::read_to_string, io::Write, path::PathBuf, rc::Rc, str::FromSt
 
 pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
-pub type Handler = fn(&mut Repl, &[&str]);
-
-pub const NEW_HANDLERS: &[Command] = &[
+pub const COMMANDS: &[Command] = &[
     Command {
         name: "quit",
         help: "quits the repl",
@@ -179,7 +177,7 @@ fn set(e: CmdEntry) {
 }
 
 fn help_fn(e: CmdEntry) {
-    for hs in NEW_HANDLERS.iter() {
+    for hs in COMMANDS.iter() {
         if e.inputs[0] == hs.name {
             println!("{}", hs.name);
             println!("\tdescription:");
@@ -307,6 +305,17 @@ fn prepare(e: CmdEntry) {
 }
 
 fn gen_nats(e: CmdEntry) {
+    fn natural(n: usize) -> Term {
+        fn natural_body(n: usize) -> Term {
+            let body = if n == 0 {
+                Body::Id(1)
+            } else {
+                Body::App(Term::new(Body::Id(0)), natural_body(n - 1))
+            };
+            Term::new(body)
+        }
+        natural_body(n).with([0, 1])
+    }
     let start = if let Ok(s) = usize::from_str(e.inputs[0]) {
         s
     } else {
@@ -322,7 +331,7 @@ fn gen_nats(e: CmdEntry) {
     let mut numbers = Scope::default();
     for i in start..end {
         numbers.aliases.push(i.to_string());
-        numbers.defs.push(Repl::natural(i).to_string());
+        numbers.defs.push(natural(i).to_string());
     }
     numbers.update();
     e.repl.scope.extend(numbers);
@@ -580,7 +589,7 @@ impl Repl {
     }
 
     pub fn handle(&mut self, args: &[&str]) {
-        for hs in NEW_HANDLERS.iter() {
+        for hs in COMMANDS.iter() {
             if args[0][1..] == *hs.name {
                 let mode = self.mode.clone();
                 let entry = CmdEntry {
@@ -685,19 +694,6 @@ impl Repl {
             }
         }
         None
-    }
-
-    #[must_use]
-    pub fn natural(n: usize) -> Term {
-        fn natural_body(n: usize) -> Term {
-            let body = if n == 0 {
-                Body::Id(1)
-            } else {
-                Body::App(Term::new(Body::Id(0)), natural_body(n - 1))
-            };
-            Term::new(body)
-        }
-        natural_body(n).with([0, 1])
     }
 
     pub fn print_closed(&mut self, expr: &Term) {

@@ -1,0 +1,36 @@
+:load assets/combs.ac
+Nand = ^a.(^b.(Not (And a b)))
+Nxor = ^a.(^b.(And (Or a b) (Nand a b)))
+
+:assert_eq (Nand False False) True
+:assert_eq (Nand False True) True
+:assert_eq (Nand True False) True
+:assert_eq (Nand True True) False
+
+:assert_eq (Nxor False False) False
+:assert_eq (Nxor False True) True
+:assert_eq (Nxor True False) True
+:assert_eq (Nxor True True) False
+
+:assert_eq (And False False) False
+:assert_eq (And False True) False 
+:assert_eq (And True False) False
+:assert_eq (And True True) True
+
+:assert_eq (Or False False) False
+:assert_eq (Or False True) True 
+:assert_eq (Or True False) True 
+:assert_eq (Or True True) True
+
+:assert_eq (Xor False False) False
+:assert_eq (Xor False True) True 
+:assert_eq (Xor True False) True 
+:assert_eq (Xor True True) False 
+
+:assert_eq (Xnor False False) True 
+:assert_eq (Xnor False True) False 
+:assert_eq (Xnor True False) False 
+:assert_eq (Xnor True True) True
+
+:assert_eq (Not False) True
+:assert_eq (Not True) False 
