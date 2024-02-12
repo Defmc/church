@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::str::FromStr;
 
+#[cfg(feature = "repl")]
 pub mod repl;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
