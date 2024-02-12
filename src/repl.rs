@@ -18,7 +18,6 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     (":fix_point", Repl::fix_point),
     (":prepare", Repl::prepare),
     (":closed", Repl::closed),
-    (":assert_eq", Repl::assert_eq),
 ];
 
 pub const NEW_HANDLERS: &[Command] = &[
@@ -31,7 +30,7 @@ pub const NEW_HANDLERS: &[Command] = &[
     Command {
         name: "show",
         help: "shows something from the repl",
-        inputs_help: &[("<thing>", "thing to be shown")],
+        inputs_help: &[("<thing>", "thing to be shown, including:\n\t\t\tscope: all the aliases and expressions defined by the user\n\t\t\tenv: the repl environment\n\t\t\tloaded: all the loaded files as the filepaths\n\t\t\t<alias>: the expression from the scope")],
         handler: show_fn,
     },
     Command {
@@ -63,6 +62,12 @@ pub const NEW_HANDLERS: &[Command] = &[
         ,inputs_help: &[("<expr>", "the lambda expression")],
         handler: delta
     },
+    Command {
+        name: "assert_eq",
+        help: "asserts equality between two lambda expressions. If they're different, panics.",
+            inputs_help: &[("<lhs-expr> <rhs-expr>", "the lambda expressions to be compared")],
+            handler: assert_eq
+    }
 ];
 
 fn quit_fn(e: CmdEntry) {
@@ -150,6 +155,29 @@ fn delta(mut e: CmdEntry) {
         Ok(expr) => {
             println!("{}", expr);
         }
+        Err(e) => eprintln!("error: {e:?}"),
+    }
+}
+
+fn assert_eq(mut e: CmdEntry) {
+    match e.into_expr() {
+        Ok(mut expr) => match Rc::make_mut(&mut expr.body) {
+            Body::App(ref mut lhs, ref mut rhs) => {
+                let (lhs_s, rhs_s) = (e.repl.format_value(lhs), e.repl.format_value(rhs));
+                print!("testing {lhs_s} == {rhs_s}... ",);
+                std::io::stdout().flush().unwrap();
+                lhs.beta_redex();
+                rhs.beta_redex();
+                if !lhs.alpha_eq(rhs) {
+                    eprintln!("\nerror: they're different");
+                    eprintln!("\t{lhs_s} -> {}", e.repl.format_value(lhs));
+                    eprintln!("\t{rhs_s} -> {}", e.repl.format_value(rhs));
+                    panic!("assertion failed");
+                }
+                println!("ok!");
+            }
+            _ => eprintln!("error: missing another expression"),
+        },
         Err(e) => eprintln!("error: {e:?}"),
     }
 }
@@ -467,18 +495,6 @@ impl Repl {
         }
     }
 
-    pub fn delta(&mut self, args: &[&str]) {
-        let input = args[1..].join(" ");
-        let input = self.scope.delta_redex(&input).0;
-        let lex = church::parser::lexer(&input);
-        match church::parser::parse(lex) {
-            Ok(expr) => {
-                println!("{}", expr);
-            }
-            Err(e) => eprintln!("error: {e:?}"),
-        }
-    }
-
     pub fn natural_from_church_encoding(s: &Term) -> Option<usize> {
         fn get_natural(f: VarId, x: VarId, s: &Term) -> Option<usize> {
             if let Body::App(lhs, rhs) = s.body.as_ref() {
@@ -664,31 +680,6 @@ impl Repl {
             Ok(expr) => {
                 self.print_closed(&expr);
             }
-            Err(e) => eprintln!("error: {e:?}"),
-        }
-    }
-
-    pub fn assert_eq(&mut self, input: &[&str]) {
-        let input = input[1..].join(" ");
-        let expr = self.scope.delta_redex(&input).0;
-        match Term::from_str(&expr) {
-            Ok(mut expr) => match Rc::make_mut(&mut expr.body) {
-                Body::App(ref mut lhs, ref mut rhs) => {
-                    let (lhs_s, rhs_s) = (self.format_value(lhs), self.format_value(rhs));
-                    print!("testing {lhs_s} == {rhs_s}... ",);
-                    std::io::stdout().flush().unwrap();
-                    lhs.beta_redex();
-                    rhs.beta_redex();
-                    if !lhs.alpha_eq(rhs) {
-                        eprintln!("\nerror: they're different");
-                        eprintln!("\t{lhs_s} -> {}", self.format_value(lhs));
-                        eprintln!("\t{rhs_s} -> {}", self.format_value(rhs));
-                    } else {
-                        println!("ok!");
-                    }
-                }
-                _ => eprintln!("error: missing another expression"),
-            },
             Err(e) => eprintln!("error: {e:?}"),
         }
     }
