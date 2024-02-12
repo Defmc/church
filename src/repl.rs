@@ -8,8 +8,6 @@ pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
 pub type Handler = fn(&mut Repl, &[&str]);
 
-pub const HANDLERS: &[(&str, Handler)] = &[(":fix_point", Repl::fix_point)];
-
 pub const NEW_HANDLERS: &[Command] = &[
     Command {
         name: "quit",
@@ -105,6 +103,12 @@ pub const NEW_HANDLERS: &[Command] = &[
         help: "binds the natural numbers of the interval",
         inputs_help: &[("<number from> <number to>", "the range of numbers to be binded")],
         handler: gen_nats
+    },
+    Command {
+        name: "fix_point",
+        help: "solves the recursion of an expression, using the Y combinator",
+        inputs_help: &[("<expr>", "the expression to be fixed")],
+        handler: fix_point
     }
 ];
 
@@ -322,6 +326,20 @@ fn gen_nats(e: CmdEntry) {
     }
     numbers.update();
     e.repl.scope.extend(numbers);
+}
+
+fn fix_point(e: CmdEntry) {
+    e.repl
+        .mode
+        .bench("fix point", || match Scope::from_str(&e.inputs.join(" ")) {
+            Ok(s) => {
+                Scope::solve_recursion(&s.aliases[0], &s.defs[0]).map_or_else(
+                    || println!("{} = {}", s.aliases[0], s.defs[0]),
+                    |imp| println!("{} = {imp}", s.aliases[0]),
+                );
+            }
+            Err(e) => eprintln!("error while parsing scope: {e:?}"),
+        })
 }
 
 pub struct Command {
@@ -680,20 +698,6 @@ impl Repl {
             Term::new(body)
         }
         natural_body(n).with([0, 1])
-    }
-
-    pub fn fix_point(&mut self, args: &[&str]) {
-        let input = args[1..].join(" ");
-        self.mode
-            .bench("fix point", || match Scope::from_str(&input) {
-                Ok(s) => {
-                    Scope::solve_recursion(&s.aliases[0], &s.defs[0]).map_or_else(
-                        || println!("{} = {}", s.aliases[0], s.defs[0]),
-                        |imp| println!("{} = {imp}", s.aliases[0]),
-                    );
-                }
-                Err(e) => eprintln!("error while parsing scope: {e:?}"),
-            })
     }
 
     pub fn print_closed(&mut self, expr: &Term) {
