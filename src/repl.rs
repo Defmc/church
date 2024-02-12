@@ -11,7 +11,6 @@ pub type Handler = fn(&mut Repl, &[&str]);
 pub const HANDLERS: &[(&str, Handler)] = &[
     (":gen_nats", Repl::gen_nats),
     (":fix_point", Repl::fix_point),
-    (":prepare", Repl::prepare),
 ];
 
 pub const NEW_HANDLERS: &[Command] = &[
@@ -97,6 +96,12 @@ pub const NEW_HANDLERS: &[Command] = &[
         help: "debrejin-alpha reduces the lambda expression",
         inputs_help: &[("<expr>", "the expression to be reduced")],
         handler: debrejin
+    },
+    Command {
+        name: "prepare",
+        help: "immediately updated the scope. Similar to `reload -s`, but way faster (because it doesn't need to load the files again)",
+        inputs_help: &[],
+        handler: prepare
     }
 ];
 
@@ -288,6 +293,10 @@ fn debrejin(mut e: CmdEntry) {
             eprintln!("error: {e:?}");
         }
     }
+}
+
+fn prepare(e: CmdEntry) {
+    e.repl.scope.update();
 }
 
 pub struct Command {
@@ -682,10 +691,6 @@ impl Repl {
                 }
                 Err(e) => eprintln!("error while parsing scope: {e:?}"),
             })
-    }
-
-    pub fn prepare(&mut self, _input: &[&str]) {
-        self.scope.update();
     }
 
     pub fn print_closed(&mut self, expr: &Term) {
