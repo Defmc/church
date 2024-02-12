@@ -90,9 +90,11 @@ impl Term {
             }
             Body::Abs(v, ref mut l) => {
                 if l.closed != is_empty {
-                    frees.remove(v);
+                    let old = frees.remove(v);
                     l.set_closeds(frees);
-                    frees.insert(*v);
+                    if old {
+                        frees.insert(*v);
+                    }
                 }
             }
         }
