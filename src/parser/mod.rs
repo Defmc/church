@@ -110,6 +110,6 @@ pub fn parse<I: Iterator<Item = Gramem>>(buffer: I) -> Result<Term, lrp::Error<S
     let mut parser = build(buffer);
     match parser.start() {
         Err(e) => Err(e),
-        Ok(..) => Ok(parser.items[0].item.item.as_expr().clone()),
+        Ok(..) => Ok(parser.items[0].item.item.as_expr().clone().updated()),
     }
 }
