@@ -2,7 +2,7 @@ use church::{scope::Scope, Body, Term, VarId};
 use logos::Logos;
 use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
-use std::{fmt, fs::read_to_string, io::Write, path::PathBuf, str::FromStr, time::Instant};
+use std::{fmt, fs::read_to_string, io::Write, path::PathBuf, rc::Rc, str::FromStr, time::Instant};
 
 pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
@@ -22,6 +22,7 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     (":fix_point", Repl::fix_point),
     (":prepare", Repl::prepare),
     (":closed", Repl::closed),
+    (":assert_eq", Repl::assert_eq),
 ];
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord, Logos, Copy)]
@@ -553,6 +554,31 @@ impl Repl {
             Ok(expr) => {
                 self.print_closed(&expr);
             }
+            Err(e) => eprintln!("error: {e:?}"),
+        }
+    }
+
+    pub fn assert_eq(&mut self, input: &[&str]) {
+        let input = input[1..].join(" ");
+        let expr = self.scope.delta_redex(&input).0;
+        match Term::from_str(&expr) {
+            Ok(mut expr) => match Rc::make_mut(&mut expr.body) {
+                Body::App(ref mut lhs, ref mut rhs) => {
+                    let (lhs_s, rhs_s) = (self.format_value(lhs), self.format_value(rhs));
+                    print!("testing {lhs_s} == {rhs_s}... ",);
+                    std::io::stdout().flush().unwrap();
+                    lhs.beta_redex();
+                    rhs.beta_redex();
+                    if !lhs.alpha_eq(rhs) {
+                        eprintln!("\nerror: they're different");
+                        eprintln!("\t{lhs_s} -> {}", self.format_value(lhs));
+                        eprintln!("\t{rhs_s} -> {}", self.format_value(rhs));
+                    } else {
+                        println!("ok!");
+                    }
+                }
+                _ => eprintln!("error: missing another expression"),
+            },
             Err(e) => eprintln!("error: {e:?}"),
         }
     }
