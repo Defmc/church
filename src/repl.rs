@@ -15,7 +15,6 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     (":alpha", Repl::alpha),
     (":delta", Repl::delta),
     (":gen_nats", Repl::gen_nats),
-    (":quit", Repl::quit),
     (":reload", Repl::reload),
     (":debrejin", Repl::debrejin),
     (":fix_point", Repl::fix_point),
@@ -26,12 +25,22 @@ pub const HANDLERS: &[(&str, Handler)] = &[
 
 pub const NEW_HANDLERS: &[Command] = &[
     Command {
+        name: "quit",
+        help: "quits the repl",
+        inputs_help: &[],
+        handler: quit_fn,
+    },
+    Command {
         name: "show",
         help: "shows something from the repl",
         inputs_help: &[("<thing>", "thing to me shown")],
         handler: show,
     },
 ];
+
+fn quit_fn(e: CmdEntry) {
+    e.repl.quit = true;
+}
 
 fn show(e: CmdEntry) {
     match e.inputs[0] {
