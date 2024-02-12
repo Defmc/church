@@ -8,10 +8,7 @@ pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
 pub type Handler = fn(&mut Repl, &[&str]);
 
-pub const HANDLERS: &[(&str, Handler)] = &[
-    (":gen_nats", Repl::gen_nats),
-    (":fix_point", Repl::fix_point),
-];
+pub const HANDLERS: &[(&str, Handler)] = &[(":fix_point", Repl::fix_point)];
 
 pub const NEW_HANDLERS: &[Command] = &[
     Command {
@@ -102,6 +99,12 @@ pub const NEW_HANDLERS: &[Command] = &[
         help: "immediately updated the scope. Similar to `reload -s`, but way faster (because it doesn't need to load the files again)",
         inputs_help: &[],
         handler: prepare
+    },
+    Command {
+        name: "gen_nats",
+        help: "binds the natural numbers of the interval",
+        inputs_help: &[("<number from> <number to>", "the range of numbers to be binded")],
+        handler: gen_nats
     }
 ];
 
@@ -297,6 +300,28 @@ fn debrejin(mut e: CmdEntry) {
 
 fn prepare(e: CmdEntry) {
     e.repl.scope.update();
+}
+
+fn gen_nats(e: CmdEntry) {
+    let start = if let Ok(s) = usize::from_str(e.inputs[0]) {
+        s
+    } else {
+        println!("{:?} is not a valid range start", e.inputs[0]);
+        return;
+    };
+    let end = if let Ok(e) = usize::from_str(e.inputs[1]) {
+        e
+    } else {
+        println!("{:?} is not a valid range end", e.inputs[1]);
+        return;
+    };
+    let mut numbers = Scope::default();
+    for i in start..end {
+        numbers.aliases.push(i.to_string());
+        numbers.defs.push(Repl::natural(i).to_string());
+    }
+    numbers.update();
+    e.repl.scope.extend(numbers);
 }
 
 pub struct Command {
@@ -642,28 +667,6 @@ impl Repl {
             }
         }
         None
-    }
-
-    pub fn gen_nats(&mut self, args: &[&str]) {
-        let s = if let Ok(s) = usize::from_str(args[1]) {
-            s
-        } else {
-            println!("{:?} is not a valid range start", args[1]);
-            return;
-        };
-        let e = if let Ok(e) = usize::from_str(args[2]) {
-            e
-        } else {
-            println!("{:?} is not a valid range end", args[2]);
-            return;
-        };
-        let mut numbers = Scope::default();
-        for i in s..e {
-            numbers.aliases.push(i.to_string());
-            numbers.defs.push(Self::natural(i).to_string());
-        }
-        numbers.update();
-        self.scope.extend(numbers);
     }
 
     #[must_use]
