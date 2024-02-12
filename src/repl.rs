@@ -167,6 +167,14 @@ pub struct CmdEntry<'a> {
     pub repl: &'a mut Repl,
 }
 
+impl<'a> CmdEntry<'a> {
+    pub fn into_expr(&mut self) -> std::result::Result<Term, lrp::Error<Sym>> {
+        let input = self.inputs.join(" ");
+        let input = self.repl.scope.delta_redex(&input).0;
+        Term::try_from_str(input)
+    }
+}
+
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord, Logos, Copy)]
 pub enum Arg {
     // #[regex(r#""([^\\]|\\.)*""#)]
