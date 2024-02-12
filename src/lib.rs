@@ -81,15 +81,15 @@ impl Term {
         match Rc::make_mut(&mut self.body) {
             Body::Id(..) => (),
             Body::App(ref mut lhs, ref mut rhs) => {
-                if lhs.closed != is_empty {
                     lhs.set_closeds(frees);
+                if !lhs.closed {
                 }
-                if rhs.closed != is_empty {
                     rhs.set_closeds(frees);
+                if !rhs.closed {
                 }
             }
             Body::Abs(v, ref mut l) => {
-                if l.closed != is_empty {
+                if !l.closed {
                     let old = frees.remove(v);
                     l.set_closeds(frees);
                     if old {
