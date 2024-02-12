@@ -362,14 +362,13 @@ impl Term {
         if rhs.closed {
             return;
         }
-        let frees_val = rhs.free_variables();lci 
+        let frees_val = rhs.free_variables();
         let vars = self.bounded_variables();
         // if there's no free variable capturing (used vars on lhs /\ free vars on rhs), we just apply on the abstraction body
         let captures: Vec<_> = frees_val.intersection(&vars).collect(); // TODO: Use vec
         if !captures.is_empty() {
             self.redex_by_alpha(&mut captures.into_iter().map(|&i| (i, i)).collect());
         } else {
-            println!("shouldnt");
         }
     }
 
@@ -383,7 +382,7 @@ impl Term {
         match Rc::make_mut(&mut self.body) {
             Body::Id(..) => false,
             Body::App(ref mut f, ref mut x) => {
-                return if matches!(*f.body, Body::Abs(..)) {
+                if matches!(*f.body, Body::Abs(..)) {
                     f.fix_captures(x);
                     let (id, l) = f.as_mut_abs().unwrap();
                     l.apply_by(*id, x);
@@ -391,7 +390,7 @@ impl Term {
                     true
                 } else {
                     f.beta_redex_step() || x.beta_redex_step()
-                };
+                }
             }
             Body::Abs(..) => {
                 self.eta_redex_step() || self.as_mut_abs().unwrap().1.beta_redex_step()
