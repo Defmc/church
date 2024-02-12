@@ -368,8 +368,7 @@ impl Term {
         let captures: Vec<_> = frees_val.intersection(&vars).collect(); // TODO: Use vec
         if !captures.is_empty() {
             self.redex_by_alpha(&mut captures.into_iter().map(|&i| (i, i)).collect());
-        } else {
-        }
+        } 
     }
 
     pub fn beta_redex(&mut self) {

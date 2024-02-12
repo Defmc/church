@@ -235,7 +235,7 @@ fn load(e: CmdEntry) {
         }
         Err(e) => eprintln!("error: {e:?}"),
     }
-    if e.flags.contains(&"-s") {
+    if e.flags.contains(&"s") {
         e.repl.scope.update();
     }
 }
@@ -252,7 +252,7 @@ fn reload(e: CmdEntry) {
         })
     });
 
-    if e.flags.contains(&"-s") {
+    if e.flags.contains(&"s") {
         e.repl.scope.update();
     }
 }
@@ -280,7 +280,7 @@ fn alpha(mut e: CmdEntry) {
 fn closed(mut e: CmdEntry) {
     match e.into_expr() {
         Ok(expr) => {
-            e.repl.print_closed(&expr);
+            Repl::print_closed(&expr);
         }
         Err(e) => eprintln!("error: {e:?}"),
     }
@@ -591,7 +591,7 @@ impl Repl {
     pub fn handle(&mut self, args: &[&str]) {
         for hs in COMMANDS.iter() {
             if args[0][1..] == *hs.name {
-                let mode = self.mode.clone();
+                let mode = self.mode;
                 let entry = CmdEntry {
                     inputs: args
                         .iter()
@@ -603,13 +603,7 @@ impl Repl {
                         .iter()
                         .skip(1)
                         .copied()
-                        .filter_map(|s| {
-                            if s.starts_with('-') {
-                                Some(s[1..].into())
-                            } else {
-                                None
-                            }
-                        })
+                        .filter_map(|s| s.strip_prefix('-'))
                         .collect(),
                     repl: self,
                 };
@@ -696,15 +690,15 @@ impl Repl {
         None
     }
 
-    pub fn print_closed(&mut self, expr: &Term) {
+    pub fn print_closed(expr: &Term) {
         println!("{expr}: {} ({:?})", expr.closed, expr.free_variables());
         match expr.body.as_ref() {
             Body::Id(..) => (),
             Body::App(ref lhs, ref rhs) => {
-                self.print_closed(lhs);
-                self.print_closed(rhs);
+                Self::print_closed(lhs);
+                Self::print_closed(rhs);
             }
-            Body::Abs(_, ref abs) => self.print_closed(abs),
+            Body::Abs(_, ref abs) => Self::print_closed(abs),
         }
     }
 }
