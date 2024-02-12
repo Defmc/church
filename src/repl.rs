@@ -25,6 +25,22 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     (":assert_eq", Repl::assert_eq),
 ];
 
+pub const NEW_HANDLERS: &[Command] = &[
+];
+
+pub struct Command {
+    pub name: &'static str,
+    pub help: &'static str,
+    pub inputs_help: &'static [(&'static str, &'static str)],
+    pub handler: fn(CmdEntry),
+}
+
+pub struct CmdEntry<'a> {
+    pub inputs: Vec<&'a str>,
+    pub flags: HashSet<&'a str>,
+    pub repl: &'a mut Repl,
+}
+
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord, Logos, Copy)]
 pub enum Arg {
     // #[regex(r#""([^\\]|\\.)*""#)]
@@ -242,9 +258,31 @@ impl Repl {
     }
 
     pub fn handle(&mut self, args: &[&str]) {
-        for (prefix, h) in HANDLERS.iter() {
-            if args[0] == *prefix {
-                return self.mode.clone().bench(prefix, || h(self, args));
+        for hs in NEW_HANDLERS.iter() {
+            if args[0][1..] == *hs.name {
+                let mode = self.mode.clone();
+                let entry = CmdEntry {
+                    inputs: args
+                        .iter()
+                        .skip(1)
+                        .copied()
+                        .filter(|s| !s.starts_with('-'))
+                        .collect(),
+                    flags: args
+                        .iter()
+                        .skip(1)
+                        .copied()
+                        .filter_map(|s| {
+                            if s.starts_with('-') {
+                                Some(s[1..].into())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                    repl: self,
+                };
+                return mode.bench(hs.name, || (hs.handler)(entry));
             }
         }
         eprintln!("error: command {:?} not found", args[0]);
