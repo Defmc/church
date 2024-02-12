@@ -1,4 +1,4 @@
-use church::{scope::Scope, Body, Term, VarId};
+use church::{parser::Sym, scope::Scope, Body, Term, VarId};
 use logos::Logos;
 use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
@@ -12,7 +12,6 @@ pub const HANDLERS: &[(&str, Handler)] = &[
     (":load", Repl::load),
     (":alpha_eq", Repl::alpha_eq),
     (":alpha", Repl::alpha),
-    (":delta", Repl::delta),
     (":gen_nats", Repl::gen_nats),
     (":reload", Repl::reload),
     (":debrejin", Repl::debrejin),
@@ -57,6 +56,12 @@ pub const NEW_HANDLERS: &[Command] = &[
             ("history <true or false>", "enable or disable addition to history (default = true)" )
         ],
         handler: set,
+    },
+    Command {
+        name: "delta",
+        help: "delta reduces the expression"
+        ,inputs_help: &[("<expr>", "the lambda expression")],
+        handler: delta
     },
 ];
 
@@ -137,6 +142,15 @@ fn help_fn(e: CmdEntry) {
                 println!("\t\t{i}: {h}");
             }
         }
+    }
+}
+
+fn delta(mut e: CmdEntry) {
+    match e.into_expr() {
+        Ok(expr) => {
+            println!("{}", expr);
+        }
+        Err(e) => eprintln!("error: {e:?}"),
     }
 }
 
