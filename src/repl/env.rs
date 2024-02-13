@@ -151,6 +151,6 @@ pub fn assert_eq(mut e: CmdEntry) {
             }
             _ => eprintln!("error: missing another expression"),
         },
-        Err(e) => eprintln!("error: {e:?}"),
+        Err(e) => panic!("error: {e:?}"),
     }
 }
