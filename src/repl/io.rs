@@ -8,17 +8,16 @@ pub struct TabulatedLines<'a, I: Iterator<Item = &'a str>>(Peekable<I>);
 impl<'a, I: Iterator<Item = &'a str>> Iterator for TabulatedLines<'a, I> {
     type Item = String;
     fn next(&mut self) -> Option<Self::Item> {
-        let next = self.0.next();
-        if self.0.peek().map_or(false, |l| {
-            println!("{l:?}");
-            l.starts_with(' ') || l.starts_with('\t')
-        }) {
-            let mut s = next.unwrap().to_owned();
-            s.push_str(self.0.next().unwrap());
-            Some(s)
-        } else {
-            next.map(str::to_owned)
+        let next = self.0.next()?;
+        let mut s = next.to_owned();
+        while let Some(p) = self.0.peek() {
+            if p.starts_with(' ') || p.starts_with('\t') {
+                s.push_str(self.0.next().unwrap());
+            } else {
+                break;
+            }
         }
+        Some(s)
     }
 }
 
