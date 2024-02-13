@@ -78,8 +78,7 @@ impl Term {
     }
 
     pub fn set_closeds(&mut self, frees: &mut HashSet<VarId>, len: &mut usize) {
-        let is_empty = *len == 0;
-        self.closed = self.fast_inner_closed_check() || is_empty;
+        self.closed = *len == 0;
         match Rc::make_mut(&mut self.body) {
             Body::Id(..) => (),
             Body::App(ref mut lhs, ref mut rhs) => {
