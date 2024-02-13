@@ -214,4 +214,8 @@ pub mod tests {
     pub fn logic() {
         Repl::spawn(&[":load tests/logic.ac"])
     }
+    #[test]
+    pub fn tabulation() {
+        Repl::spawn(&[":load tests/tabs.ac"]);
+    }
 }
