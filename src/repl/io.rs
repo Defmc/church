@@ -5,10 +5,6 @@ use church::scope::Scope;
 
 pub fn run(e: CmdEntry) {
     let input = e.inputs[0].into();
-    // if e.repl.loaded_files.contains(&input) {
-    // eprintln!("warn: already loaded {input:?}");
-    // return;
-    // }
     match read_to_string(&input) {
         Ok(s) => {
             s.lines().for_each(|l| e.repl.parse(l));
@@ -16,9 +12,6 @@ pub fn run(e: CmdEntry) {
         }
         Err(e) => eprintln!("error: {e:?}"),
     }
-    // if e.flags.contains(&"s") {
-    e.repl.scope.update();
-    // }
 }
 pub fn rerun(e: CmdEntry) {
     e.repl.scope = Scope::default();
@@ -31,10 +24,6 @@ pub fn rerun(e: CmdEntry) {
             repl: e.repl,
         })
     });
-
-    // if e.flags.contains(&"s") {
-    e.repl.scope.update();
-    // }
 }
 
 pub fn load(e: CmdEntry) {
