@@ -21,3 +21,12 @@ Length = FoldR ^n.(^z.(Succ z)) 0
 Take = ^n.(^l.(Or (IsNil l) (IsZero n) Nil (Cons (Head l) (Take (Pred n) (Take l)))))
 All = ^f.(FoldR (Comp And f) True)
 Any = ^f.(FoldR (Comp Or f) False)
+
+Filter = ^f.(^l.(
+    If (IsNil l)
+        Nil
+        (If (f (Head l))
+            (Cons (Head l) (Filter f (Tail l)))
+            (Filter f (Tail l))
+        )
+    ))
