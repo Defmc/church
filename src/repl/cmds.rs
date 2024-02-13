@@ -52,16 +52,28 @@ pub const COMMANDS: &[Command] = &[
             handler: env::assert_eq
     },
     Command {
-        name: "load",
+        name: "run",
         help: "runs a file inside repl",
-        inputs_help: &[("<filepath>", "file to be run"), ("-s", "strictly load. Updating the lazy-scope immediately")],
+        inputs_help: &[("<filepath>", "file to be runned")],
+        handler: io::run
+    },
+    Command {
+        name: "load",
+        help: "loads a file inside repl",
+        inputs_help: &[("<filepath>", "file to be loaded"), ("-s", "strictly loads the file. Updating the lazy-evaluation system immediately")],
         handler: io::load
+    },
+    Command {
+        name: "rerun",
+        help: "reruns the environment",
+        inputs_help: &[]
+            ,handler: io::rerun
     },
     Command {
         name: "reload",
         help: "reloads the environment",
-        inputs_help: &[("-s", "strictly reload. Updating the lazy-scope after all files have been loaded")]
-            ,handler: io::reload
+        inputs_help: &[("-s", "strictly reloads the environment, updating the entire lazy-evaluating system immediately")]
+            ,handler: io::rerun
     },
     Command {
         name: "alpha_eq",
