@@ -1,4 +1,4 @@
-use super::{Arg, CmdEntry, COMMANDS};
+use super::{cmds::COMMANDS, parser::Arg, CmdEntry};
 use church::{scope::Scope, Body, Term};
 use core::fmt;
 use rustyline::config::Configurer;
@@ -42,6 +42,12 @@ pub fn set(e: CmdEntry) {
 }
 
 pub fn help_fn(e: CmdEntry) {
+    if e.inputs.is_empty() {
+        eprintln!(
+            "missing a command to see help. Type `show commands` to see the available commands."
+        );
+        return;
+    }
     for hs in COMMANDS.iter() {
         if e.inputs[0] == hs.name {
             println!("{}", hs.name);
@@ -106,6 +112,9 @@ pub fn show_fn(e: CmdEntry) {
             for p in e.repl.loaded_files.iter() {
                 println!("{p:?}");
             }
+        }
+        "commands" => {
+            COMMANDS.iter().for_each(|c| println!("{}", c.name));
         }
         _ => {
             if let Some(def) = e.repl.scope.indexes.get(e.inputs[0]) {
