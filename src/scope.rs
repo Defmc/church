@@ -1,7 +1,7 @@
 use rustc_hash::FxHashMap as HashMap;
 use std::str::FromStr;
 
-use aho_corasick::{AhoCorasick};
+use aho_corasick::AhoCorasick;
 
 use crate::{id_to_str, parser, Term, VarId};
 
@@ -156,7 +156,7 @@ impl FromStr for Scope {
             if let Some(equal_pos) = l.find(|c| c == '=') {
                 let bind = &l[..equal_pos].trim();
                 let imp = &l[equal_pos + 1..].trim();
-                let imp = Self::solve_recursion(&bind, &imp).unwrap_or_else(|| imp.to_string());
+                let imp = Self::solve_recursion(bind, imp).unwrap_or_else(|| imp.to_string());
                 if let Some(shadow) = defs.insert(bind.to_string(), imp) {
                     panic!("shadowing {bind}, already defined as {shadow}");
                 }

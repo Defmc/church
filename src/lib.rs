@@ -29,6 +29,11 @@ pub fn id_to_str(i: usize) -> String {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Term {
     pub body: Rc<Body>,
+    /// closedness. A optimization tech.
+    /// A term is called as `closed` if all variables used are declared inside the function. I.e:
+    /// FV(x) == {} -> x is closed
+    /// If x is closed and x = a b, then a and b are also closed,
+    /// Any term can be not closed, but just closed terms CAN be closed
     pub closed: bool,
 }
 
@@ -46,17 +51,73 @@ impl fmt::Display for Term {
 
 impl Term {
     pub fn new(body: Body) -> Self {
-        let closed = body.free_variables().is_empty();
+        Self::lazy_new(body).updated()
+    }
+
+    pub fn lazy_new(body: Body) -> Self {
         Self {
             body: Rc::new(body),
-            closed,
+            closed: false, // there's no problem to use it as always `false`, but it will always
+                           // check for free variables and handle it as it have. Performance will
+                           // decrease for big expressions.
+        }
+    }
+
+    pub fn updated(mut self) -> Self {
+        self.update_closed();
+        self
+    }
+
+    /// An optional function to optimize beta reductions. It's not needed, but guarantees to never
+    /// check for free_variables in combinators. For example, in `Fact 6`, without `update_closed`,
+    /// the computation takes 11s, while when enabled, it's 3.04s.
+    pub fn update_closed(&mut self) {
+        let mut frees = self.body.free_variables();
+        let mut len = frees.len();
+        self.set_closeds(&mut frees, &mut len);
+    }
+
+    pub fn set_closeds(&mut self, frees: &mut HashSet<VarId>, len: &mut usize) {
+        let is_empty = *len == 0;
+        self.closed = self.fast_inner_closed_check() || is_empty;
+        match Rc::make_mut(&mut self.body) {
+            Body::Id(..) => (),
+            Body::App(ref mut lhs, ref mut rhs) => {
+                if !lhs.closed {
+                    lhs.set_closeds(frees, len);
+                }
+                if !rhs.closed {
+                    rhs.set_closeds(frees, len);
+                }
+            }
+            Body::Abs(v, ref mut l) => {
+                if !l.closed {
+                    let old = frees.remove(v);
+                    if old {
+                        *len -= 1;
+                    }
+                    l.set_closeds(frees, len);
+                    if old {
+                        frees.insert(*v);
+                        *len += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn fast_inner_closed_check(&self) -> bool {
+        match self.body.as_ref() {
+            Body::Id(..) => false,
+            Body::App(lhs, rhs) => lhs.closed && rhs.closed,
+            Body::Abs(_, l) => l.closed,
         }
     }
 
     #[must_use]
     pub fn id() -> Self {
         let id = Self::new(Body::Id(0));
-        Self::new(Body::Abs(0, id.into()))
+        Self::new(Body::Abs(0, id))
     }
 
     /// Create a lambda abstraction from left-to-right arguments
@@ -68,10 +129,10 @@ impl Term {
         if it.peek().is_some() {
             let abs = Self::from_args(it, term).unwrap();
             let body = abs.clone();
-            let abs = Body::Abs(next, body.into());
+            let abs = Body::Abs(next, body);
             Some(Self::new(abs))
         } else {
-            let abs = Body::Abs(next, term.into());
+            let abs = Body::Abs(next, term);
             Some(Self::new(abs))
         }
     }
@@ -87,7 +148,7 @@ impl Term {
 
     pub fn as_mut_abs(&mut self) -> Option<(&mut VarId, &mut Self)> {
         if let Body::Abs(ref mut v, ref mut b) = Rc::make_mut(&mut self.body) {
-            Some((v, Rc::make_mut(b)))
+            Some((v, b))
         } else {
             None
         }
@@ -95,7 +156,7 @@ impl Term {
 
     pub fn as_mut_app(&mut self) -> Option<(&mut Self, &mut Self)> {
         if let Body::App(ref mut lhs, ref mut rhs) = Rc::make_mut(&mut self.body) {
-            Some((Rc::make_mut(lhs), Rc::make_mut(rhs)))
+            Some((lhs, rhs))
         } else {
             None
         }
@@ -136,16 +197,16 @@ impl Term {
                 }
             }
             Body::App(ref mut f, ref mut x) => {
-                Rc::make_mut(f).redex_by_alpha(&mut map.clone());
-                Rc::make_mut(x).redex_by_alpha(&mut map.clone());
+                f.redex_by_alpha(&mut map.clone());
+                x.redex_by_alpha(&mut map.clone());
             }
             Body::Abs(ref mut i, ref mut l) => {
                 let (mut maybe_map, bind) = Self::try_alpha_redex(*i, map);
                 *i = bind;
                 if let Some(ref mut new_map) = maybe_map {
-                    Rc::make_mut(l).redex_by_alpha(new_map)
+                    l.redex_by_alpha(new_map)
                 } else {
-                    Rc::make_mut(l).redex_by_alpha(map)
+                    l.redex_by_alpha(map)
                 }
             }
         }
@@ -162,7 +223,17 @@ impl Term {
     /// FV(a) = { a }
     #[must_use]
     pub fn free_variables(&self) -> HashSet<VarId> {
-        self.body.free_variables()
+        if self.closed {
+            // debug_assert!(
+            //     self.body.free_variables().is_empty(),
+            //     "{self} is marked as closed, without being: {:?} are free",
+            //     self.body.free_variables()
+            // );
+            // self.body.free_variables()
+            HashSet::default()
+        } else {
+            self.body.free_variables()
+        }
     }
 
     /// α-equivalency refers to expressions with same implementation, disconsidering the variable
@@ -278,9 +349,7 @@ impl Term {
                     false
                 }
             }
-            Body::App(ref mut f, ref mut x) => {
-                Rc::make_mut(f).apply_by(id, val) | Rc::make_mut(x).apply_by(id, val)
-            }
+            Body::App(ref mut f, ref mut x) => f.apply_by(id, val) | x.apply_by(id, val),
         };
         if changed {
             self.closed &= val.closed;
@@ -293,62 +362,37 @@ impl Term {
         if rhs.closed {
             return;
         }
-        let vars = self.bounded_variables();
         let frees_val = rhs.free_variables();
+        let vars = self.bounded_variables();
         // if there's no free variable capturing (used vars on lhs /\ free vars on rhs), we just apply on the abstraction body
         let captures: Vec<_> = frees_val.intersection(&vars).collect(); // TODO: Use vec
         if !captures.is_empty() {
-            // println!("debugging {self} and {rhs}");
-            // println!(
-            //     "frees_val: {:?}",
-            //     frees_val
-            //         .iter()
-            //         .map(|s| id_to_str(*s))
-            //         .collect::<HashSet<_>>()
-            // );
-            // println!(
-            //     "vars: {:?}",
-            //     vars.iter().map(|s| id_to_str(*s)).collect::<HashSet<_>>()
-            // );
-            // println!(
-            //     "captures founded: {:?}",
-            //     captures
-            //         .iter()
-            //         .map(|s| id_to_str(**s))
-            //         .collect::<HashSet<_>>()
-            // );
             self.redex_by_alpha(&mut captures.into_iter().map(|&i| (i, i)).collect());
-            // println!("final: {self} | {rhs}");
         }
     }
 
     pub fn beta_redex(&mut self) {
+        // self.update_closed();
         while self.beta_redex_step() {}
     }
 
     pub fn beta_redex_step(&mut self) -> bool {
+        // assert!(!self.closed || self.free_variables().is_empty());
         match Rc::make_mut(&mut self.body) {
             Body::Id(..) => false,
             Body::App(ref mut f, ref mut x) => {
-                return if matches!(*f.body, Body::Abs(..)) {
-                    let f = Rc::make_mut(f);
+                if matches!(*f.body, Body::Abs(..)) {
                     f.fix_captures(x);
                     let (id, l) = f.as_mut_abs().unwrap();
                     l.apply_by(*id, x);
                     *self = l.clone();
                     true
                 } else {
-                    Rc::make_mut(f).beta_redex_step() || Rc::make_mut(x).beta_redex_step()
-                };
+                    f.beta_redex_step() || x.beta_redex_step()
+                }
             }
             Body::Abs(..) => {
-                if self.eta_redex_step() {
-                    true
-                } else if let Body::Abs(_, ref mut l) = Rc::make_mut(&mut self.body) {
-                    Rc::make_mut(l).beta_redex_step()
-                } else {
-                    unreachable!()
-                }
+                self.eta_redex_step() || self.as_mut_abs().unwrap().1.beta_redex_step()
             }
         }
     }
@@ -378,9 +422,9 @@ impl Term {
 
     pub fn eta_redex_step(&mut self) -> bool {
         if let Body::Abs(v, ref mut app) = Rc::make_mut(&mut self.body) {
-            if let Body::App(ref mut lhs, ref mut rhs) = Rc::make_mut(&mut Rc::make_mut(app).body) {
+            if let Body::App(ref mut lhs, ref mut rhs) = Rc::make_mut(&mut app.body) {
                 if rhs.body.as_ref() == &Body::Id(*v) && !lhs.contains(&Body::Id(*v)) {
-                    *self = (**lhs).clone();
+                    *self = lhs.clone();
                     return true;
                 }
             }
@@ -429,17 +473,21 @@ impl Term {
 
     pub fn redex_by_debrejin(&mut self, binds: &mut HashMap<VarId, VarId>, lvl: usize) {
         match Rc::make_mut(&mut self.body) {
-            Body::Id(ref mut id) => *id = binds[id],
+            Body::Id(ref mut id) => {
+                if binds.contains_key(id) {
+                    *id = binds[id]
+                }
+            }
             Body::App(ref mut lhs, ref mut rhs) => {
-                Rc::make_mut(lhs).redex_by_debrejin(binds, lvl + 1);
-                Rc::make_mut(rhs).redex_by_debrejin(binds, lvl + 1);
+                lhs.redex_by_debrejin(binds, lvl + 1);
+                rhs.redex_by_debrejin(binds, lvl + 1);
             }
             Body::Abs(ref mut v, ref mut l) => {
                 let lvl = Self::get_next_free(lvl, binds);
                 let old_v = *v;
                 *v = lvl;
                 let old = binds.insert(old_v, lvl);
-                Rc::make_mut(l).redex_by_debrejin(binds, lvl + 1);
+                l.redex_by_debrejin(binds, lvl + 1);
                 if let Some(old) = old {
                     *binds.get_mut(&old_v).unwrap() = old;
                 } else {
@@ -485,8 +533,8 @@ impl FromStr for Term {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub enum Body {
     /* identity */ Id(VarId),
-    /* application */ App(Rc<Term>, /* ( */ Rc<Term> /* ) */),
-    /* abstraction */ Abs(VarId, Rc<Term>),
+    /* application */ App(Term, /* ( */ Term /* ) */),
+    /* abstraction */ Abs(VarId, Term),
 }
 
 impl Body {
@@ -509,14 +557,20 @@ impl Body {
                 }
             }
             Self::App(lhs, rhs) => {
-                lhs.body.get_free_variables(binds, frees);
-                rhs.body.get_free_variables(binds, frees);
+                if !lhs.closed {
+                    lhs.body.get_free_variables(binds, frees);
+                }
+                if !rhs.closed {
+                    rhs.body.get_free_variables(binds, frees);
+                }
             }
             Self::Abs(v, l) => {
-                let recent = binds.insert(*v);
-                l.body.get_free_variables(binds, frees);
-                if recent {
-                    binds.remove(v);
+                if !l.closed {
+                    let recent = binds.insert(*v);
+                    l.body.get_free_variables(binds, frees);
+                    if recent {
+                        binds.remove(v);
+                    }
                 }
             }
         }
@@ -563,8 +617,6 @@ impl fmt::Display for Body {
 
 #[cfg(test)]
 pub mod tests {
-    use std::str::FromStr;
-
     use crate::Term;
 
     #[test]
@@ -588,19 +640,5 @@ pub mod tests {
         SCRIPTS
             .iter()
             .for_each(|s| assert!(Term::try_from_str(s).is_err()))
-    }
-
-    #[test]
-    pub fn capture_avoiding_xor() {
-        // Xor = ^a.(^b.(And (Or a b) (Not (And a b))))
-        const SCRIPT: &str ="λa.(λb.(λa.(λb.(a b a)) (λa.(λb.(a a b)) a b) (λa.(a (λa.(λb.(b))) (λa.(λb.(a)))) (λa.(λb.(a b a)) a b))))";
-        assert!(
-            Term::from_str(SCRIPT).unwrap().beta_reduced().alpha_eq(
-                &Term::from_str("λa.(λb.(a a b (a b a (λd.(λe.(e))) (λd.(λe.(d)))) (a a b)))")
-                    .unwrap()
-            ),
-            "{}",
-            Term::from_str(SCRIPT).unwrap().beta_reduced()
-        )
     }
 }

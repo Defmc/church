@@ -1,26 +1,139 @@
-use church::{scope::Scope, Body, Term, VarId};
+use church::{parser::Sym, scope::Scope, Body, Term, VarId};
 use logos::Logos;
 use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
-use std::{fmt, fs::read_to_string, io::Write, path::PathBuf, str::FromStr, time::Instant};
+use std::{io::Write, path::PathBuf, str::FromStr, time::Instant};
+
+pub mod env;
+pub mod io;
+pub mod proc;
 
 pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
-pub type Handler = fn(&mut Repl, &[&str]);
-
-pub const HANDLERS: &[(&str, Handler)] = &[
-    (":show", Repl::show),
-    (":load", Repl::load),
-    (":set", Repl::set),
-    (":alpha_eq", Repl::alpha_eq),
-    (":alpha", Repl::alpha),
-    (":delta", Repl::delta),
-    (":gen_nats", Repl::gen_nats),
-    (":quit", Repl::quit),
-    (":reload", Repl::reload),
-    (":debrejin", Repl::debrejin),
-    (":fix_point", Repl::fix_point),
+pub const COMMANDS: &[Command] = &[
+    Command {
+        name: "quit",
+        help: "quits the repl",
+        inputs_help: &[],
+        handler: env::quit_fn,
+    },
+    Command {
+        name: "show",
+        help: "shows something from the repl",
+        inputs_help: &[("<thing>", "thing to be shown, including:\n\t\t\tscope: all the aliases and expressions defined by the user\n\t\t\tenv: the repl environment\n\t\t\tloaded: all the loaded files as the filepaths\n\t\t\t<alias>: the expression from the scope")],
+        handler: env::show_fn,
+    },
+    Command {
+        name: "help",
+        help: "show the help message of something",
+        inputs_help: &[("<thing>", "thing to be shown")],
+        handler: env::help_fn,
+    },
+    Command {
+        name: "set",
+        help: "configure something from the repl",
+        inputs_help: &[
+            (
+                "readable <true or false>",
+                "sets if the repl should format lambda expressions (default = true)",
+            ),
+            (
+                "prompt <str>",
+                "sets the prompt message before each repl line (default = \"λ> \")",
+            ),
+            ("mode <mode>", "sets the repl mode:\n\t\t\tnormal: it's the default\n\t\t\tdebug: allows you to check and stop every line\n\t\t\tvisual: shows you each step of beta reductions\n\t\t\tbench: benchmarks everything executed"),
+            ("history <true or false>", "enable or disable addition to history (default = true)" )
+        ],
+        handler: env::set,
+    },
+    Command {
+        name: "delta",
+        help: "delta reduces the expression"
+        ,inputs_help: &[("<expr>", "the lambda expression")],
+        handler: proc::delta
+    },
+    Command {
+        name: "assert_eq",
+        help: "asserts equality between two lambda expressions. If they're different, panics.",
+            inputs_help: &[("<lhs-expr> <rhs-expr>", "the lambda expressions to be compared")],
+            handler: env::assert_eq
+    },
+    Command {
+        name: "load",
+        help: "runs a file inside repl",
+        inputs_help: &[("<filepath>", "file to be run"), ("-s", "strictly load. Updating the lazy-scope immediately")],
+        handler: io::load
+    },
+    Command {
+        name: "reload",
+        help: "reloads the environment",
+        inputs_help: &[("-s", "strictly reload. Updating the lazy-scope after all files have been loaded")]
+            ,handler: io::reload
+    },
+    Command {
+        name: "alpha_eq",
+        help: "check if two lambda expressions are alpha equivalent",
+            inputs_help: &[("<lhs-expr> <rhs-expr>", "the lambda expressions to be compared")],
+            handler: proc::alpha_eq
+    }
+    ,Command {
+        name: "alpha",
+        help: "alpha reduces the lambda expression",
+        inputs_help: &[("<expr>", "the expression to be reduced")],
+        handler: proc::alpha
+    },
+    Command {
+        name: "closed",
+        help: "show the term's closedness structure",
+        inputs_help: &[("<expr>", "the expression to be analyzed")],
+        handler: proc::closed
+    },
+    Command {
+        name: "debrejin",
+        help: "debrejin-alpha reduces the lambda expression",
+        inputs_help: &[("<expr>", "the expression to be reduced")],
+        handler: proc::debrejin
+    },
+    Command {
+        name: "prepare",
+        help: "immediately updated the scope. Similar to `reload -s`, but way faster (because it doesn't need to load the files again)",
+        inputs_help: &[],
+        handler: io::prepare
+    },
+    Command {
+        name: "gen_nats",
+        help: "binds the natural numbers of the interval",
+        inputs_help: &[("<number from> <number to>", "the range of numbers to be binded")],
+        handler: env::gen_nats
+    },
+    Command {
+        name: "fix_point",
+        help: "solves the recursion of an expression, using the Y combinator",
+        inputs_help: &[("<expr>", "the expression to be fixed")],
+        handler: proc::fix_point
+    },
 ];
+
+pub struct Command {
+    pub name: &'static str,
+    pub help: &'static str,
+    pub inputs_help: &'static [(&'static str, &'static str)],
+    pub handler: fn(CmdEntry),
+}
+
+pub struct CmdEntry<'a> {
+    pub inputs: Vec<&'a str>,
+    pub flags: HashSet<&'a str>,
+    pub repl: &'a mut Repl,
+}
+
+impl<'a> CmdEntry<'a> {
+    pub fn into_expr(&mut self) -> std::result::Result<Term, lrp::Error<Sym>> {
+        let input = self.inputs.join(" ");
+        let input = self.repl.scope.delta_redex(&input).0;
+        Term::try_from_str(input)
+    }
+}
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord, Logos, Copy)]
 pub enum Arg {
@@ -38,7 +151,7 @@ pub enum Arg {
 }
 
 impl Arg {
-    pub fn parse<'a>(s: &'a impl AsRef<str>) -> impl Iterator<Item = &'a str> {
+    pub fn parse(s: &impl AsRef<str>) -> impl Iterator<Item = &'_ str> {
         Self::lexer(s.as_ref()).spanned().map(move |(arg, span)| {
             if arg == Ok(Arg::StrLit) {
                 &s.as_ref()[span.start + 1..span.end - 1]
@@ -119,12 +232,13 @@ impl Mode {
         };
     }
 
-    pub fn run_show(&self, l: &mut Term) {
+    pub fn run_show(&self, repl: &mut Repl, l: &mut Term) {
         let mut buf = String::new();
         println!("{l}");
         let mut steps = 0;
+        l.update_closed();
         while l.beta_redex_step() {
-            println!("{l}");
+            println!("{}", repl.format_value(l),);
             if self == &Self::Debug {
                 loop {
                     print!("[step {steps}] (c)ontinue or (a)bort: ");
@@ -150,7 +264,7 @@ impl Mode {
         let l = if self.should_show() {
             match Term::try_from_str(&l) {
                 Ok(mut l) => {
-                    self.bench("beta redex", || self.run_show(&mut l));
+                    self.bench("beta redex", || self.run_show(repl, &mut l));
                     l
                 }
                 Err(e) => {
@@ -238,131 +352,28 @@ impl Repl {
     }
 
     pub fn handle(&mut self, args: &[&str]) {
-        for (prefix, h) in HANDLERS.iter() {
-            if args[0] == *prefix {
-                return self.mode.clone().bench(prefix, || h(self, args));
+        for hs in COMMANDS.iter() {
+            if args[0][1..] == *hs.name {
+                let mode = self.mode;
+                let entry = CmdEntry {
+                    inputs: args
+                        .iter()
+                        .skip(1)
+                        .copied()
+                        .filter(|s| !s.starts_with('-'))
+                        .collect(),
+                    flags: args
+                        .iter()
+                        .skip(1)
+                        .copied()
+                        .filter_map(|s| s.strip_prefix('-'))
+                        .collect(),
+                    repl: self,
+                };
+                return mode.bench(hs.name, || (hs.handler)(entry));
             }
         }
         eprintln!("error: command {:?} not found", args[0]);
-    }
-
-    pub fn show(&mut self, args: &[&str]) {
-        match args[1] {
-            "scope" => {
-                for (k, v) in self.scope.aliases.iter().zip(self.scope.defs.iter()) {
-                    println!("{k} = {v}");
-                }
-            }
-            "env" => {
-                println!("{self:?}");
-            }
-            "loaded" => {
-                for p in self.loaded_files.iter() {
-                    println!("{p:?}");
-                }
-            }
-            _ => {
-                if let Some(def) = self.scope.indexes.get(args[1]) {
-                    println!("{}", self.scope.defs[*def]);
-                } else {
-                    eprintln!("unknown option {args:?}");
-                }
-            }
-        }
-    }
-
-    pub fn load(&mut self, args: &[&str]) {
-        let input = args[1].into();
-        if self.loaded_files.contains(&input) {
-            eprintln!("warn: already loaded {input:?}");
-            return;
-        }
-        match read_to_string(&input) {
-            Ok(s) => {
-                s.lines().for_each(|l| self.parse(l));
-                self.loaded_files.insert(input);
-            }
-            Err(e) => eprintln!("error: {e:?}"),
-        }
-        if args.contains(&"-s") {
-            self.scope.update();
-        }
-    }
-
-    pub fn set(&mut self, args: &[&str]) {
-        fn set_with<T: FromStr>(opt: &mut T, s: &str)
-        where
-            <T as FromStr>::Err: fmt::Debug,
-        {
-            match T::from_str(s) {
-                Ok(v) => *opt = v,
-                Err(e) => println!("unknown value {:?}: {e:?}", s),
-            }
-        }
-
-        match args.len() {
-            1 => {
-                eprintln!("missing option and value");
-                return;
-            }
-            2 => {
-                eprintln!("missing value");
-                return;
-            }
-            _ => (),
-        };
-        match args[1] {
-            "readable" => set_with(&mut self.readable, args[2]),
-            "prompt" => match Arg::format(args[2]) {
-                Some(v) => set_with(&mut self.prompt, &v),
-                None => eprintln!("bad format string {:?}", args[2]),
-            },
-            "mode" => set_with(&mut self.mode, args[2]),
-            "history" => match bool::from_str(args[2]) {
-                Ok(opt) => self.rl.set_auto_add_history(opt),
-                Err(e) => eprintln!("unknown value {:?}: {e:?}", args[2]),
-            },
-            _ => eprintln!("unknonwn option {:?}", args[1]),
-        }
-    }
-
-    pub fn alpha_eq(&mut self, args: &[&str]) {
-        let input = args[1..].join(" ");
-        let input = self.scope.delta_redex(&input).0;
-        let lex = church::parser::lexer(&input);
-        match church::parser::parse(lex) {
-            Ok(expr) => match expr.body.as_ref() {
-                Body::App(ref lhs, ref rhs) => {
-                    println!("{}", lhs.alpha_eq(rhs));
-                }
-                _ => eprintln!("missing the second expression"),
-            },
-            Err(e) => eprintln!("error: {e:?}"),
-        }
-    }
-
-    pub fn alpha(&mut self, args: &[&str]) {
-        let input = args[1..].join(" ");
-        let input = self.scope.delta_redex(&input).0;
-        let lex = church::parser::lexer(&input);
-        match church::parser::parse(lex) {
-            Ok(expr) => {
-                println!("{}", expr.alpha_reduced());
-            }
-            Err(e) => eprintln!("error: {e:?}"),
-        }
-    }
-
-    pub fn delta(&mut self, args: &[&str]) {
-        let input = args[1..].join(" ");
-        let input = self.scope.delta_redex(&input).0;
-        let lex = church::parser::lexer(&input);
-        match church::parser::parse(lex) {
-            Ok(expr) => {
-                println!("{}", expr);
-            }
-            Err(e) => eprintln!("error: {e:?}"),
-        }
     }
 
     pub fn natural_from_church_encoding(s: &Term) -> Option<usize> {
@@ -381,7 +392,8 @@ impl Repl {
         if let Body::Abs(f, l) = s.body.as_ref() {
             if let Body::Abs(x, l) = l.body.as_ref() {
                 return get_natural(*f, *x, l);
-            } else if *l.body == Body::Id(*f) {
+            }
+            if *l.body == Body::Id(*f) {
                 // λf.(λx.(f x))
                 // λf.(f) # eta-reduced version of 1
                 return Some(1);
@@ -441,88 +453,15 @@ impl Repl {
         None
     }
 
-    pub fn gen_nats(&mut self, args: &[&str]) {
-        let s = if let Ok(s) = usize::from_str(args[1]) {
-            s
-        } else {
-            println!("{:?} is not a valid range start", args[1]);
-            return;
-        };
-        let e = if let Ok(e) = usize::from_str(args[2]) {
-            e
-        } else {
-            println!("{:?} is not a valid range end", args[2]);
-            return;
-        };
-        let mut numbers = Scope::default();
-        for i in s..e {
-            numbers.aliases.push(i.to_string());
-            numbers.defs.push(Self::natural(i).to_string());
-        }
-        numbers.update();
-        self.scope.extend(numbers);
-    }
-
-    pub fn reload(&mut self, args: &[&str]) {
-        self.scope = Scope::default();
-        let loaded = self.loaded_files.clone();
-        self.loaded_files.clear();
-        loaded
-            .into_iter()
-            .for_each(|f| self.load(&["load", &f.to_string_lossy()]));
-
-        if args.contains(&"-s") {
-            self.scope.update();
-        }
-    }
-
-    pub fn quit(&mut self, _args: &[&str]) {
-        self.quit = true;
-    }
-
-    #[must_use]
-    pub fn natural(n: usize) -> Term {
-        fn natural_body(n: usize) -> Term {
-            let body = if n == 0 {
-                Body::Id(1)
-            } else {
-                Body::App(Term::new(Body::Id(0)).into(), natural_body(n - 1).into())
-            };
-            Term::new(body)
-        }
-        natural_body(n).with([0, 1])
-    }
-
-    pub fn debrejin(&mut self, args: &[&str]) {
-        let mut o = String::new();
-        let input = args[1..].join(" ");
-        self.mode.bench("delta redex", || {
-            o = self.scope.delta_redex(&input).0;
-        });
-        match Term::try_from_str(&o) {
-            Ok(l) => {
-                println!("{}", l.clone().debrejin_reduced());
-                self.mode.bench("printing", || {
-                    self.print_value(&l);
-                });
+    pub fn print_closed(expr: &Term) {
+        println!("{expr}: {} ({:?})", expr.closed, expr.free_variables());
+        match expr.body.as_ref() {
+            Body::Id(..) => (),
+            Body::App(ref lhs, ref rhs) => {
+                Self::print_closed(lhs);
+                Self::print_closed(rhs);
             }
-            Err(e) => {
-                eprintln!("error: {e:?}");
-            }
+            Body::Abs(_, ref abs) => Self::print_closed(abs),
         }
-    }
-
-    pub fn fix_point(&mut self, args: &[&str]) {
-        let input = args[1..].join(" ");
-        self.mode
-            .bench("fix point", || match Scope::from_str(&input) {
-                Ok(s) => {
-                    Scope::solve_recursion(&s.aliases[0], &s.defs[0]).map_or_else(
-                        || println!("{} = {}", s.aliases[0], s.defs[0]),
-                        |imp| println!("{} = {imp}", s.aliases[0]),
-                    );
-                }
-                Err(e) => eprintln!("error while parsing scope: {e:?}"),
-            })
     }
 }
