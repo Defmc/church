@@ -122,7 +122,9 @@ pub fn assert_eq(mut e: CmdEntry) {
         Ok(mut expr) => match Rc::make_mut(&mut expr.body) {
             Body::App(ref mut lhs, ref mut rhs) => {
                 let (lhs_s, rhs_s) = (e.repl.format_value(lhs), e.repl.format_value(rhs));
-                print!("testing {lhs_s} == {rhs_s}... ",);
+                if !e.flags.contains("q") {
+                    print!("testing {lhs_s} == {rhs_s}... ",);
+                }
                 std::io::stdout().flush().unwrap();
                 lhs.beta_redex();
                 rhs.beta_redex();

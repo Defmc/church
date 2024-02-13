@@ -55,7 +55,7 @@ pub const COMMANDS: &[Command] = &[
     Command {
         name: "assert_eq",
         help: "asserts equality between two lambda expressions. If they're different, panics.",
-            inputs_help: &[("<lhs-expr> <rhs-expr>", "the lambda expressions to be compared")],
+            inputs_help: &[("<lhs-expr> <rhs-expr>", "the lambda expressions to be compared"), ("-q", "quiet mode: just runs and crashes if needed. Don't should anything more than the panic message")],
             handler: env::assert_eq
     },
     Command {
@@ -467,9 +467,7 @@ impl Repl {
 
     pub fn spawn(tasks: &[&str]) {
         let mut repl = Repl::default();
-        for task in tasks {
-            repl.parse(task);
-        }
+        tasks.iter().for_each(|t| repl.parse(t));
     }
 }
 
