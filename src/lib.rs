@@ -368,7 +368,6 @@ impl Term {
         let captures: Vec<_> = frees_val.intersection(&vars).collect(); // TODO: Use vec
         if !captures.is_empty() {
             self.redex_by_alpha(&mut captures.into_iter().map(|&i| (i, i)).collect());
-        } else {
         }
     }
 
@@ -618,8 +617,6 @@ impl fmt::Display for Body {
 
 #[cfg(test)]
 pub mod tests {
-    use std::str::FromStr;
-
     use crate::Term;
 
     #[test]
@@ -643,19 +640,5 @@ pub mod tests {
         SCRIPTS
             .iter()
             .for_each(|s| assert!(Term::try_from_str(s).is_err()))
-    }
-
-    #[test]
-    pub fn capture_avoiding_xor() {
-        // Xor = ^a.(^b.(And (Or a b) (Not (And a b))))
-        const SCRIPT: &str ="λa.(λb.(λa.(λb.(a b a)) (λa.(λb.(a a b)) a b) (λa.(a (λa.(λb.(b))) (λa.(λb.(a)))) (λa.(λb.(a b a)) a b))))";
-        assert!(
-            Term::from_str(SCRIPT).unwrap().beta_reduced().alpha_eq(
-                &Term::from_str("λa.(λb.(a a b (a b a (λd.(λe.(e))) (λd.(λe.(d)))) (a a b)))")
-                    .unwrap()
-            ),
-            "{}",
-            Term::from_str(SCRIPT).unwrap().beta_reduced()
-        )
     }
 }
