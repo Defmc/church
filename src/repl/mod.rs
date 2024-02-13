@@ -218,7 +218,6 @@ pub mod tests {
     #[test]
     pub fn tabulation() {
         Repl::spawn(&[":load tests/tabs.ac"]);
-        println!("hey");
         Repl::spawn(&[
             ":load assets/nat.ac",
             ":load assets/combs.ac",
@@ -233,5 +232,10 @@ pub mod tests {
             ":gen_nats 0 4",
             ":assert_eq (Fibo 3) 3",
         ]);
+    }
+
+    #[test]
+    pub fn whitespaced_filepath() {
+        Repl::spawn(&[":load \"tests/white spaced.ac\"", ":assert_eq Dark Reasons"])
     }
 }
