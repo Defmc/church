@@ -63,7 +63,6 @@ impl Repl {
     }
 
     pub fn parse(&mut self, input: &str) {
-        println!("parsing {input}");
         let input = input.trim();
         if input.starts_with(':') {
             let args: Vec<_> = parser::Arg::parse(&input).collect();
