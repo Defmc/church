@@ -99,6 +99,10 @@ pub fn quit_fn(e: CmdEntry) {
 }
 
 pub fn show_fn(e: CmdEntry) {
+    if e.inputs.is_empty() {
+        eprintln!("missing something to be shown");
+        return;
+    }
     match e.inputs[0] {
         "scope" => {
             for (k, v) in e.repl.scope.aliases.iter().zip(e.repl.scope.defs.iter()) {
