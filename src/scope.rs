@@ -157,9 +157,8 @@ impl Scope {
                 .unwrap();
             if !aho.is_match(imp) {
                 return free;
-            } else {
-                free += 1;
             }
+            free += 1;
         }
     }
 }
@@ -168,7 +167,7 @@ impl FromStr for Scope {
     type Err = lrp::Error<parser::Sym>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut defs = HashMap::default();
-        for l in s.lines() {
+        for l in TabulatedLines(s.lines().peekable()) {
             let end = l.find(|c| c == '#').unwrap_or(l.len());
             let l = &l[..end];
             if let Some(equal_pos) = l.find(|c| c == '=') {
