@@ -464,4 +464,21 @@ impl Repl {
             Body::Abs(_, ref abs) => Self::print_closed(abs),
         }
     }
+
+    pub fn spawn(tasks: &[&str]) {
+        let mut repl = Repl::default();
+        for task in tasks {
+            repl.parse(task);
+        }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use crate::repl::Repl;
+
+    #[test]
+    pub fn logic() {
+        Repl::spawn(&[":load tests/logic.ac"])
+    }
 }
