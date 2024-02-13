@@ -1,25 +1,7 @@
-use std::{collections::HashSet, fs::read_to_string, iter::Peekable};
+use std::{collections::HashSet, fs::read_to_string};
 
 use super::CmdEntry;
-use church::scope::Scope;
-
-pub struct TabulatedLines<'a, I: Iterator<Item = &'a str>>(Peekable<I>);
-
-impl<'a, I: Iterator<Item = &'a str>> Iterator for TabulatedLines<'a, I> {
-    type Item = String;
-    fn next(&mut self) -> Option<Self::Item> {
-        let next = self.0.next()?;
-        let mut s = next.to_owned();
-        while let Some(p) = self.0.peek() {
-            if p.starts_with(' ') || p.starts_with('\t') {
-                s.push_str(self.0.next().unwrap());
-            } else {
-                break;
-            }
-        }
-        Some(s)
-    }
-}
+use church::scope::{Scope, TabulatedLines};
 
 pub fn run(e: CmdEntry) {
     let input = e.inputs[0].into();

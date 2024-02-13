@@ -1,9 +1,27 @@
 use rustc_hash::FxHashMap as HashMap;
-use std::str::FromStr;
+use std::{iter::Peekable, str::FromStr};
 
 use aho_corasick::AhoCorasick;
 
 use crate::{id_to_str, parser, Term, VarId};
+
+pub struct TabulatedLines<'a, I: Iterator<Item = &'a str>>(pub Peekable<I>);
+
+impl<'a, I: Iterator<Item = &'a str>> Iterator for TabulatedLines<'a, I> {
+    type Item = String;
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.0.next()?;
+        let mut s = next.to_owned();
+        while let Some(p) = self.0.peek() {
+            if p.starts_with(' ') || p.starts_with('\t') {
+                s.push_str(self.0.next().unwrap());
+            } else {
+                break;
+            }
+        }
+        Some(s)
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct Scope {

@@ -63,6 +63,7 @@ impl Repl {
     }
 
     pub fn parse(&mut self, input: &str) {
+        println!("parsing {input}");
         let input = input.trim();
         if input.starts_with(':') {
             let args: Vec<_> = parser::Arg::parse(&input).collect();
@@ -214,8 +215,24 @@ pub mod tests {
     pub fn logic() {
         Repl::spawn(&[":load tests/logic.ac"])
     }
+
     #[test]
     pub fn tabulation() {
         Repl::spawn(&[":load tests/tabs.ac"]);
+        println!("hey");
+        Repl::spawn(&[
+            ":load assets/nat.ac",
+            ":load assets/combs.ac",
+            "Fibo = ^n.(
+    If (IsZero (Pred n)) 
+        1 
+        (Add 
+            (Fibo (Pred n))
+            (Fibo (Pred (Pred n)))
+        )
+    )",
+            ":gen_nats 0 4",
+            ":assert_eq (Fibo 3) 3",
+        ]);
     }
 }
