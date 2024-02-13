@@ -1,13 +1,32 @@
-use std::{collections::HashSet, fs::read_to_string};
+use std::{collections::HashSet, fs::read_to_string, iter::Peekable};
 
 use super::CmdEntry;
 use church::scope::Scope;
+
+pub struct TabulatedLines<'a, I: Iterator<Item = &'a str>>(Peekable<I>);
+
+impl<'a, I: Iterator<Item = &'a str>> Iterator for TabulatedLines<'a, I> {
+    type Item = String;
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.0.next();
+        if self.0.peek().map_or(false, |l| {
+            println!("{l:?}");
+            l.starts_with(' ') || l.starts_with('\t')
+        }) {
+            let mut s = next.unwrap().to_owned();
+            s.push_str(self.0.next().unwrap());
+            Some(s)
+        } else {
+            next.map(str::to_owned)
+        }
+    }
+}
 
 pub fn run(e: CmdEntry) {
     let input = e.inputs[0].into();
     match read_to_string(&input) {
         Ok(s) => {
-            s.lines().for_each(|l| e.repl.parse(l));
+            TabulatedLines(s.lines().peekable()).for_each(|l| e.repl.parse(&l));
             e.repl.loaded_files.insert(input);
         }
         Err(e) => eprintln!("error: {e:?}"),
@@ -34,10 +53,10 @@ pub fn load(e: CmdEntry) {
     }
     match read_to_string(&input) {
         Ok(s) => {
-            s.lines()
+            TabulatedLines(s.lines().peekable())
                 // fix: there're expressions # like = this
                 .filter(|l| l.starts_with(':') || l.contains('='))
-                .for_each(|l| e.repl.parse(l));
+                .for_each(|l| e.repl.parse(&l));
             e.repl.loaded_files.insert(input);
         }
         Err(e) => eprintln!("error: {e:?}"),
