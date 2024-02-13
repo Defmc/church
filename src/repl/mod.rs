@@ -2,7 +2,11 @@ use church::{parser::Sym, scope::Scope, Body, Term, VarId};
 use logos::Logos;
 use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
-use std::{fmt, fs::read_to_string, io::Write, path::PathBuf, rc::Rc, str::FromStr, time::Instant};
+use std::{io::Write, path::PathBuf, str::FromStr, time::Instant};
+
+pub mod env;
+pub mod io;
+pub mod proc;
 
 pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
@@ -11,19 +15,19 @@ pub const COMMANDS: &[Command] = &[
         name: "quit",
         help: "quits the repl",
         inputs_help: &[],
-        handler: quit_fn,
+        handler: env::quit_fn,
     },
     Command {
         name: "show",
         help: "shows something from the repl",
         inputs_help: &[("<thing>", "thing to be shown, including:\n\t\t\tscope: all the aliases and expressions defined by the user\n\t\t\tenv: the repl environment\n\t\t\tloaded: all the loaded files as the filepaths\n\t\t\t<alias>: the expression from the scope")],
-        handler: show_fn,
+        handler: env::show_fn,
     },
     Command {
         name: "help",
         help: "show the help message of something",
         inputs_help: &[("<thing>", "thing to be shown")],
-        handler: help_fn,
+        handler: env::help_fn,
     },
     Command {
         name: "set",
@@ -40,316 +44,75 @@ pub const COMMANDS: &[Command] = &[
             ("mode <mode>", "sets the repl mode:\n\t\t\tnormal: it's the default\n\t\t\tdebug: allows you to check and stop every line\n\t\t\tvisual: shows you each step of beta reductions\n\t\t\tbench: benchmarks everything executed"),
             ("history <true or false>", "enable or disable addition to history (default = true)" )
         ],
-        handler: set,
+        handler: env::set,
     },
     Command {
         name: "delta",
         help: "delta reduces the expression"
         ,inputs_help: &[("<expr>", "the lambda expression")],
-        handler: delta
+        handler: proc::delta
     },
     Command {
         name: "assert_eq",
         help: "asserts equality between two lambda expressions. If they're different, panics.",
             inputs_help: &[("<lhs-expr> <rhs-expr>", "the lambda expressions to be compared")],
-            handler: assert_eq
+            handler: env::assert_eq
     },
     Command {
         name: "load",
         help: "runs a file inside repl",
         inputs_help: &[("<filepath>", "file to be run"), ("-s", "strictly load. Updating the lazy-scope immediately")],
-        handler: load
+        handler: io::load
     },
     Command {
         name: "reload",
         help: "reloads the environment",
         inputs_help: &[("-s", "strictly reload. Updating the lazy-scope after all files have been loaded")]
-            ,handler: reload
+            ,handler: io::reload
     },
     Command {
         name: "alpha_eq",
         help: "check if two lambda expressions are alpha equivalent",
             inputs_help: &[("<lhs-expr> <rhs-expr>", "the lambda expressions to be compared")],
-            handler: alpha_eq
+            handler: proc::alpha_eq
     }
     ,Command {
         name: "alpha",
         help: "alpha reduces the lambda expression",
         inputs_help: &[("<expr>", "the expression to be reduced")],
-        handler: alpha
+        handler: proc::alpha
     },
     Command {
         name: "closed",
         help: "show the term's closedness structure",
         inputs_help: &[("<expr>", "the expression to be analyzed")],
-        handler: closed
+        handler: proc::closed
     },
     Command {
         name: "debrejin",
         help: "debrejin-alpha reduces the lambda expression",
         inputs_help: &[("<expr>", "the expression to be reduced")],
-        handler: debrejin
+        handler: proc::debrejin
     },
     Command {
         name: "prepare",
         help: "immediately updated the scope. Similar to `reload -s`, but way faster (because it doesn't need to load the files again)",
         inputs_help: &[],
-        handler: prepare
+        handler: io::prepare
     },
     Command {
         name: "gen_nats",
         help: "binds the natural numbers of the interval",
         inputs_help: &[("<number from> <number to>", "the range of numbers to be binded")],
-        handler: gen_nats
+        handler: env::gen_nats
     },
     Command {
         name: "fix_point",
         help: "solves the recursion of an expression, using the Y combinator",
         inputs_help: &[("<expr>", "the expression to be fixed")],
-        handler: fix_point
-    }
+        handler: proc::fix_point
+    },
 ];
-
-fn quit_fn(e: CmdEntry) {
-    e.repl.quit = true;
-}
-
-fn show_fn(e: CmdEntry) {
-    match e.inputs[0] {
-        "scope" => {
-            for (k, v) in e.repl.scope.aliases.iter().zip(e.repl.scope.defs.iter()) {
-                println!("{k} = {v}");
-            }
-        }
-        "env" => {
-            println!("{:?}", e.repl);
-        }
-        "loaded" => {
-            for p in e.repl.loaded_files.iter() {
-                println!("{p:?}");
-            }
-        }
-        _ => {
-            if let Some(def) = e.repl.scope.indexes.get(e.inputs[0]) {
-                println!("{}", e.repl.scope.defs[*def]);
-            } else {
-                eprintln!("unknown option {:?}", e.inputs[0]);
-            }
-        }
-    }
-}
-
-fn set(e: CmdEntry) {
-    fn set_with<T: FromStr>(opt: &mut T, s: &str)
-    where
-        <T as FromStr>::Err: fmt::Debug,
-    {
-        match T::from_str(s) {
-            Ok(v) => *opt = v,
-            Err(e) => println!("unknown value {:?}: {e:?}", s),
-        }
-    }
-
-    match e.inputs.len() {
-        1 => {
-            eprintln!("missing option and value");
-            return;
-        }
-        2 => {
-            eprintln!("missing value");
-            return;
-        }
-        _ => (),
-    };
-    match e.inputs[0] {
-        "readable" => set_with(&mut e.repl.readable, e.inputs[1]),
-        "prompt" => match Arg::format(e.inputs[1]) {
-            Some(v) => set_with(&mut e.repl.prompt, &v),
-            None => eprintln!("bad format string {:?}", e.inputs[1]),
-        },
-        "mode" => set_with(&mut e.repl.mode, e.inputs[1]),
-        "history" => match bool::from_str(e.inputs[1]) {
-            Ok(opt) => e.repl.rl.set_auto_add_history(opt),
-            Err(err) => eprintln!("unknown value {:?}: {err:?}", e.inputs[1]),
-        },
-        _ => eprintln!("unknonwn option {:?}", e.inputs[0]),
-    }
-}
-
-fn help_fn(e: CmdEntry) {
-    for hs in COMMANDS.iter() {
-        if e.inputs[0] == hs.name {
-            println!("{}", hs.name);
-            println!("\tdescription:");
-            println!("\t\t{}", hs.help);
-            println!("\tinputs:");
-            for (i, h) in hs.inputs_help {
-                println!("\t\t{i}: {h}");
-            }
-        }
-    }
-}
-
-fn delta(mut e: CmdEntry) {
-    match e.into_expr() {
-        Ok(expr) => {
-            println!("{}", expr);
-        }
-        Err(e) => eprintln!("error: {e:?}"),
-    }
-}
-
-fn assert_eq(mut e: CmdEntry) {
-    match e.into_expr() {
-        Ok(mut expr) => match Rc::make_mut(&mut expr.body) {
-            Body::App(ref mut lhs, ref mut rhs) => {
-                let (lhs_s, rhs_s) = (e.repl.format_value(lhs), e.repl.format_value(rhs));
-                print!("testing {lhs_s} == {rhs_s}... ",);
-                std::io::stdout().flush().unwrap();
-                lhs.beta_redex();
-                rhs.beta_redex();
-                if !lhs.alpha_eq(rhs) {
-                    eprintln!("\nerror: they're different");
-                    eprintln!("\t{lhs_s} -> {}", e.repl.format_value(lhs));
-                    eprintln!("\t{rhs_s} -> {}", e.repl.format_value(rhs));
-                    panic!("assertion failed");
-                }
-                println!("ok!");
-            }
-            _ => eprintln!("error: missing another expression"),
-        },
-        Err(e) => eprintln!("error: {e:?}"),
-    }
-}
-
-fn load(e: CmdEntry) {
-    let input = e.inputs[0].into();
-    if e.repl.loaded_files.contains(&input) {
-        eprintln!("warn: already loaded {input:?}");
-        return;
-    }
-    match read_to_string(&input) {
-        Ok(s) => {
-            s.lines().for_each(|l| e.repl.parse(l));
-            e.repl.loaded_files.insert(input);
-        }
-        Err(e) => eprintln!("error: {e:?}"),
-    }
-    if e.flags.contains(&"s") {
-        e.repl.scope.update();
-    }
-}
-
-fn reload(e: CmdEntry) {
-    e.repl.scope = Scope::default();
-    let loaded = e.repl.loaded_files.clone();
-    e.repl.loaded_files.clear();
-    loaded.into_iter().for_each(|f| {
-        load(CmdEntry {
-            inputs: vec![&f.to_string_lossy()],
-            flags: HashSet::default(),
-            repl: e.repl,
-        })
-    });
-
-    if e.flags.contains(&"s") {
-        e.repl.scope.update();
-    }
-}
-
-fn alpha_eq(mut e: CmdEntry) {
-    match e.into_expr() {
-        Ok(expr) => match expr.body.as_ref() {
-            Body::App(ref lhs, ref rhs) => {
-                println!("{}", lhs.alpha_eq(rhs));
-            }
-            _ => eprintln!("missing the second expression"),
-        },
-        Err(e) => eprintln!("error: {e:?}"),
-    }
-}
-fn alpha(mut e: CmdEntry) {
-    match e.into_expr() {
-        Ok(expr) => {
-            println!("{}", expr.alpha_reduced());
-        }
-        Err(e) => eprintln!("error: {e:?}"),
-    }
-}
-
-fn closed(mut e: CmdEntry) {
-    match e.into_expr() {
-        Ok(expr) => {
-            Repl::print_closed(&expr);
-        }
-        Err(e) => eprintln!("error: {e:?}"),
-    }
-}
-
-fn debrejin(mut e: CmdEntry) {
-    match e.into_expr() {
-        Ok(l) => {
-            println!("{}", l.clone().debrejin_reduced());
-            e.repl.mode.bench("printing", || {
-                e.repl.print_value(&l);
-            });
-        }
-        Err(e) => {
-            eprintln!("error: {e:?}");
-        }
-    }
-}
-
-fn prepare(e: CmdEntry) {
-    e.repl.scope.update();
-}
-
-fn gen_nats(e: CmdEntry) {
-    fn natural(n: usize) -> Term {
-        fn natural_body(n: usize) -> Term {
-            let body = if n == 0 {
-                Body::Id(1)
-            } else {
-                Body::App(Term::new(Body::Id(0)), natural_body(n - 1))
-            };
-            Term::new(body)
-        }
-        natural_body(n).with([0, 1])
-    }
-    let start = if let Ok(s) = usize::from_str(e.inputs[0]) {
-        s
-    } else {
-        println!("{:?} is not a valid range start", e.inputs[0]);
-        return;
-    };
-    let end = if let Ok(e) = usize::from_str(e.inputs[1]) {
-        e
-    } else {
-        println!("{:?} is not a valid range end", e.inputs[1]);
-        return;
-    };
-    let mut numbers = Scope::default();
-    for i in start..end {
-        numbers.aliases.push(i.to_string());
-        numbers.defs.push(natural(i).to_string());
-    }
-    numbers.update();
-    e.repl.scope.extend(numbers);
-}
-
-fn fix_point(e: CmdEntry) {
-    e.repl
-        .mode
-        .bench("fix point", || match Scope::from_str(&e.inputs.join(" ")) {
-            Ok(s) => {
-                Scope::solve_recursion(&s.aliases[0], &s.defs[0]).map_or_else(
-                    || println!("{} = {}", s.aliases[0], s.defs[0]),
-                    |imp| println!("{} = {imp}", s.aliases[0]),
-                );
-            }
-            Err(e) => eprintln!("error while parsing scope: {e:?}"),
-        })
-}
 
 pub struct Command {
     pub name: &'static str,
