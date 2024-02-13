@@ -16,11 +16,11 @@ pub fn set(e: CmdEntry) {
     }
 
     match e.inputs.len() {
-        1 => {
+        0 => {
             eprintln!("missing option and value");
             return;
         }
-        2 => {
+        1 => {
             eprintln!("missing value");
             return;
         }
