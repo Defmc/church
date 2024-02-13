@@ -7,7 +7,7 @@ Mult = λm.(λn.(λf.(m (n f))))
 Pow = λb.(λe.(e b))
 Monus = λm.(λn.(n Pred m))
 IsZero = λn.(n (λx.(False)) True)
-Equal = λa.(λb.(And (IsZero Monus(a b)) (IsZero Monus(b a))))
+Eq = λa.(λb.(And (IsZero (Monus a b)) (IsZero (Monus b a))))
 Leq = λa.(λb.(IsZero (Monus a b)))
 Geq = λa.(λb.(IsZero (Monus b a)))
 
