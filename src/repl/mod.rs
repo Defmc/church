@@ -146,11 +146,20 @@ impl Repl {
             if let Some(alias) = self.scope.get_from_alpha_key(b) {
                 return alias.to_string();
             }
-            if let Some(n) = Repl::natural_from_church_encoding(b) {
+            if let Some(n) = Self::natural_from_church_encoding(b) {
                 return n.to_string();
             }
             if let Some(v) = self.from_list(b) {
-                return format!("[{v}]");
+                if let Some(bin_n) = Self::from_binary_number(&v) {
+                    return format!("{bin_n}");
+                }
+                return format!(
+                    "[{}]",
+                    v.into_iter()
+                        .map(|s| self.format_value(&s))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
             }
             return match b.body.as_ref() {
                 Body::Id(id) => church::id_to_str(*id),
@@ -169,16 +178,16 @@ impl Repl {
         format!("{b}")
     }
 
-    pub fn from_list(&self, b: &Term) -> Option<String> {
+    pub fn from_list(&self, b: &Term) -> Option<Vec<Term>> {
         if let Body::Abs(wrapper, b) = b.body.as_ref() {
             if let Body::App(b, rhs) = b.body.as_ref() {
                 if let Body::App(wrap, lhs) = b.body.as_ref() {
                     if &Body::Id(*wrapper) == wrap.body.as_ref() {
-                        let mut v = self.format_value(lhs);
+                        let mut v = vec![lhs.clone()];
                         if let Some(tail) = self.from_list(rhs) {
-                            v = format!("{v}, {tail}")
+                            v.extend(tail);
                         } else {
-                            v = format!("{v}, {}", self.format_value(rhs))
+                            v.push(rhs.clone());
                         }
                         return Some(v);
                     }
@@ -186,6 +195,20 @@ impl Repl {
             }
         }
         None
+    }
+
+    pub fn from_binary_number(list: &[Term]) -> Option<u128> {
+        let one = Term::from_str("^a.(^b.(a))").unwrap();
+        let zero = Term::from_str("^a.(^b.(b))").unwrap();
+        if list.first()?.alpha_eq(&one) {
+            let buf = Self::from_binary_number(&list[1..]).unwrap_or(0) << 1;
+            Some(1 + buf)
+        } else if list.first()?.alpha_eq(&zero) {
+            let buf = Self::from_binary_number(&list[1..]).unwrap_or(0) << 1;
+            Some(0 + buf)
+        } else {
+            None
+        }
     }
 
     pub fn print_closed(expr: &Term) {
