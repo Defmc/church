@@ -1,0 +1,24 @@
+:load assets/list.ac
+
+# Numbers should be build like lists of `True` and `False` with a `Nil` at the end
+# I.e, 10110 (or 22) == [True, False, True, True, False]
+# But, they will be implemented in big endianness (aka from left to right instead of right to left)
+Bum = Cons
+
+3 = Cons True (Cons True Nil)
+7 = Cons True (Cons True (Cons True Nil))
+10 = Cons False (Cons True (Cons False (Cons True Nil)))
+
+Badd = ^a.(^b.(^c.(
+    If (And (IsNil a) (IsNil b))
+        (If (c)
+            (Cons True Nil)
+            Nil
+        )
+        (If (IsNil a)
+            (Badd b Cons (c Nil) False)
+            (If (IsNil b)
+                (Badd a (Cons c Nil) False)
+                (Cons (Xor (Xor (Head a) (Head b)) c) (Badd (Tail a) (Tail b) (And (Head a) (Head b))))
+        )
+    ))))
