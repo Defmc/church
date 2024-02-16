@@ -13,7 +13,7 @@ Nand = ^a.(^b.(Not (And a b)))
 Hadder = ^a.(^b.(^c.(
     If (And (IsNil a) (IsNil b))
         (If c (Cons True Nil) Nil)
-        (Cons 
+        (Cons
             (Xor (Xor (HeadOrFalse a) (HeadOrFalse b)) c)
             (Hadder
                 (TailOrNil a) (TailOrNil b)
