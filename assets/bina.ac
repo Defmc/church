@@ -17,10 +17,7 @@ Hadder = ^a.(^b.(^c.(
             (Xor (Xor (HeadOrFalse a) (HeadOrFalse b)) c)
             (Hadder
                 (TailOrNil a) (TailOrNil b)
-                (Or 
-                    (And (HeadOrFalse a) (HeadOrFalse b))
-                    (And (Nand (HeadOrFalse a) (HeadOrFalse b)) (c))
-                )
+                (And (HeadOrFalse a) (HeadOrFalse b))
             )
         )
     )))
