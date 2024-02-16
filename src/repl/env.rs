@@ -62,18 +62,33 @@ pub fn help_fn(e: CmdEntry) {
     }
 }
 
-pub fn gen_nats(e: CmdEntry) {
-    fn natural(n: usize) -> Term {
-        fn natural_body(n: usize) -> Term {
-            let body = if n == 0 {
-                Body::Id(1)
-            } else {
-                Body::App(Term::new(Body::Id(0)), natural_body(n - 1))
-            };
-            Term::new(body)
-        }
-        natural_body(n).with([0, 1])
+pub fn num_to_church(n: usize) -> Term {
+    fn natural_body(n: usize) -> Term {
+        let body = if n == 0 {
+            Body::Id(1)
+        } else {
+            Body::App(Term::new(Body::Id(0)), natural_body(n - 1))
+        };
+        Term::new(body)
     }
+    natural_body(n).with([0, 1])
+}
+
+pub fn num_to_bin_list(n: usize) -> String {
+    fn natural_body(n: usize) -> String {
+        match n {
+            0 => "(Cons False Nil)".into(),
+            _ => format!(
+                "(Cons {} {})",
+                if n & 0b1 == 1 { "True" } else { "False" },
+                natural_body(n >> 1)
+            ),
+        }
+    }
+    natural_body(n)
+}
+
+pub fn gen_nats(e: CmdEntry) {
     let start = if let Ok(s) = usize::from_str(e.inputs[0]) {
         s
     } else {
@@ -89,7 +104,11 @@ pub fn gen_nats(e: CmdEntry) {
     let mut numbers = Scope::default();
     for i in start..end {
         numbers.aliases.push(i.to_string());
-        numbers.defs.push(natural(i).to_string());
+        if e.repl.binary_numbers {
+            numbers.defs.push(num_to_bin_list(i));
+        } else {
+            numbers.defs.push(num_to_church(i).to_string());
+        }
     }
     numbers.update();
     e.repl.scope.extend(numbers);

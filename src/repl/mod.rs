@@ -148,8 +148,10 @@ impl Repl {
             if let Some(alias) = self.scope.get_from_alpha_key(b) {
                 return alias.to_string();
             }
-            if let Some(n) = Self::natural_from_church_encoding(b) {
-                return n.to_string();
+            if !self.binary_numbers {
+                if let Some(n) = Self::natural_from_church_encoding(b) {
+                    return n.to_string();
+                }
             }
             if let Some(v) = self.from_list(b) {
                 if self.binary_numbers {
