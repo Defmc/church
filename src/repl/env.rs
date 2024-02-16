@@ -110,7 +110,6 @@ pub fn gen_nats(e: CmdEntry) {
             numbers.defs.push(num_to_church(i).to_string());
         }
     }
-    numbers.update();
     e.repl.scope.extend(numbers);
 }
 
