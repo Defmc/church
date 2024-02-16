@@ -191,3 +191,29 @@ impl FromStr for Scope {
         Ok(s)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::Term;
+
+    use super::Scope;
+    use std::str::FromStr;
+
+    #[test]
+    fn constants_replacement() {
+        let mut s = Scope::from_str(
+            "
+C = ^x.(x x)
+A = a a
+        ",
+        )
+        .unwrap();
+        let lhs = Term::from_str(&s.delta_redex("C A").0)
+            .unwrap()
+            .beta_reduced();
+        let rhs = Term::from_str(&s.delta_redex("C (A)").0)
+            .unwrap()
+            .beta_reduced();
+        assert!(lhs.alpha_eq(&rhs), "{lhs} != {rhs}");
+    }
+}
