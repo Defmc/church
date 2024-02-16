@@ -30,7 +30,7 @@ impl Mode {
         let mut steps = 0;
         l.update_closed();
         while l.beta_redex_step() {
-            println!("{}", repl.format_value(l),);
+            println!("{}", repl.format_value(l));
             if self == &Self::Debug {
                 loop {
                     print!("[step {steps}] (c)ontinue or (a)bort: ");

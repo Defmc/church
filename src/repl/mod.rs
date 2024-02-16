@@ -22,6 +22,7 @@ pub struct Repl {
     loaded_files: HashSet<PathBuf>,
     prompt: String,
     readable: bool,
+    binary_numbers: bool,
     mode: Mode,
     quit: bool,
     rl: DefaultEditor,
@@ -36,6 +37,7 @@ impl Default for Repl {
             scope: Scope::default(),
             loaded_files: HashSet::default(),
             readable: true,
+            binary_numbers: false,
             mode: Mode::default(),
             quit: false,
             prompt: String::from("λ> "),
@@ -150,8 +152,10 @@ impl Repl {
                 return n.to_string();
             }
             if let Some(v) = self.from_list(b) {
-                if let Some(bin_n) = Self::from_binary_number(&v) {
-                    return format!("{bin_n}");
+                if self.binary_numbers {
+                    if let Some(bin_n) = Self::from_binary_number(&v) {
+                        return format!("{bin_n}");
+                    }
                 }
                 return format!(
                     "[{}]",
