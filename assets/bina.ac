@@ -16,7 +16,7 @@ Badd = ^a.(^b.(^c.(
             Nil
         )
         (If (IsNil a)
-            (Badd b Cons (c Nil) False)
+            (Badd b (Cons c Nil) False)
             (If (IsNil b)
                 (Badd a (Cons c Nil) False)
                 (Cons (Xor (Xor (Head a) (Head b)) c) (Badd (Tail a) (Tail b) (And (Head a) (Head b))))
