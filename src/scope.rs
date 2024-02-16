@@ -98,12 +98,13 @@ impl Scope {
             self.indexes
                 .entry(k.clone())
                 .and_modify(|iv| {
-                    if self.defs[*iv] != v {
-                        panic!(
-                            "shadowing {k:?}: the old value {:?} is different from the new {v:?}",
-                            self.defs[*iv]
-                        );
-                    }
+                    //     if self.defs[*iv] != v {
+                    //         panic!(
+                    //             "shadowing {k:?}: the old value {:?} is different from the new {v:?}",
+                    //             self.defs[*iv]
+                    //         );
+                    //      }
+                    self.defs[*iv] = v;
                 })
                 .or_insert(i);
         }
@@ -142,7 +143,7 @@ impl Scope {
                 .build([def])
                 .unwrap();
             let s = aho.replace_all(imp, &[id_to_str(free_name)]);
-            Some(format!("Y ^{}.({s})", id_to_str(free_name)))
+            Some(format!("(Y ^{}.({s}))", id_to_str(free_name)))
         } else {
             None
         }
@@ -173,7 +174,8 @@ impl FromStr for Scope {
             if let Some(equal_pos) = l.find(|c| c == '=') {
                 let bind = &l[..equal_pos].trim();
                 let imp = &l[equal_pos + 1..].trim();
-                let imp = Self::solve_recursion(bind, imp).unwrap_or_else(|| imp.to_string());
+                let imp = Self::solve_recursion(bind, imp)
+                    .unwrap_or_else(|| format!("({})", imp.to_string()));
                 if let Some(shadow) = defs.insert(bind.to_string(), imp) {
                     panic!("shadowing {bind}, already defined as {shadow}");
                 }

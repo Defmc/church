@@ -90,3 +90,15 @@ false
 Should show `Y` again, but internally it's the beta reduction expression into `^f.(^x.(f (x x)) ^x.(f (x x)))`.
 
 - [ ] Use normal order strategy
+
+## Scope delta-reducing without parenthesis in constants
+```
+λ> :load assets/bina.ac
+λ> Add 3
+[True, Nil]
+λ> Add (3)
+λb.([λb.(0), If, Nil])
+λ> 
+```
+
+- [x] just add a parenthesis
