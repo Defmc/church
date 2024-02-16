@@ -23,6 +23,7 @@ pub fn alpha_eq(mut e: CmdEntry) {
         Err(e) => eprintln!("error: {e:?}"),
     }
 }
+
 pub fn alpha(mut e: CmdEntry) {
     match e.into_expr() {
         Ok(expr) => {
