@@ -5,20 +5,24 @@
 # But, they will be implemented in big endianness (aka from left to right instead of right to left)
 Bum = Cons
 
-3 = Cons True (Cons True Nil)
-7 = Cons True (Cons True (Cons True Nil))
-10 = Cons False (Cons True (Cons False (Cons True Nil)))
+HeadOrFalse = ^a.(If (IsNil a) False (Head a))
+TailOrNil = ^a.(If (IsNil a) Nil (Tail a))
 
-Badd = ^a.(^b.(^c.(
+Nand = ^a.(^b.(Not (And a b)))
+
+Hadder = ^a.(^b.(^c.(
     If (And (IsNil a) (IsNil b))
-        (If (c)
-            (Cons True Nil)
-            Nil
+        (If c (Cons True Nil) Nil)
+        (Cons 
+            (Xor (Xor (HeadOrFalse a) (HeadOrFalse b)) c)
+            (Hadder
+                (TailOrNil a) (TailOrNil b)
+                (Or 
+                    (And (HeadOrFalse a) (HeadOrFalse b))
+                    (And (Nand (HeadOrFalse a) (HeadOrFalse b)) (c))
+                )
+            )
         )
-        (If (IsNil a)
-            (Badd b (Cons c Nil) False)
-            (If (IsNil b)
-                (Badd a (Cons c Nil) False)
-                (Cons (Xor (Xor (Head a) (Head b)) c) (Badd (Tail a) (Tail b) (And (Head a) (Head b))))
-        )
-    ))))
+    )))
+
+Add = ^a.(^b.(Hadder a b False))
