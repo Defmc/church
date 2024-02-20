@@ -153,7 +153,7 @@ impl Repl {
                     return n.to_string();
                 }
             }
-            if let Some(v) = self.from_list(b) {
+            if let Some(v) = Self::from_list(b) {
                 if self.binary_numbers {
                     if let Some(bin_n) = Self::from_binary_number(&v) {
                         return format!("{bin_n}");
@@ -184,13 +184,13 @@ impl Repl {
         format!("{b}")
     }
 
-    pub fn from_list(&self, b: &Term) -> Option<Vec<Term>> {
+    pub fn from_list(b: &Term) -> Option<Vec<Term>> {
         if let Body::Abs(wrapper, b) = b.body.as_ref() {
             if let Body::App(b, rhs) = b.body.as_ref() {
                 if let Body::App(wrap, lhs) = b.body.as_ref() {
                     if &Body::Id(*wrapper) == wrap.body.as_ref() {
                         let mut v = vec![lhs.clone()];
-                        if let Some(tail) = self.from_list(rhs) {
+                        if let Some(tail) = Self::from_list(rhs) {
                             v.extend(tail);
                         } else {
                             v.push(rhs.clone());
@@ -211,7 +211,7 @@ impl Repl {
             Some(1 + buf)
         } else if list.first()?.alpha_eq(&zero) {
             let buf = Self::from_binary_number(&list[1..]).unwrap_or(0) << 1;
-            Some(0 + buf)
+            Some(buf)
         } else {
             None
         }
