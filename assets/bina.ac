@@ -9,12 +9,12 @@ Bum = Cons
 HeadOrFalse = ^a.(If (IsNil a) False (Head a))
 TailOrNil = ^a.(If (IsNil a) Nil (Tail a))
 
-Hadder = ^a.(^b.(^c.(
+biAdd = ^a.(^b.(^c.(
     If (And (IsNil a) (IsNil b))
         (If c (Cons True Nil) Nil)
         (Cons
             (Xor (Xor (HeadOrFalse a) (HeadOrFalse b)) c)
-            (Hadder
+            (iAdd
                 (TailOrNil a) (TailOrNil b)
                 (Or 
                     (And (HeadOrFalse a) (HeadOrFalse b))
@@ -24,4 +24,4 @@ Hadder = ^a.(^b.(^c.(
         )
     )))
 
-Add = ^a.(^b.(Hadder a b False))
+bAdd = ^a.(^b.(biAdd a b False))
