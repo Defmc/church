@@ -1,4 +1,5 @@
 :load assets/list.ac
+:load assets/combs.ac
 
 # Numbers should be build like lists of `True` and `False` with a `Nil` at the end
 # I.e, 10110 (or 22) == [True, False, True, True, False]
@@ -8,8 +9,6 @@ Bum = Cons
 HeadOrFalse = ^a.(If (IsNil a) False (Head a))
 TailOrNil = ^a.(If (IsNil a) Nil (Tail a))
 
-Nand = ^a.(^b.(Not (And a b)))
-
 Hadder = ^a.(^b.(^c.(
     If (And (IsNil a) (IsNil b))
         (If c (Cons True Nil) Nil)
@@ -17,7 +16,10 @@ Hadder = ^a.(^b.(^c.(
             (Xor (Xor (HeadOrFalse a) (HeadOrFalse b)) c)
             (Hadder
                 (TailOrNil a) (TailOrNil b)
-                (And (HeadOrFalse a) (HeadOrFalse b))
+                (Or 
+                    (And (HeadOrFalse a) (HeadOrFalse b))
+                    (And (Xor (HeadOrFalse a) (HeadOrFalse b)) c)
+                )
             )
         )
     )))
