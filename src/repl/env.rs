@@ -102,7 +102,7 @@ pub fn gen_nats(e: CmdEntry) {
         return;
     };
     let mut numbers = Scope::default();
-    for i in start..end {
+    for i in start..=end {
         numbers.aliases.push(i.to_string());
         if e.repl.binary_numbers {
             numbers.defs.push(num_to_bin_list(i));
