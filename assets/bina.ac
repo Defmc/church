@@ -24,4 +24,24 @@ biAdd = ^a.(^b.(^c.(
         )
     )))
 
+biSub = ^a.(^b.(^c.(
+    If (And (IsNil a) (IsNil b))
+        (If c False Nil)
+        (Cons
+            (Xor (Xor (HeadOrFalse a) (HeadOrFalse b)) c)
+            (biSub
+                (TailOrNil a)
+                (TailOrNil b)
+                (Or
+                    (Or
+                        (And (Not (HeadOrFalse a)) c)
+                        (And (Not (HeadOrFalse a)) (HeadOrFalse b))
+                    )
+                    (And (HeadOrFalse b) c)
+                )
+            )
+        )
+    )))
+
 bAdd = ^a.(^b.(biAdd a b False))
+bSub = ^a.(^b.(biSub a b False))
