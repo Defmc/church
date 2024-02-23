@@ -1,6 +1,9 @@
 :load assets/list.ac
 :load assets/combs.ac
 
+# "Caches" an expression
+Let = ^f.(^a.(f a))
+
 # Numbers should be build like lists of `True` and `False` with a `Nil` at the end
 # I.e, 10110 (or 22) == [True, False, True, True, False]
 # But, they will be implemented in big endianness (aka from left to right instead of right to left)
@@ -42,6 +45,33 @@ biSub = ^a.(^b.(^c.(
             )
         )
     )))
+
+# Cmp = Eq | Lt | Gt
+Eq = ^a.(^b.(^c.(a)))
+Lt = ^a.(^b.(^c.(b)))
+Gt = ^a.(^b.(^c.(c)))
+biIsEq = True False False
+biIsLt = False True False
+biIsGt = False False True
+
+bCmp = ^a.(^b.(
+    If (And (IsNil a) (IsNil b))
+        Eq
+    (Let (^c.(
+        If (And (And (biIsEq c) (HeadOrFalse a)) (Not (HeadOrFalse b)))
+            Gt
+            (If (And (And (biIsEq c) (Not (HeadOrFalse a)) (HeadOrFalse b)))
+                Lt
+                c
+            )
+    )) (bCmp (TailOrNil a) (TailOrNil b)))))
+
+bEq = ^a.(^b.(bCmp a b True False False))
+bNeq = ^a.(^b.(bCmp a b False True True))
+bLt = ^a.(^b.(bCmp a b False True False))
+bGt = ^a.(^b.(bCmp a b False False True))
+bLeq = ^a.(^b.(bCmp a b True True False))
+bGeq = ^a.(^b.(bCmp a b True True False))
 
 bAdd = ^a.(^b.(biAdd a b False))
 bSub = ^a.(^b.(biSub a b False))
