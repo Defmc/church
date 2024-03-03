@@ -122,6 +122,28 @@ biMul = ^a.(^b.(^f.(
             (biMul a (TailOrNil b) (Comp f biShiftrOne))
     ))))
 
+# binary internal division
+# inputs:
+#   - b: divisor binary integer
+# ouputs: Pair
+#   - 0: binary integer quotient
+#   - 1: binary integer rest
+biOne = Cons True Nil
+biZero = Cons False Nil
+biDiv = ^a.(^b.(
+    If (bGeq a b)
+        (Let ^d.(
+            Let ^r.(
+                (If (bGeq r b)
+                    (Pair (bAdd (Fst d) biOne) (bSub r b))
+                    (Pair (Fst d) r)
+                )
+            ) (If (HeadOrFalse a) (bAdd (Snd d) biOne) (Snd d))
+        ) (MapPair biShiftrOne (biDiv (biShiftlOne a) b))
+        )
+        (Pair Nil a)
+    ))
+
 bMul = ^a.(^b.(biMul a b I))
 bAdd = ^a.(^b.(biAdd a b False))
 bSub = ^a.(^b.(biSub a b False))
