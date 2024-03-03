@@ -38,6 +38,7 @@ pub fn set(e: CmdEntry) {
             Ok(opt) => e.repl.rl.set_auto_add_history(opt),
             Err(err) => eprintln!("unknown value {:?}: {err:?}", e.inputs[1]),
         },
+        "visual_trace" => set_with(&mut e.repl.visual_trace, e.inputs[1]),
         _ => eprintln!("unknonwn option {:?}", e.inputs[0]),
     }
 }

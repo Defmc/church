@@ -6,6 +6,7 @@ use std::{io::Write, str::FromStr, time::Instant};
 pub enum Mode {
     Debug,
     Visual,
+    Trace,
     Bench,
     #[default]
     Normal,
@@ -13,7 +14,10 @@ pub enum Mode {
 
 impl Mode {
     pub fn should_show(&self) -> bool {
-        self == &Self::Visual || self == &Self::Debug
+        match self {
+            Self::Trace | Self::Visual | Self::Debug => true,
+            _ => false,
+        }
     }
 
     pub fn bench(&self, op: &str, f: impl FnOnce()) {
@@ -33,11 +37,15 @@ impl Mode {
         while l.beta_redex_step() {
             let elapsed_beta_time = start.elapsed();
             steps += 1;
-            println!("{}", repl.format_value(l));
-            println!(
-                "step {steps} | len: {} | time: {elapsed_beta_time:?}",
-                l.len()
-            );
+            if self != &Self::Trace || repl.visual_trace {
+                println!("{}", repl.format_value(l));
+            }
+            if self == &Self::Trace {
+                println!(
+                    "step {steps} | len: {} | time: {elapsed_beta_time:?}",
+                    l.len()
+                );
+            }
             if self == &Self::Debug {
                 loop {
                     print!("[step {steps}] (c)ontinue or (a)bort: ");
@@ -99,6 +107,7 @@ impl FromStr for Mode {
             "visual" => Ok(Self::Visual),
             "normal" => Ok(Self::Normal),
             "bench" => Ok(Self::Bench),
+            "trace" => Ok(Self::Trace),
             _ => Err(()),
         }
     }
