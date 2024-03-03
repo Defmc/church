@@ -1,5 +1,5 @@
-import "assets/list.ac"
-import "assets/combs.ac"
+import "assets/list.ac";
+import "assets/combs.ac";
 
 # Numbers should be build like lists of `True` and `False` with a `Nil` at the end
 # I.e, 10110 (or 22) == [True, False, True, True, False]

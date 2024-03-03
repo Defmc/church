@@ -1,4 +1,4 @@
-import "assets/combs.ac"
+import "assets/combs.ac";
 
 # Pairs: (x, y)
 Pair = ^x.(^y.(^z.(z x y)));

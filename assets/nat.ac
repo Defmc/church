@@ -1,6 +1,6 @@
-import "assets/combs.ac"
+import "assets/combs.ac";
 
-Succ = λn.(λf.(λx.(f (n f x)))) ;
+Succ = λn.(λf.(λx.(f (n f x))));
 Pred = λx.(λy.(λz.(((x (λp.(λq.(q (p y))))) (λy.(z))) ^x.(x))));
 Add = λm.(λn.(λf.(λx.(m f (n f x)))));
 Mult = λm.(λn.(λf.(m (n f))));
