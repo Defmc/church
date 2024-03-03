@@ -94,8 +94,24 @@ impl<'a> Dumper<'a> {
             Term::new(Body::Id(*id))
         } else if let Some(def) = self.scope.definitions.get(var) {
             def.clone()
+        } else if let Some(id) = Self::str_to_id(var) {
+            Term::new(Body::Id(id))
         } else {
             panic!("cannot find a definition for {var:?}");
+        }
+    }
+
+    pub fn str_to_id(s: &str) -> Option<VarId> {
+        let first = s.chars().next()?;
+        if !first.is_ascii_alphabetic()
+            || first.is_ascii_uppercase()
+            || s.chars().skip(1).filter(|&c| c == '\'').count() != s.len() - 1
+        {
+            None
+        } else {
+            let c = first as usize - 'a' as usize;
+            let offset = 26 * (s.len() - 1);
+            Some(c + offset)
         }
     }
 
