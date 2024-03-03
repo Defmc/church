@@ -82,9 +82,7 @@ impl Repl {
             println!("cci parser output: {cci_parser_out:?}",);
             let ubody = cci_parser_out.unwrap().into_ubody();
             let mut scope = cci::scope::Scope::default();
-            scope
-                .definitions
-                .insert("Russia".to_string(), Term::new(Body::Id(0)));
+            scope.include("Russia".to_string(), Term::new(Body::Id(0)));
             let mut dumper = cci::ubody::Dumper::new(&scope);
             println!("cci code dump: {}", dumper.dump(&ubody));
         }

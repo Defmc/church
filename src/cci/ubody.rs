@@ -75,7 +75,9 @@ impl<'a> Dumper<'a> {
     }
 
     pub fn is_var_used(&self, v: &str) -> bool {
-        self.renames.contains_key(v) || self.scope.definitions.contains_key(v)
+        self.renames.contains_key(v)
+            || self.scope.definitions.contains_key(v)
+            || self.scope.reserved_vars.contains(v)
     }
 }
 
