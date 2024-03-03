@@ -160,6 +160,9 @@ biPow = ^b.(^e.(
         )
     ))
 
+bPow = biPow
+bDiv = ^a.(^b.(Fst (biDiv a b)))
+bMod = ^a.(^b.(Snd (biDiv a b)))
 bMul = ^a.(^b.(biMul a b I))
 bAdd = ^a.(^b.(biAdd a b False))
 bSub = ^a.(^b.(biSub a b False))
