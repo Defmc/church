@@ -6,6 +6,7 @@ pub mod mode;
 pub mod runner;
 pub mod scope;
 pub mod ubody;
+pub mod ui;
 
 use ubody::UnprocessedBody;
 

@@ -1,11 +1,7 @@
 use church::{scope::Scope, Body, Term, VarId};
 use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
-use std::{
-    path::PathBuf,
-    str::FromStr,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use std::{path::PathBuf, str::FromStr, sync::atomic::Ordering};
 
 use crate::{cci::runner::Runner, repl::cmds::CmdEntry};
 
@@ -111,120 +107,12 @@ impl Repl {
         eprintln!("error: command {:?} not found", args[0]);
     }
 
-    pub fn natural_from_church_encoding(s: &Term) -> Option<usize> {
-        fn get_natural(f: VarId, x: VarId, s: &Term) -> Option<usize> {
-            if let Body::App(lhs, rhs) = s.body.as_ref() {
-                if *lhs.body == Body::Id(f) {
-                    return get_natural(f, x, rhs).map(|n| n + 1);
-                }
-            } else if let Body::Id(v) = s.body.as_ref() {
-                return (*v == x).then_some(0);
-            }
-
-            None
-        }
-
-        if let Body::Abs(f, l) = s.body.as_ref() {
-            if let Body::Abs(x, l) = l.body.as_ref() {
-                return get_natural(*f, *x, l);
-            }
-            if *l.body == Body::Id(*f) {
-                // λf.(λx.(f x))
-                // λf.(f) # eta-reduced version of 1
-                return Some(1);
-            }
-        }
-        None
+    pub fn print(&self, t: &Term) {
+        self.runner.ui.print(&self.runner.scope, t);
     }
 
-    pub fn print_value(&self, b: &Term) {
-        println!("{}", self.format_value(b));
-    }
-
-    pub fn format_value(&self, b: &Term) -> String {
-        if self.readable {
-            if let Some(alias) = self.scope.get_from_alpha_key(b) {
-                return alias.to_string();
-            }
-            if !self.binary_numbers {
-                if let Some(n) = Self::natural_from_church_encoding(b) {
-                    return n.to_string();
-                }
-            }
-            if let Some(v) = Self::from_list(b) {
-                if self.binary_numbers {
-                    if let Some(bin_n) = Self::from_binary_number(&v) {
-                        return format!("{bin_n}");
-                    }
-                }
-                return format!(
-                    "[{}]",
-                    v.into_iter()
-                        .map(|s| self.format_value(&s))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                );
-            }
-            return match b.body.as_ref() {
-                Body::Id(id) => church::id_to_str(*id),
-                Body::App(ref f, ref x) => format!(
-                    "{} {}",
-                    self.format_value(f),
-                    if usize::from(x.len()) > 1 {
-                        format!("({})", self.format_value(x))
-                    } else {
-                        self.format_value(x)
-                    }
-                ),
-                Body::Abs(v, l) => format!("λ{}.({})", church::id_to_str(*v), self.format_value(l)),
-            };
-        }
-        format!("{b}")
-    }
-
-    pub fn from_list(b: &Term) -> Option<Vec<Term>> {
-        if let Body::Abs(wrapper, b) = b.body.as_ref() {
-            if let Body::App(b, rhs) = b.body.as_ref() {
-                if let Body::App(wrap, lhs) = b.body.as_ref() {
-                    if &Body::Id(*wrapper) == wrap.body.as_ref() {
-                        let mut v = vec![lhs.clone()];
-                        if let Some(tail) = Self::from_list(rhs) {
-                            v.extend(tail);
-                        } else {
-                            v.push(rhs.clone());
-                        }
-                        return Some(v);
-                    }
-                }
-            }
-        }
-        None
-    }
-
-    pub fn from_binary_number(list: &[Term]) -> Option<u128> {
-        let one = Term::from_str("^a.(^b.(a))").unwrap();
-        let zero = Term::from_str("^a.(^b.(b))").unwrap();
-        if list.first()?.alpha_eq(&one) {
-            let buf = Self::from_binary_number(&list[1..]).unwrap_or(0) << 1;
-            Some(1 + buf)
-        } else if list.first()?.alpha_eq(&zero) {
-            let buf = Self::from_binary_number(&list[1..]).unwrap_or(0) << 1;
-            Some(buf)
-        } else {
-            None
-        }
-    }
-
-    pub fn print_closed(expr: &Term) {
-        println!("{expr}: {} ({:?})", expr.closed, expr.free_variables());
-        match expr.body.as_ref() {
-            Body::Id(..) => (),
-            Body::App(ref lhs, ref rhs) => {
-                Self::print_closed(lhs);
-                Self::print_closed(rhs);
-            }
-            Body::Abs(_, ref abs) => Self::print_closed(abs),
-        }
+    pub fn format_value(&self, t: &Term) -> String {
+        self.runner.ui.format_value(&self.runner.scope, t)
     }
 
     pub fn spawn(tasks: &[&str]) {

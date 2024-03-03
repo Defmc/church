@@ -36,7 +36,8 @@ pub fn alpha(mut e: CmdEntry) {
 pub fn closed(mut e: CmdEntry) {
     match e.into_expr() {
         Ok(expr) => {
-            Repl::print_closed(&expr);
+            // Repl::print_closed(&expr);
+            todo!()
         }
         Err(e) => eprintln!("error: {e:?}"),
     }
@@ -47,7 +48,7 @@ pub fn debrejin(mut e: CmdEntry) {
         Ok(l) => {
             println!("{}", l.clone().debrejin_reduced());
             e.repl.runner.mode.bench("printing", || {
-                e.repl.print_value(&l);
+                e.repl.print(&l);
             });
         }
         Err(e) => {
@@ -91,10 +92,7 @@ pub fn straight(mut e: CmdEntry) {
             e.repl.runner.mode.bench("beta straight reducing", || {
                 l.straight_redex();
             });
-            e.repl
-                .runner
-                .mode
-                .bench("printing", || e.repl.print_value(&l))
+            e.repl.runner.mode.bench("printing", || e.repl.print(&l))
         }
         Err(e) => {
             eprintln!("error: {e:?}");

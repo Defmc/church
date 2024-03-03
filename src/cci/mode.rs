@@ -6,7 +6,7 @@ use std::{
     time::Instant,
 };
 
-use super::{runner::Runner, scope::Scope};
+use super::{scope::Scope, ui::Ui};
 pub static INTERRUPT: AtomicBool = AtomicBool::new(false);
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -36,7 +36,7 @@ impl Mode {
         };
     }
 
-    pub fn run(&self, scope: &Scope, mut expr: Term) {
+    pub fn run(&self, ui: &Ui, scope: &Scope, mut expr: Term) {
         let mut steps = 0;
         let mut start = Instant::now();
         expr.update_closed();
@@ -44,7 +44,7 @@ impl Mode {
             let elapsed_beta_time = start.elapsed();
             steps += 1;
             if self.should_show() {
-                scope.print(&expr);
+                ui.print(scope, &expr);
             }
             if self == &Self::Trace {
                 println!(
@@ -59,7 +59,7 @@ impl Mode {
         }
         let _ = INTERRUPT.compare_exchange(true, false, Ordering::Acquire, Ordering::Relaxed);
         if !self.should_show() {
-            scope.print(&expr);
+            ui.print(scope, &expr);
         }
     }
 

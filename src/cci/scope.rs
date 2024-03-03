@@ -31,8 +31,4 @@ impl Scope {
         let mut dumper = Dumper::new(self);
         dumper.dump(u)
     }
-
-    pub fn print(&self, t: &Term) {
-        todo!()
-    }
 }

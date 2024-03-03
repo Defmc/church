@@ -1,13 +1,12 @@
-use std::time::Instant;
-
 use church::Term;
 
-use super::{mode::Mode, scope::Scope, ubody::Dumper, Ast};
+use super::{mode::Mode, scope::Scope, ubody::Dumper, ui::Ui, Ast};
 
 #[derive(Debug, Default)]
 pub struct Runner {
     pub scope: Scope,
     pub mode: Mode,
+    pub ui: Ui,
 }
 
 #[derive(Debug, Clone)]
@@ -29,7 +28,7 @@ impl Runner {
                 }
                 Ast::Expr(expr) => {
                     let expr = self.scope.delta_redex(expr.as_ref());
-                    self.mode.run(&self.scope, expr);
+                    self.mode.run(&self.ui, &self.scope, expr);
                 }
                 _ => unreachable!(),
             }
