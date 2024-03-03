@@ -34,9 +34,12 @@ impl Mode {
     }
 
     pub fn run(&self, ui: &Ui, scope: &Scope, mut expr: Term) {
+        expr.update_closed();
+        if self.should_show() {
+            println!("{expr}");
+        }
         let mut steps = 0;
         let mut start = Instant::now();
-        expr.update_closed();
         while expr.beta_redex_step() && !INTERRUPT.load(Ordering::Acquire) {
             let elapsed_beta_time = start.elapsed();
             steps += 1;
