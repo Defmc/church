@@ -85,10 +85,16 @@ pub fn try_lexer(src: &str) -> Result<impl Iterator<Item = Gramem> + '_, lrp::Er
             }
             Ok(_) => Ast::Token(t.unwrap()),
             Err(_) => {
+                println!(
+                    "[try_lexer] error: unexpected token {:?} ({}..{})\n[try_lexer] source: {src:?}",
+                    &src[s.start..s.end],
+                    s.start,
+                    s.end
+                );
                 return Err(lrp::Error::UnexpectedToken(
                     Sym::Unknown((s.start, s.end)),
                     vec![],
-                ))
+                ));
             }
         };
         v.push(Token::new(Meta::new(ast, s.into()), t.unwrap()))
