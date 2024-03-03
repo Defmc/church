@@ -1,8 +1,6 @@
 :load assets/list.ac
 :load assets/combs.ac
 
-Let = ^a.(^b.(a b))
-
 # Numbers should be build like lists of `True` and `False` with a `Nil` at the end
 # I.e, 10110 (or 22) == [True, False, True, True, False]
 # But, they will be implemented in big endianness (aka from left to right instead of right to left)
@@ -55,7 +53,7 @@ biSub = ^a.(^b.(^c.(
         )
     )))
 
-biShiftrOne = Cons False
+biShiftrOne = ^a.(Cons False a)
 biShiftlOne = TailOrNil
 
 biIsZero = All Not
@@ -147,17 +145,11 @@ biMul = ^a.(^b.(^f.(
 biOne = Cons True Nil
 biZero = Cons False Nil
 biDiv = ^a.(^b.(
-    If (bGeq a b)
-        (Let ^d.(
-            Let ^r.(
-                (If (bGeq r b)
-                    (Pair (bAdd (Fst d) biOne) (bSub r b))
-                    (Pair (Fst d) r)
-                )
-            ) (If (HeadOrFalse a) (bAdd (Snd d) biOne) (Snd d))
-        ) (MapPair biShiftrOne (biDiv (biShiftlOne a) b))
-        )
-        (Pair Nil a)
+        (If (bGeq a b))
+            (^d.(Pair (bAdd (Fst d) biOne) (bSub a b))
+                (biDiv (bSub a b) b)
+            )
+            (Pair Nil a)
     ))
 
 bIsOdd = HeadOrFalse
