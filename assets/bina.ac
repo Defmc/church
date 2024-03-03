@@ -50,10 +50,8 @@ biSub = ^a.(^b.(^c.(
 Eq = ^a.(^b.(^c.(a)))
 Lt = ^a.(^b.(^c.(b)))
 Gt = ^a.(^b.(^c.(c)))
-biIsEq = True False False
-biIsLt = False True False
-biIsGt = False False True
 
+biIsEq = ^c.(c True False False)
 bCmp = ^a.(^b.(
     If (And (IsNil a) (IsNil b))
         Eq
