@@ -10,7 +10,8 @@ alias ")" Sym::CloseParen;
 alias "=" Sym::Let;
 alias Ident Sym::Var;
 
-EntryPoint: Ast = App:&e -> { Ast::Expr(e.item.item.as_expr().clone()) }%;
+EntryPoint: Ast = ProgramAtom:&e -> { e.item.item }%;
+
 Let: Ast = Ident:&i "=" App:&a -> { Ast::Let(i.item.item.into_var(), a.item.item.into_expr()) }%;
 
 ProgramAtom: Ast = App:&e -> { e.item.item }%
@@ -28,8 +29,8 @@ Program: Ast = Program:p ProgramAtom:&a -> {
 
 Lambda: Ast = "^" Ident:&i "." "(" App:&a ")" -> { Ast::Expr(UnprocessedBody::Abs(i.item.item.into_var(), a.item.item.into_boxed_expr())) }%;
 App: Ast = App:&a Expr:&e -> { Ast::Expr(UnprocessedBody::App(a.item.item.into_boxed_expr(), e.item.item.into_boxed_expr())) }%
-            | Expr:&e -> { Ast::Expr(e.item.item.as_expr().clone()) }%;
+            | Expr:&e -> { Ast::Expr(e.item.item.into_expr()) }%;
 
-Expr: Ast = "(" App:&e ")" -> { Ast::Expr(e.item.item.as_expr().clone()) }% 
-                   | Lambda:&l -> { Ast::Expr(l.item.item.as_expr().clone()) }%
+Expr: Ast = "(" App:&e ")" -> { Ast::Expr(e.item.item.into_expr()) }% 
+                   | Lambda:&l -> { Ast::Expr(l.item.item.into_expr()) }%
                    | Ident:&i -> { Ast::Expr(UnprocessedBody::Var(i.item.item.into_var())) }%;
