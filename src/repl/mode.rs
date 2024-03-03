@@ -31,9 +31,9 @@ impl Mode {
         let mut start = Instant::now();
         l.update_closed();
         while l.beta_redex_step() {
-            println!("{}", repl.format_value(l));
             let elapsed_beta_time = start.elapsed();
             steps += 1;
+            println!("{}", repl.format_value(l));
             println!(
                 "step {steps} | len: {} | time: {elapsed_beta_time:?}",
                 l.len()
