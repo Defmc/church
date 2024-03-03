@@ -1,5 +1,5 @@
 use super::CmdEntry;
-use church::{straight::StraightRedex, Body};
+use church::{straight::StraightRedex, Body, Term};
 
 pub fn delta(mut e: CmdEntry) {
     match e.into_expr() {
@@ -32,10 +32,26 @@ pub fn alpha(mut e: CmdEntry) {
 }
 
 pub fn closed(mut e: CmdEntry) {
+    fn print_closed(e: &CmdEntry, t: &Term, lvl: usize) {
+        println!(
+            "{}{}: {}",
+            "  ".repeat(lvl),
+            e.repl.format_value(t),
+            t.closed
+        );
+        match t.body.as_ref() {
+            Body::Id(..) => (),
+            Body::App(lhs, rhs) => {
+                print_closed(e, lhs, lvl + 1);
+                print_closed(e, rhs, lvl + 1);
+            }
+            Body::Abs(_, l) => print_closed(e, l, lvl + 1),
+        }
+    }
+
     match e.into_expr() {
-        Ok(_) => {
-            // Repl::print_closed(&expr);
-            todo!()
+        Ok(expr) => {
+            print_closed(&e, &expr, 0);
         }
         Err(e) => eprintln!("error: {e:?}"),
     }
