@@ -144,3 +144,13 @@ updated
 )
 ```
 - Renomeou `P` para `b` em `Pair` e ficou `bair`. Ele não reconhece nomes se forem menores, justamente o que está ocorrendo em `MapPair` em `biDiv` da `bina`.
+
+# Capture-avoiding system not working (fixed)
+```
+λ> Succ 2
+Succ (2)
+λb.(λc.(b (2 b c)))
+λb.(λc.(b (λb.(b (b b)) c)))
+λb.(λc.(b (c (c c))))
+```
+- [x] Check definition of `Term::set_closeds`
