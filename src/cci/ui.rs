@@ -4,8 +4,8 @@ use super::scope::Scope;
 
 #[derive(Debug, Clone)]
 pub struct Ui {
-    readable: bool,
-    bina_ext: bool,
+    pub readable: bool,
+    pub bina_ext: bool,
 }
 
 impl Default for Ui {
@@ -49,46 +49,46 @@ impl Ui {
     }
 
     pub fn format_value(&self, s: &Scope, t: &Term) -> String {
-        if self.readable {
-            if let Some(alias) = s.get_like(t) {
-                return alias.to_string();
-            }
-            if !self.bina_ext {
-                if let Some(n) = Self::natural_from_church_encoding(t) {
-                    return n.to_string();
-                }
-            }
-            if let Some(v) = Self::from_list(t) {
-                if self.bina_ext {
-                    if let Some(bin_n) = Self::from_binary_number(&v) {
-                        return format!("{bin_n}");
-                    }
-                }
-                return format!(
-                    "[{}]",
-                    v.into_iter()
-                        .map(|e| self.format_value(s, &e))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                );
-            }
-            return match t.body.as_ref() {
-                Body::Id(id) => church::id_to_str(*id),
-                Body::App(ref f, ref x) => format!(
-                    "{} {}",
-                    self.format_value(s, f),
-                    if usize::from(x.len()) > 1 {
-                        format!("({})", self.format_value(s, x))
-                    } else {
-                        self.format_value(s, x)
-                    }
-                ),
-                Body::Abs(v, l) => {
-                    format!("λ{}.({})", church::id_to_str(*v), self.format_value(s, l))
-                }
-            };
+        if !self.readable {
+            return format!("{t}");
         }
-        format!("{t}")
+        if let Some(alias) = s.get_like(t) {
+            return alias.to_string();
+        }
+        if !self.bina_ext {
+            if let Some(n) = Self::natural_from_church_encoding(t) {
+                return n.to_string();
+            }
+        }
+        if let Some(v) = Self::from_list(t) {
+            if self.bina_ext {
+                if let Some(bin_n) = Self::from_binary_number(&v) {
+                    return format!("{bin_n}");
+                }
+            }
+            return format!(
+                "[{}]",
+                v.into_iter()
+                    .map(|e| self.format_value(s, &e))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+        }
+        return match t.body.as_ref() {
+            Body::Id(id) => church::id_to_str(*id),
+            Body::App(ref f, ref x) => format!(
+                "{} {}",
+                self.format_value(s, f),
+                if usize::from(x.len()) > 1 {
+                    format!("({})", self.format_value(s, x))
+                } else {
+                    self.format_value(s, x)
+                }
+            ),
+            Body::Abs(v, l) => {
+                format!("λ{}.({})", church::id_to_str(*v), self.format_value(s, l))
+            }
+        };
     }
 
     pub fn from_list(b: &Term) -> Option<Vec<Term>> {

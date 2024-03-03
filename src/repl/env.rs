@@ -27,7 +27,7 @@ pub fn set(e: CmdEntry) {
         _ => (),
     };
     match e.inputs[0] {
-        "readable" => set_with(&mut e.repl.readable, e.inputs[1]),
+        "readable" => set_with(&mut e.repl.runner.ui.readable, e.inputs[1]),
         "binary_numbers" => set_with(&mut e.repl.binary_numbers, e.inputs[1]),
         "prompt" => match Arg::format(e.inputs[1]) {
             Some(v) => set_with(&mut e.repl.prompt, &v),
