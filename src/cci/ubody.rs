@@ -1,7 +1,83 @@
-use crate::{Body, Term, VarId};
+use crate::{id_to_str, Body, Term, VarId};
 use core::fmt;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::num::NonZeroUsize;
+
+use super::scope::Scope;
+
+pub struct Dumper<'a> {
+    scope: &'a Scope,
+    renames: HashMap<String, VarId>,
+    last_var_id: VarId,
+}
+
+impl<'a> Dumper<'a> {
+    pub fn new(scope: &'a Scope) -> Self {
+        Self {
+            scope,
+            renames: HashMap::default(),
+            last_var_id: 0,
+        }
+    }
+
+    pub fn dump(&mut self, expr: &UnprocessedBody) -> Term {
+        let mut used_vars = HashSet::default();
+        expr.get_used_vars(&mut used_vars);
+        self.dump_with(expr)
+    }
+
+    pub fn dump_with(&mut self, expr: &UnprocessedBody) -> Term {
+        match expr {
+            UnprocessedBody::Var(v) => self.handle_vars(v),
+            UnprocessedBody::App(lhs, rhs) => {
+                self.dump_with(lhs);
+                self.dump_with(rhs)
+            }
+            UnprocessedBody::Abs(v, l) => {
+                let (var_id, body) = self.do_binding(v, |s| s.dump_with(l));
+                Term::new(Body::Abs(var_id, body))
+            }
+        }
+    }
+
+    pub fn do_binding<T>(&mut self, v: &str, f: impl FnOnce(&mut Self) -> T) -> (usize, T) {
+        let old_rename_val = self.renames.get(v).cloned();
+        let old_last_var_id = self.last_var_id;
+        let var_id = self.get_next_free_name();
+        self.renames.insert(v.to_string(), var_id);
+        let f_ret = f(self);
+        self.last_var_id = old_last_var_id;
+        if let Some(rename_val) = old_rename_val {
+            *self.renames.get_mut(v).unwrap() = rename_val;
+        } else {
+            self.renames.remove(v);
+        }
+        (var_id, f_ret)
+    }
+
+    pub fn handle_vars(&mut self, var: &str) -> Term {
+        if let Some(id) = self.renames.get(var) {
+            Term::new(Body::Id(*id))
+        } else if let Some(def) = self.scope.definitions.get(var) {
+            def.clone()
+        } else {
+            panic!("cannot find a definition for {var:?}");
+        }
+    }
+
+    pub fn get_next_free_name(&mut self) -> VarId {
+        let var_id = (self.last_var_id..)
+            .filter(|&i| !self.is_var_used(&id_to_str(i)))
+            .next()
+            .unwrap();
+        self.last_var_id = var_id + 1;
+        var_id
+    }
+
+    pub fn is_var_used(&self, v: &str) -> bool {
+        self.renames.contains_key(v) || self.scope.definitions.contains_key(v)
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum UnprocessedBody {
@@ -11,33 +87,9 @@ pub enum UnprocessedBody {
 }
 
 impl UnprocessedBody {
-    pub fn dump(&self) -> Term {
-        let mut set = HashSet::default();
-        self.get_used_vars(&mut set);
-
-        let renames: HashMap<String, VarId> = set
-            .iter()
-            .cloned()
-            .zip(Self::get_free_names(&set))
-            .collect();
-        self.dump_with(&renames)
-    }
-
-    pub fn dump_with(&self, map: &HashMap<String, VarId>) -> Term {
-        match self {
-            Self::Var(s) => Term::new(Body::Id(map[s])),
-            Self::App(lhs, rhs) => Term::new(Body::App(lhs.dump_with(map), rhs.dump_with(map))),
-            Self::Abs(arg, fun) => Term::new(Body::Abs(map[arg], fun.dump_with(map))),
-        }
-    }
-
     pub fn get_used_vars(&self, set: &mut HashSet<String>) {
         match self {
-            Self::Var(s) => {
-                if !set.contains(s) {
-                    set.insert(s.clone());
-                }
-            }
+            Self::Var(_) => {}
             Self::Abs(arg, fun) => {
                 if !set.contains(arg) {
                     set.insert(arg.clone());
@@ -49,10 +101,6 @@ impl UnprocessedBody {
                 rhs.get_used_vars(set);
             }
         }
-    }
-
-    pub fn get_free_names(used_names: &HashSet<String>) -> impl Iterator<Item = VarId> + '_ {
-        (0..).filter(|&i| !used_names.contains(&crate::id_to_str(i)))
     }
 
     #[must_use]

@@ -1,8 +1,9 @@
-pub mod ubody;
 use lalrpop_util::lalrpop_mod;
 use std::sync::OnceLock;
 
 lalrpop_mod!(pub parser);
+pub mod scope;
+pub mod ubody;
 
 use ubody::UnprocessedBody;
 

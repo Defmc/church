@@ -76,6 +76,18 @@ impl Repl {
 
     pub fn parse(&mut self, input: &str) {
         let input = input.trim();
+        {
+            use church::cci;
+            let cci_parser_out = cci::parser::ProgramParser::new().parse(input);
+            println!("cci parser output: {cci_parser_out:?}",);
+            let ubody = cci_parser_out.unwrap().into_ubody();
+            let mut scope = cci::scope::Scope::default();
+            scope
+                .definitions
+                .insert("Russia".to_string(), Term::new(Body::Id(0)));
+            let mut dumper = cci::ubody::Dumper::new(&scope);
+            println!("cci code dump: {}", dumper.dump(&ubody));
+        }
         if input.starts_with(':') {
             let args: Vec<_> = parser::Arg::parse(&input).collect();
             self.handle(&args);
