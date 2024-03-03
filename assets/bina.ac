@@ -46,6 +46,23 @@ biSub = ^a.(^b.(^c.(
         )
     )))
 
+biShiftrOne = ^l.(Cons False l)
+biShiftlOne = TailOrNil
+
+biIsZero = All ^c.(Not c)
+
+bShiftr = ^l.(^n.(
+    If (biIsZero l)
+        l
+        (Cons False (bShiftr l (bSub n True)))
+    ))
+
+bShiftl = ^l.(^n.(
+    If (biIsZero l)
+        l
+        (TailOrNil (bShiftl l (bSub n True)))
+    ))
+
 # Cmp = Eq | Lt | Gt
 Eq = ^a.(^b.(^c.(a)))
 Lt = ^a.(^b.(^c.(b)))
