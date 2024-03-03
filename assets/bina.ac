@@ -52,23 +52,47 @@ Lt = ^a.(^b.(^c.(b)))
 Gt = ^a.(^b.(^c.(c)))
 
 biIsEq = ^c.(c True False False)
+# {} cmp {} == Eq
+# True, ... cmp False, ... == Gt
+# False, ... cmp True, ... == Lt
+# otherwise cmp ... ...
 bCmp = ^a.(^b.(
     If (And (IsNil a) (IsNil b))
-        Eq
-    (Let (^c.(
-        If (And (And (biIsEq c) (HeadOrFalse a)) (Not (HeadOrFalse b)))
-            Gt
-            (If (And (And (biIsEq c) (Not (HeadOrFalse a)) (HeadOrFalse b)))
-                Lt
-                c
+        (Eq)
+        (If (And
+            (And
+                (biIsEq (bCmp (TailOrNil a) (TailOrNil b)))
+                (HeadOrFalse a)
             )
-    )) (bCmp (TailOrNil a) (TailOrNil b)))))
+            (Not (HeadOrFalse b)))
+            Gt
+            (If (And
+                (And
+                    (biIsEq (bCmp (TailOrNil a) (TailOrNil b)))
+                    (HeadOrFalse b)
+                )
+                (Not (HeadOrFalse a)))
+                Lt
+                (bCmp (TailOrNil a) (TailOrNil b))
+    ))))
 
+
+# ==
 bEq = ^a.(^b.(bCmp a b True False False))
+
+# !=
 bNeq = ^a.(^b.(bCmp a b False True True))
+
+# <
 bLt = ^a.(^b.(bCmp a b False True False))
+
+# >
 bGt = ^a.(^b.(bCmp a b False False True))
+
+# <=
 bLeq = ^a.(^b.(bCmp a b True True False))
+
+# >=
 bGeq = ^a.(^b.(bCmp a b True True False))
 
 bAdd = ^a.(^b.(biAdd a b False))
