@@ -1,11 +1,19 @@
-use super::Repl;
 use church::Term;
-use std::{io::Write, str::FromStr, sync::atomic::Ordering, time::Instant};
+use std::{
+    io::Write,
+    str::FromStr,
+    sync::atomic::{AtomicBool, Ordering},
+    time::Instant,
+};
+
+use super::{runner::Runner, scope::Scope};
+pub static INTERRUPT: AtomicBool = AtomicBool::new(false);
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Mode {
     Debug,
     Visual,
+    VisualTrace,
     Trace,
     Bench,
     #[default]
@@ -13,10 +21,9 @@ pub enum Mode {
 }
 
 impl Mode {
-    pub fn should_show(&self, repl: &Repl) -> bool {
+    pub fn should_show(&self) -> bool {
         match self {
-            Self::Visual | Self::Debug => true,
-            Self::Trace => repl.visual_trace,
+            Self::Visual | Self::Debug | Self::VisualTrace => true,
             _ => false,
         }
     }
@@ -29,25 +36,15 @@ impl Mode {
         };
     }
 
-    pub fn run(&self, repl: &mut Repl, mut l: String) {
-        self.bench("delta redex", || {
-            l = repl.scope.delta_redex(&l).0;
-        });
-        let mut expr = match Term::try_from_str(&l) {
-            Ok(e) => e,
-            Err(e) => {
-                eprintln!("error: {e:?}");
-                return;
-            }
-        };
+    pub fn run(&self, scope: &Scope, mut expr: Term) {
         let mut steps = 0;
         let mut start = Instant::now();
         expr.update_closed();
-        while expr.beta_redex_step() && !super::INTERRUPT.load(Ordering::Acquire) {
+        while expr.beta_redex_step() && !INTERRUPT.load(Ordering::Acquire) {
             let elapsed_beta_time = start.elapsed();
             steps += 1;
-            if self.should_show(repl) {
-                println!("{}", repl.format_value(&expr));
+            if self.should_show() {
+                scope.print(&expr);
             }
             if self == &Self::Trace {
                 println!(
@@ -60,10 +57,9 @@ impl Mode {
             }
             start = Instant::now();
         }
-        let _ =
-            super::INTERRUPT.compare_exchange(true, false, Ordering::Acquire, Ordering::Relaxed);
-        if !self.should_show(repl) {
-            println!("{}", repl.format_value(&expr));
+        let _ = INTERRUPT.compare_exchange(true, false, Ordering::Acquire, Ordering::Relaxed);
+        if !self.should_show() {
+            scope.print(&expr);
         }
     }
 
@@ -90,6 +86,7 @@ impl FromStr for Mode {
         match s {
             "debug" => Ok(Self::Debug),
             "visual" => Ok(Self::Visual),
+            "visualtrace" => Ok(Self::VisualTrace),
             "normal" => Ok(Self::Normal),
             "bench" => Ok(Self::Bench),
             "trace" => Ok(Self::Trace),

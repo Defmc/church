@@ -1,13 +1,19 @@
-use super::{scope::Scope, ubody::Dumper, Ast};
+use std::time::Instant;
+
+use church::Term;
+
+use super::{mode::Mode, scope::Scope, ubody::Dumper, Ast};
 
 #[derive(Debug, Default)]
 pub struct Runner {
     pub scope: Scope,
+    pub mode: Mode,
 }
 
 #[derive(Debug, Clone)]
 pub enum Error {
     CantParse,
+    InvalidExpr,
 }
 
 impl Runner {
@@ -15,7 +21,6 @@ impl Runner {
         let parsed = super::get_global_parser()
             .parse(s)
             .map_err(|_| Error::CantParse)?;
-        println!("parsed: {parsed:?}");
         let program = parsed.into_program();
         for inst in program {
             match *inst {
@@ -23,16 +28,33 @@ impl Runner {
                     self.scope.include_from_ubody(&def, imp.as_ref());
                 }
                 Ast::Expr(expr) => {
-                    let mut dumper = Dumper::new(&self.scope);
-                    let mut term = dumper.dump(&expr);
-                    println!("dump: {term}");
-                    term.beta_redex();
-                    println!("reduced: {term}");
-                    println!("similar: {:?}", self.scope.get_like(&term));
+                    let expr = self.scope.delta_redex(expr.as_ref());
+                    self.mode.run(&self.scope, expr);
                 }
                 _ => unreachable!(),
             }
         }
         Ok(())
+    }
+
+    pub fn get_term_from_str(&self, s: &str) -> Result<Term, Error> {
+        let parsed = super::get_global_parser()
+            .parse(s)
+            .map_err(|_| Error::CantParse)?;
+        let program = parsed.into_program();
+        for inst in program {
+            match *inst {
+                Ast::LetExpr(..) => {
+                    unreachable!()
+                }
+                Ast::Expr(expr) => {
+                    let mut dumper = Dumper::new(&self.scope);
+                    let term = dumper.dump(&expr);
+                    return Ok(term);
+                }
+                _ => unreachable!(),
+            }
+        }
+        Err(Error::InvalidExpr)
     }
 }

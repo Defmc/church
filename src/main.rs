@@ -1,6 +1,8 @@
 #[cfg(feature = "repl")]
 pub mod repl;
 
+pub mod cci;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     repl()?;
     Ok(())

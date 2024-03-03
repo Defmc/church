@@ -13,9 +13,6 @@ pub mod parser;
 /// Delta Reductions
 pub mod scope;
 
-/// Church's code interface
-pub mod cci;
-
 /// Striaghtforward beta reduction
 pub mod straight;
 

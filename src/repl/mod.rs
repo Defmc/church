@@ -1,4 +1,4 @@
-use church::{cci::runner::Runner, scope::Scope, Body, Term, VarId};
+use church::{scope::Scope, Body, Term, VarId};
 use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
 use std::{
@@ -7,19 +7,15 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use crate::repl::cmds::CmdEntry;
-
-use self::mode::Mode;
+use crate::{cci::runner::Runner, repl::cmds::CmdEntry};
 
 pub mod cmds;
 pub mod env;
 pub mod io;
-pub mod mode;
 pub mod parser;
 pub mod proc;
 
 pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
-pub static INTERRUPT: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug)]
 pub struct Repl {
@@ -28,8 +24,6 @@ pub struct Repl {
     prompt: String,
     readable: bool,
     binary_numbers: bool,
-    visual_trace: bool,
-    mode: Mode,
     quit: bool,
     rl: DefaultEditor,
     runner: Runner,
@@ -45,8 +39,6 @@ impl Default for Repl {
             loaded_files: HashSet::default(),
             readable: true,
             binary_numbers: false,
-            mode: Mode::default(),
-            visual_trace: false,
             quit: false,
             prompt: String::from("λ> "),
             rl,
@@ -57,7 +49,9 @@ impl Default for Repl {
 
 impl Repl {
     pub fn start(&mut self) -> Result {
-        if let Err(e) = ctrlc::set_handler(|| INTERRUPT.store(true, Ordering::SeqCst)) {
+        if let Err(e) =
+            ctrlc::set_handler(|| crate::cci::mode::INTERRUPT.store(true, Ordering::SeqCst))
+        {
             eprintln!("error: {e:?}");
         }
         while !self.quit {
@@ -78,22 +72,13 @@ impl Repl {
 
     pub fn parse(&mut self, input: &str) {
         let input = input.trim();
-        assert!(self.runner.run(input).is_ok());
         if input.starts_with(':') {
             let args: Vec<_> = parser::Arg::parse(&input).collect();
             self.handle(&args);
-        } else if input.contains('=') {
-            self.alias(input);
-        } else if !input.is_empty() && !input.starts_with('#') {
-            self.run(input);
+        } else {
+            self.runner.run(input);
         }
     }
-
-    pub fn run(&mut self, input: &str) {
-        let mode = self.mode;
-        mode.bench("total", || mode.run(self, input.to_string()));
-    }
-
     pub fn alias(&mut self, input: &str) {
         match Scope::from_str(input) {
             Ok(nscope) => self.scope.extend(nscope),
@@ -104,7 +89,7 @@ impl Repl {
     pub fn handle(&mut self, args: &[&str]) {
         for hs in cmds::COMMANDS.iter() {
             if args[0][1..] == *hs.name {
-                let mode = self.mode;
+                let mode = self.runner.mode;
                 let entry = CmdEntry {
                     inputs: args
                         .iter()

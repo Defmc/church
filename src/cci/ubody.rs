@@ -1,4 +1,4 @@
-use crate::{id_to_str, Body, Term, VarId};
+use church::{id_to_str, Body, Term, VarId};
 use core::fmt;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::num::NonZeroUsize;

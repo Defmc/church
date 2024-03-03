@@ -2,6 +2,7 @@ use lalrpop_util::lalrpop_mod;
 use std::sync::OnceLock;
 
 lalrpop_mod!(pub parser);
+pub mod mode;
 pub mod runner;
 pub mod scope;
 pub mod ubody;

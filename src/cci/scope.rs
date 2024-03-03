@@ -1,6 +1,5 @@
+use church::Term;
 use rustc_hash::FxHashMap as HashMap;
-
-use crate::Term;
 
 use super::ubody::{Dumper, UnprocessedBody};
 
@@ -26,5 +25,14 @@ impl Scope {
         self.alias
             .get(&t.clone().debrejin_reduced())
             .map(|s| s.as_str())
+    }
+
+    pub fn delta_redex(&self, u: &UnprocessedBody) -> Term {
+        let mut dumper = Dumper::new(self);
+        dumper.dump(u)
+    }
+
+    pub fn print(&self, t: &Term) {
+        todo!()
     }
 }

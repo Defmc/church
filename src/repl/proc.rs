@@ -46,7 +46,7 @@ pub fn debrejin(mut e: CmdEntry) {
     match e.into_expr() {
         Ok(l) => {
             println!("{}", l.clone().debrejin_reduced());
-            e.repl.mode.bench("printing", || {
+            e.repl.runner.mode.bench("printing", || {
                 e.repl.print_value(&l);
             });
         }
@@ -58,6 +58,7 @@ pub fn debrejin(mut e: CmdEntry) {
 
 pub fn fix_point(e: CmdEntry) {
     e.repl
+        .runner
         .mode
         .bench("fix point", || match Scope::from_str(&e.inputs.join(" ")) {
             Ok(s) => {
@@ -73,7 +74,7 @@ pub fn fix_point(e: CmdEntry) {
 pub fn len(mut e: CmdEntry) {
     match e.into_expr() {
         Ok(l) => {
-            e.repl.mode.bench("printing", || {
+            e.repl.runner.mode.bench("printing", || {
                 println!("{}", l.len());
             });
         }
@@ -87,10 +88,13 @@ pub fn straight(mut e: CmdEntry) {
     match e.into_expr() {
         Ok(l) => {
             let mut l = l.clone();
-            e.repl.mode.bench("beta straight reducing", || {
+            e.repl.runner.mode.bench("beta straight reducing", || {
                 l.straight_redex();
             });
-            e.repl.mode.bench("printing", || e.repl.print_value(&l))
+            e.repl
+                .runner
+                .mode
+                .bench("printing", || e.repl.print_value(&l))
         }
         Err(e) => {
             eprintln!("error: {e:?}");
