@@ -13,6 +13,9 @@ pub mod parser;
 /// Delta Reductions
 pub mod scope;
 
+/// Church's code interface
+pub mod cci;
+
 /// Striaghtforward beta reduction
 pub mod straight;
 
@@ -394,7 +397,8 @@ impl Term {
                 }
             }
             Body::Abs(..) => {
-                self.eta_redex_step() || self.as_mut_abs().unwrap().1.beta_redex_step()
+                /*self.eta_redex_step() || */
+                self.as_mut_abs().unwrap().1.beta_redex_step()
             }
         }
     }
