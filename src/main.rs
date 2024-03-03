@@ -21,10 +21,10 @@ fn repl() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn bootstrap() -> Result<(), Box<dyn std::error::Error>> {
-    let src = include_str!("parser/parser.wop");
+    let src = include_str!("cci/parser.wop");
     let mut builder = wop::builder::Builder::from_str(src).unwrap();
     builder.entry_type = "Gramem".to_string();
-    let file = File::create("src/parser/out.rs").unwrap();
+    let file = File::create("src/cci/out.rs").unwrap();
     let mut writer = BufWriter::new(file);
     writeln!(
         writer,
