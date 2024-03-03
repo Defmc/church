@@ -17,7 +17,7 @@ biAdd = ^a.(^b.(^c.(
         (If c (Cons True Nil) Nil)
         (Cons
             (Xor (Xor (HeadOrFalse a) (HeadOrFalse b)) c)
-            (iAdd
+            (biAdd
                 (TailOrNil a) (TailOrNil b)
                 (Or 
                     (And (HeadOrFalse a) (HeadOrFalse b))
