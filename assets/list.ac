@@ -3,6 +3,7 @@
 
 # Pairs: (x, y)
 Pair = ^x.(^y.(^z.(z x y)))
+MapPair = ^f.(^m.(Pair (f (Fst m)) (f (Snd m))))
 Fst = ^z.(z True)
 Snd = ^z.(z False)
 
