@@ -69,45 +69,30 @@ impl Term {
     /// check for free_variables in combinators. For example, in `Fact 6`, without `update_closed`,
     /// the computation takes 11s, while when enabled, it's 3.04s.
     pub fn update_closed(&mut self) {
-        let mut frees = self.body.free_variables();
-        let mut len = frees.len();
-        self.set_closeds(&mut frees, &mut len);
+        self.set_closeds(&mut HashSet::default(), &mut 0);
     }
 
     pub fn set_closeds(&mut self, frees: &mut HashSet<VarId>, len: &mut usize) {
-        self.closed = *len == 0;
         match Rc::make_mut(&mut self.body) {
-            Body::Id(..) => (),
+            Body::Id(id) => {
+                if !frees.contains(id) {
+                    frees.insert(*id);
+                    *len += 1;
+                }
+            }
             Body::App(ref mut lhs, ref mut rhs) => {
-                if !lhs.closed {
-                    lhs.set_closeds(frees, len);
-                }
-                if !rhs.closed {
-                    rhs.set_closeds(frees, len);
-                }
+                lhs.set_closeds(frees, len);
+                rhs.set_closeds(frees, len);
             }
             Body::Abs(v, ref mut l) => {
-                if !l.closed {
-                    let old = frees.remove(v);
-                    if old {
-                        *len -= 1;
-                    }
-                    l.set_closeds(frees, len);
-                    if old {
-                        frees.insert(*v);
-                        *len += 1;
-                    }
+                l.set_closeds(frees, len);
+                if frees.contains(v) {
+                    frees.remove(v);
+                    *len -= 1;
                 }
             }
-        }
-    }
-
-    pub fn fast_inner_closed_check(&self) -> bool {
-        match self.body.as_ref() {
-            Body::Id(..) => false,
-            Body::App(lhs, rhs) => lhs.closed && rhs.closed,
-            Body::Abs(_, l) => l.closed,
-        }
+        };
+        self.closed = *len == 0;
     }
 
     #[must_use]
@@ -491,7 +476,9 @@ impl Term {
 
     pub fn get_next_free(start: VarId, binds: &HashMap<VarId, VarId>) -> VarId {
         for k in start.. {
-            if !binds.contains_key(&k) {
+            // just FVs and already rebinds are { i: i }, but there should'nt be two rebinds in the
+            // same level. So { i: i } is always a FV.
+            if binds.get(&k) != Some(&k) {
                 return k;
             }
         }
