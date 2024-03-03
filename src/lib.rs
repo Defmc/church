@@ -13,6 +13,9 @@ pub mod parser;
 /// Delta Reductions
 pub mod scope;
 
+/// Striaghtforward beta reduction
+pub mod straight;
+
 /// # Panics
 /// Never.
 #[must_use]
