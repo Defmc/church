@@ -1,8 +1,7 @@
 :load assets/list.ac
 :load assets/combs.ac
 
-# "Caches" an expression
-Let = ^f.(^a.(f a))
+Let = ^a.(^b.(a b))
 
 # Numbers should be build like lists of `True` and `False` with a `Nil` at the end
 # I.e, 10110 (or 22) == [True, False, True, True, False]
@@ -12,6 +11,11 @@ Bum = Cons
 HeadOrFalse = ^a.(If (IsNil a) False (Head a))
 TailOrNil = ^a.(If (IsNil a) Nil (Tail a))
 
+# binary internal addition
+# inputs: 
+#   - a: lhs binary integer
+#   - b: rhs binary integer
+#   - c: carry bit
 biAdd = ^a.(^b.(^c.(
     If (And (IsNil a) (IsNil b))
         (If c (Cons True Nil) Nil)
@@ -27,6 +31,11 @@ biAdd = ^a.(^b.(^c.(
         )
     )))
 
+# binary internal subtraction
+# inputs: 
+#   - a: lhs binary integer
+#   - b: rhs binary integer
+#   - c: borrow (carry) bit
 biSub = ^a.(^b.(^c.(
     If (And (IsNil a) (IsNil b))
         (If c False Nil)
@@ -112,8 +121,14 @@ bGt = ^a.(^b.(bCmp a b False False True))
 bLeq = ^a.(^b.(bCmp a b True True False))
 
 # >=
-bGeq = ^a.(^b.(bCmp a b True True False))
+bGeq = ^a.(^b.(bCmp a b True False True))
 
+# binary internal multiplication
+# inputs:
+#   - a: lhs binary integer
+#   - b: rhs binary integer
+#   - f: right shifting function
+# output: lhs * rhs
 biMul = ^a.(^b.(^f.(
     If (IsNil b)
         Nil
@@ -124,6 +139,7 @@ biMul = ^a.(^b.(^f.(
 
 # binary internal division
 # inputs:
+#   - a: dividend binary integer
 #   - b: divisor binary integer
 # ouputs: Pair
 #   - 0: binary integer quotient
