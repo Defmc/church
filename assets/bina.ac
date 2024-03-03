@@ -144,6 +144,22 @@ biDiv = ^a.(^b.(
         (Pair Nil a)
     ))
 
+bIsOdd = HeadOrFalse
+
+# binary internal potence in logaritic time:
+# inputs:
+#   - b: base binary integer
+#   - e: exponent binary integer
+# outputs: an binary integer b^e
+biPow = ^b.(^e.(
+    If (biIsZero e)
+        biOne
+        (If (bIsOdd e)
+            (bMul b (biPow (bMul b b) (biShiftlOne (bSub e biOne))))
+            (biPow (bMul b b) (biShiftlOne e))
+        )
+    ))
+
 bMul = ^a.(^b.(biMul a b I))
 bAdd = ^a.(^b.(biAdd a b False))
 bSub = ^a.(^b.(biSub a b False))
