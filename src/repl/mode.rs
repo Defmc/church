@@ -28,13 +28,19 @@ impl Mode {
         let mut buf = String::new();
         println!("{l}");
         let mut steps = 0;
+        let mut start = Instant::now();
         l.update_closed();
         while l.beta_redex_step() {
             println!("{}", repl.format_value(l));
+            let elapsed_beta_time = start.elapsed();
+            steps += 1;
+            println!(
+                "step {steps} | len: {} | time: {elapsed_beta_time:?}",
+                l.len()
+            );
             if self == &Self::Debug {
                 loop {
                     print!("[step {steps}] (c)ontinue or (a)bort: ");
-                    steps += 1;
                     assert!(std::io::stdout().flush().is_ok());
                     buf.clear();
                     assert!(std::io::stdin().read_line(&mut buf).is_ok());
@@ -46,6 +52,7 @@ impl Mode {
                     }
                 }
             }
+            start = Instant::now();
         }
     }
 
