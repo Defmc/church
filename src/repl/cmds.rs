@@ -117,6 +117,12 @@ pub const COMMANDS: &[Command] = &[
         inputs_help: &[("<expr>", "the expression to be fixed")],
         handler: proc::fix_point
     },
+    Command {
+        name: "len",
+        help: "get the length of an expression - how many elements/symbols there are",
+        inputs_help: &[("<expr>", "the expression to get length")],
+        handler: proc::len
+    }
 ];
 
 pub struct Command {

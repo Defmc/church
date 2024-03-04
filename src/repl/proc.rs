@@ -69,3 +69,16 @@ pub fn fix_point(e: CmdEntry) {
             Err(e) => eprintln!("error while parsing scope: {e:?}"),
         })
 }
+
+pub fn len(mut e: CmdEntry) {
+    match e.into_expr() {
+        Ok(l) => {
+            e.repl.mode.bench("printing", || {
+                println!("{}", l.len());
+            });
+        }
+        Err(e) => {
+            eprintln!("error: {e:?}");
+        }
+    }
+}
