@@ -3,9 +3,16 @@ I = ^x.(x) # identity function: I x = x
 True = ^a.(^b.(a))
 False = ^a.(^b.(b))
 If = I # (if c, then i, else e) == c
+# r = True only when a == b == True
 And = ^a.(^b.(a b a)) 
+# r = False only when a == b == False
 Or = ^a.(^b.(a a b))
+# r = a == False
 Not = ^a.(a False True)
+# r = a != b
 Xor = ^a.(^b.(a (Not b) b))
+# r = a == b
 Xnor = ^a.(^b.(a b (Not b)))
-Nand = ^a.(^b.(Not (And a b)))
+# r = False only when a == b == True
+Nand = ^a.(^b.(a (Not b) True))
+# old impl: Nand = ^a.(^b.(Not (And a b)))
