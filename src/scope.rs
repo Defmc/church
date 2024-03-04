@@ -143,7 +143,10 @@ impl Scope {
                 .build([def])
                 .unwrap();
             let s = aho.replace_all(imp, &[id_to_str(free_name)]);
-            Some(format!("(Y ^{}.({s}))", id_to_str(free_name)))
+            Some(format!(
+                "(^f.(^x.(f (x x)) ^x.(f (x x))) ^{}.({s}))",
+                id_to_str(free_name)
+            ))
         } else {
             None
         }
