@@ -3,7 +3,8 @@
 " endif
 
 syn match churchOperator "[=^(->)\(\)\.\\]"
-syn match churchVar "[a-z]"
+syn match churchVar "\l"
+syn match churchAlias "\u"
 syn match churchAlias "\w\w\+"
 syn match churchComment "#.*$"
 syn match churchKeyword ":\w\+"
