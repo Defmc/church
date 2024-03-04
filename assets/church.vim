@@ -1,6 +1,6 @@
-" if exists("b:current_syntax")
-"     finish
-" endif
+if exists("b:current_syntax")
+    finish
+endif
 
 syn match churchOperator "[=^(->)\(\)\.\\]"
 syn match churchVar "\l"
