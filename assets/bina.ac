@@ -46,10 +46,10 @@ biSub = ^a.(^b.(^c.(
         )
     )))
 
-biShiftrOne = ^l.(Cons False l)
+biShiftrOne = Cons False
 biShiftlOne = TailOrNil
 
-biIsZero = All ^c.(Not c)
+biIsZero = All Not
 
 bShiftr = ^l.(^n.(
     If (biIsZero l)
