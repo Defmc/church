@@ -50,17 +50,19 @@ biShiftrOne = Cons False
 biShiftlOne = TailOrNil
 
 biIsZero = All Not
+bi0 = Nil
+bi1 = Cons True Nil
 
 bShiftr = ^l.(^n.(
-    If (biIsZero l)
+    If (biIsZero n)
         l
-        (Cons False (bShiftr l (bSub n True)))
+        (Cons False (bShiftr l (bSub n bi1)))
     ))
 
 bShiftl = ^l.(^n.(
-    If (biIsZero l)
+    If (biIsZero n)
         l
-        (TailOrNil (bShiftl l (bSub n True)))
+        (TailOrNil (bShiftl l (bSub n bi1)))
     ))
 
 # Cmp = Eq | Lt | Gt
