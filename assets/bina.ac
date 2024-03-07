@@ -114,5 +114,14 @@ bLeq = ^a.(^b.(bCmp a b True True False))
 # >=
 bGeq = ^a.(^b.(bCmp a b True True False))
 
+biMul = ^a.(^b.(^f.(
+    If (IsNil b)
+        Nil
+        (If (HeadOrFalse b)
+            (bAdd (f a) (biMul a (TailOrNil b) (Comp f biShiftrOne)))
+            (biMul a (TailOrNil b) (Comp f biShiftrOne))
+    ))))
+
+bMul = ^a.(^b.(biMul a b I))
 bAdd = ^a.(^b.(biAdd a b False))
 bSub = ^a.(^b.(biSub a b False))
