@@ -1,6 +1,6 @@
 use super::Repl;
 use church::Term;
-use std::{io::Write, str::FromStr, time::Instant};
+use std::{io::Write, str::FromStr, sync::atomic::Ordering, time::Instant};
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Mode {
@@ -13,9 +13,10 @@ pub enum Mode {
 }
 
 impl Mode {
-    pub fn should_show(&self) -> bool {
+    pub fn should_show(&self, repl: &Repl) -> bool {
         match self {
-            Self::Trace | Self::Visual | Self::Debug => true,
+            Self::Visual | Self::Debug => true,
+            Self::Trace => repl.visual_trace,
             _ => false,
         }
     }
@@ -28,74 +29,58 @@ impl Mode {
         };
     }
 
-    pub fn run_show(&self, repl: &mut Repl, l: &mut Term) {
-        let mut buf = String::new();
-        println!("{l}");
-        let mut steps = 0;
-        let mut start = Instant::now();
-        l.update_closed();
-        while l.beta_redex_step() {
-            let elapsed_beta_time = start.elapsed();
-            steps += 1;
-            if self != &Self::Trace || repl.visual_trace {
-                println!("{}", repl.format_value(l));
-            }
-            if self == &Self::Trace {
-                println!(
-                    "step {steps} | len: {} | time: {elapsed_beta_time:?}",
-                    l.len()
-                );
-            }
-            if self == &Self::Debug {
-                loop {
-                    print!("[step {steps}] (c)ontinue or (a)bort: ");
-                    assert!(std::io::stdout().flush().is_ok());
-                    buf.clear();
-                    assert!(std::io::stdin().read_line(&mut buf).is_ok());
-                    match buf.trim() {
-                        "c" => break,
-                        "a" => return,
-                        "" => break,
-                        _ => eprintln!("unknown option"),
-                    }
-                }
-            }
-            start = Instant::now();
-        }
-    }
-
     pub fn run(&self, repl: &mut Repl, mut l: String) {
         self.bench("delta redex", || {
             l = repl.scope.delta_redex(&l).0;
         });
-        let l = if self.should_show() {
-            match Term::try_from_str(&l) {
-                Ok(mut l) => {
-                    self.bench("beta redex", || self.run_show(repl, &mut l));
-                    l
-                }
-                Err(e) => {
-                    eprintln!("error: {e:?}");
-                    return;
-                }
-            }
-        } else {
-            match Term::try_from_str(&l) {
-                Ok(mut l) => {
-                    self.bench("beta redex", || {
-                        l.beta_redex();
-                    });
-                    l
-                }
-                Err(e) => {
-                    eprintln!("error: {e:?}");
-                    return;
-                }
+        let mut expr = match Term::try_from_str(&l) {
+            Ok(e) => e,
+            Err(e) => {
+                eprintln!("error: {e:?}");
+                return;
             }
         };
-        self.bench("printing", || {
-            repl.print_value(&l);
-        });
+        let mut steps = 0;
+        let mut start = Instant::now();
+        expr.update_closed();
+        while expr.beta_redex_step() && !super::INTERRUPT.load(Ordering::Acquire) {
+            let elapsed_beta_time = start.elapsed();
+            steps += 1;
+            if self.should_show(repl) {
+                println!("{}", repl.format_value(&expr));
+            }
+            if self == &Self::Trace {
+                println!(
+                    "step {steps} | len: {} | time: {elapsed_beta_time:?}",
+                    expr.len()
+                );
+            }
+            if self == &Self::Debug {
+                Self::wait_response(steps);
+            }
+            start = Instant::now();
+        }
+        let _ =
+            super::INTERRUPT.compare_exchange(true, false, Ordering::Acquire, Ordering::Relaxed);
+        if !self.should_show(repl) {
+            println!("{}", repl.format_value(&expr));
+        }
+    }
+
+    pub fn wait_response(steps: usize) {
+        let mut buf = String::new();
+        loop {
+            print!("[step {steps}] (c)ontinue or (a)bort: ");
+            std::io::stdout().flush().unwrap();
+            buf.clear();
+            std::io::stdin().read_line(&mut buf).unwrap();
+            match buf.trim() {
+                "c" => break,
+                "a" => return,
+                "" => break,
+                _ => eprintln!("unknown option"),
+            }
+        }
     }
 }
 

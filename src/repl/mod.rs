@@ -1,7 +1,11 @@
 use church::{scope::Scope, Body, Term, VarId};
 use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
-use std::{path::PathBuf, str::FromStr};
+use std::{
+    path::PathBuf,
+    str::FromStr,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use crate::repl::cmds::CmdEntry;
 
@@ -15,6 +19,7 @@ pub mod parser;
 pub mod proc;
 
 pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
+pub static INTERRUPT: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug)]
 pub struct Repl {
@@ -50,6 +55,9 @@ impl Default for Repl {
 
 impl Repl {
     pub fn start(&mut self) -> Result {
+        if let Err(e) = ctrlc::set_handler(|| INTERRUPT.store(true, Ordering::SeqCst)) {
+            eprintln!("error: {e:?}");
+        }
         while !self.quit {
             let buf = match self.rl.readline(&self.prompt) {
                 Ok(s) => s,
