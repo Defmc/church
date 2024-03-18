@@ -102,3 +102,45 @@ Should show `Y` again, but internally it's the beta reduction expression into `^
 ```
 
 - [x] just add a parenthesis
+
+## `error: UnexpectedToken(OpenParen, [Var])` in pair functions
+```
+λ> :load assets/list.ac
+λ> p = ^a.(Pair False a)
+λ> p True
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+Not
+λ> 
+
+```
+
+### Hints
+- It's in [scope:121](src/scope.rs)
+```
+λ> ^p.(p ^x.(b))
+error: UnexpectedToken(OpenParen, [Var])
+```
+- Todas as expressões que relatam este erro sofrem com `solve_recursion` de `Scope`, provavelmente o binding está usando uma variável que conforme as reduções acontecem, ela é utilizada, oq impede a recursão de ocorrer quando sofre shadowing.
+R: Não faz sentido ser isso, pois uma função sempre será recursiva se for chamada dentro dela mesma. Caso haja uma referência cíclica, o redutor delta nem terminaria.
+```
+λ> A = ^a.(A a)
+A = Some("((^f.(^x.(f (x x)) ^x.(f (x x)))) ^a.(^a.(a a)))")
+λ> A a
+a a
+```
+``` 
+λ> P True
+updating
+updated
+[src/scope.rs:42:1] self.redex_by_delta(b) = (
+    "((^f.(^x.(f (x x)) ^x.(f (x x)))) ^b.(^p.(bair (^a.(^b.(b))) p))) (^a.(^b.(a)))",
+    true,
+)
+```
+- Renomeou `P` para `b` em `Pair` e ficou `bair`. Ele não reconhece nomes se forem menores, justamente o que está ocorrendo em `MapPair` em `biDiv` da `bina`.
