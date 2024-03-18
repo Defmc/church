@@ -122,6 +122,12 @@ pub const COMMANDS: &[Command] = &[
         help: "get the length of an expression - how many elements/symbols there are",
         inputs_help: &[("<expr>", "the expression to get length")],
         handler: proc::len
+    },
+    Command {
+        name: "straight",
+        help: "straightforward beta redex an expression",
+        inputs_help: &[("<expr>", "the expression to reduce")],
+        handler: proc::straight
     }
 ];
 

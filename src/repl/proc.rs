@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use super::{CmdEntry, Repl};
-use church::{scope::Scope, Body};
+use church::{scope::Scope, straight::StraightRedex, Body};
 
 pub fn delta(mut e: CmdEntry) {
     match e.into_expr() {
@@ -76,6 +76,21 @@ pub fn len(mut e: CmdEntry) {
             e.repl.mode.bench("printing", || {
                 println!("{}", l.len());
             });
+        }
+        Err(e) => {
+            eprintln!("error: {e:?}");
+        }
+    }
+}
+
+pub fn straight(mut e: CmdEntry) {
+    match e.into_expr() {
+        Ok(l) => {
+            let mut l = l.clone();
+            e.repl.mode.bench("beta straight reducing", || {
+                l.straight_redex();
+            });
+            e.repl.mode.bench("printing", || e.repl.print_value(&l))
         }
         Err(e) => {
             eprintln!("error: {e:?}");
