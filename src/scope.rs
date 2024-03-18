@@ -3,7 +3,7 @@ use std::{iter::Peekable, str::FromStr};
 
 use aho_corasick::AhoCorasick;
 
-use crate::{id_to_str, parser, Term, VarId};
+use crate::{id_to_str, parser, Term};
 
 pub struct TabulatedLines<'a, I: Iterator<Item = &'a str>>(pub Peekable<I>);
 
@@ -36,8 +36,10 @@ pub struct Scope {
 
 impl Scope {
     pub fn delta_redex(&mut self, b: &str) -> (String, bool) {
+        println!("updating");
         self.update();
-        self.redex_by_delta(b)
+        println!("updated");
+dbg!(        self.redex_by_delta(b))
     }
 
     pub fn redex_by_delta(&self, b: &str) -> (String, bool) {
@@ -118,7 +120,7 @@ impl Scope {
                     self.cached_defs
                         .insert(l.debrejin_reduced().to_string(), k.clone());
                 }
-                Err(e) => eprintln!("error: {e:?}"),
+                Err(e) => eprintln!("error(in {k}): {e:?}"),
             }
         }
     }
@@ -137,33 +139,26 @@ impl Scope {
 
     pub fn solve_recursion(def: &str, imp: &str) -> Option<String> {
         if imp.contains(def) {
-            let free_name = Self::get_free_name(imp);
+            let mut free_name_iter = Self::get_free_names(imp);
+            let self_f = free_name_iter.next().unwrap();
             let aho = AhoCorasick::builder()
                 .match_kind(aho_corasick::MatchKind::LeftmostLongest)
                 .build([def])
                 .unwrap();
-            let s = aho.replace_all(imp, &[id_to_str(free_name)]);
-            Some(format!(
-                "(^f.(^x.(f (x x)) ^x.(f (x x))) ^{}.({s}))",
-                id_to_str(free_name)
-            ))
+            let new_imp = aho.replace_all(imp, &[id_to_str(self_f)]);
+            let s = Some(format!(
+                "((^f.(^x.(f (x x)) ^x.(f (x x)))) ^{}.({new_imp}))",
+                id_to_str(self_f)
+            ));
+            println!("{def} = {s:?}");
+            s
         } else {
             None
         }
     }
 
-    pub fn get_free_name(imp: &str) -> VarId {
-        let mut free = 0;
-        loop {
-            let aho = AhoCorasick::builder()
-                .match_kind(aho_corasick::MatchKind::LeftmostLongest)
-                .build([id_to_str(free)])
-                .unwrap();
-            if !aho.is_match(imp) {
-                return free;
-            }
-            free += 1;
-        }
+    pub fn get_free_names(imp: &str) -> impl Iterator<Item = usize> + '_ {
+        (0..).filter(|i| !imp.contains(&id_to_str(*i)))
     }
 }
 
