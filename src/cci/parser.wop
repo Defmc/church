@@ -1,0 +1,20 @@
+use super::Sym::*;
+use crate::Term;
+use crate::Body;
+use super::UnprocessedBody;
+
+alias "^" Sym::LambdaChar;
+alias "." Sym::Body;
+alias "(" Sym::OpenParen;
+alias ")" Sym::CloseParen;
+alias Ident Sym::Var;
+
+EntryPoint: Ast = App:&e -> { Ast::Expr(e.item.item.as_expr().clone()) }%;
+
+Lambda: Ast = "^" Ident:&i "." "(" App:&a ")" -> { Ast::Expr(UnprocessedBody::Abs(i.item.item.into_var(), a.item.item.into_boxed_expr())) }%;
+App: Ast = App:&a Expr:&e -> { Ast::Expr(UnprocessedBody::App(a.item.item.into_boxed_expr(), e.item.item.into_boxed_expr())) }%
+            | Expr:&e -> { Ast::Expr(e.item.item.as_expr().clone()) }%;
+
+Expr: Ast = "(" App:&e ")" -> { Ast::Expr(e.item.item.as_expr().clone()) }% 
+                   | Lambda:&l -> { Ast::Expr(l.item.item.as_expr().clone()) }%
+                   | Ident:&i -> { Ast::Expr(UnprocessedBody::Var(i.item.item.into_var())) }%;
