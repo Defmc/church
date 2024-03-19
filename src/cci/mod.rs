@@ -40,4 +40,9 @@ pub mod tests {
         assert!(get_global_parser().parse("Const").is_ok());
     }
 
+    #[test]
+    fn let_expressions() {
+        assert!(get_global_parser().parse("Const = Value").is_ok());
+        assert!(get_global_parser().parse("Sum = FoldR Add 0").is_ok());
+    }
 }
