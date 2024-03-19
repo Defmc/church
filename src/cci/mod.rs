@@ -7,14 +7,15 @@ use ubody::UnprocessedBody;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord)]
 pub enum Ast {
-    Expr(UnprocessedBody),
+    Expr(Box<UnprocessedBody>),
+    LetExpr(String, Box<UnprocessedBody>),
 }
 
 impl Ast {
     pub fn into_ubody(self) -> Box<UnprocessedBody> {
         assert!(matches!(self, Self::Expr(..)));
         match self {
-            Self::Expr(e) => Box::new(e),
+            Self::Expr(e) => e,
             _ => unreachable!(),
         }
     }

@@ -3,29 +3,32 @@ use crate::cci::ubody::UnprocessedBody;
 
 grammar;
 
+pub Program: Box<Ast> = {
+    App,
+    LetExpr,
+};
+
+pub LetExpr: Box<Ast> = {
+    <id:Ident> "=" <e:App> => Ast::LetExpr(id, e.into_ubody()).into()
+};
+
 pub Expr: Box<Ast> = {
-    "(" <a:App> ")" => a,
+    "(" <App> ")",
     Abs,
-    Ident => Ast::Expr(UnprocessedBody::Var(<>.clone())).into()
+    Ident => Ast::Expr(UnprocessedBody::Var(<>).into()).into()
 };
 
 pub Abs: Box<Ast> = {
-    AbsPrefix <id:Ident> AbsBody "(" <a:App> ")" => Ast::Expr(UnprocessedBody::Abs(id, a.into_ubody())).into()
+    AbsPrefix <id:Ident> AbsBody "(" <a:App> ")" => Ast::Expr(UnprocessedBody::Abs(id, a.into_ubody()).into()).into()
 };
 
 pub App: Box<Ast> = {
-    <a:App> <e:Expr> => Ast::Expr(UnprocessedBody::App(a.into_ubody(), e.into_ubody())).into(),
+    <a:App> <e:Expr> => Ast::Expr(UnprocessedBody::App(a.into_ubody(), e.into_ubody()).into()).into(),
     Expr,
 };
 
-pub Ident: String = {
-    <s:r"[a-zA-Z_]\w*"> => s.to_string()
-};
+pub Ident: String = r"[a-zA-Z_]\w*" => <>.to_string();
 
-pub AbsPrefix: () = {
-    <s:r"[λ|\^|\\]"> => (),
-};
+pub AbsPrefix: () = r"[λ|\^|\\]" => ();
 
-pub AbsBody: () = {
-    <s:r"\.|(->)"> => ()
-};
+pub AbsBody: () = r"\.|(->)" => ();
