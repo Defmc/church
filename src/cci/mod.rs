@@ -27,3 +27,17 @@ impl Ast {
         }
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::get_global_parser;
+
+    #[test]
+    fn lambda_expressions() {
+        assert!(get_global_parser().parse("^a.(a)").is_ok());
+        assert!(get_global_parser().parse("^Param.(Function Param)").is_ok());
+        assert!(get_global_parser().parse("Just a TEST").is_ok());
+        assert!(get_global_parser().parse("Const").is_ok());
+    }
+
+}
