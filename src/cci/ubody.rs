@@ -63,11 +63,6 @@ impl UnprocessedBody {
             Self::Abs(_, ref b) => b.len().saturating_add(1),
         }
     }
-
-    pub fn try_from_str<T: AsRef<str>>(s: T) -> Result<Self, lrp::Error<super::Sym>> {
-        let lex = super::try_lexer(s.as_ref())?;
-        super::parse(lex)
-    }
 }
 
 impl fmt::Display for UnprocessedBody {
