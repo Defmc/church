@@ -32,7 +32,7 @@ pub fn id_to_str(i: usize) -> String {
     )
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Term {
     pub body: Rc<Body>,
     /// closedness. A optimization tech.
@@ -536,7 +536,7 @@ impl FromStr for Term {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub enum Body {
     /* identity */ Id(VarId),
     /* application */ App(Term, /* ( */ Term /* ) */),
