@@ -15,14 +15,18 @@ impl Runner {
         let parsed = super::get_global_parser()
             .parse(s)
             .map_err(|_| Error::CantParse)?;
+        println!("parsed: {parsed:?}");
         match parsed.as_ref() {
             Ast::LetExpr(def, imp) => {
-                self.scope
-                    .include(def.to_string(), imp.delta_redex(&self.scope));
+                self.scope.include(def, imp.delta_redex(&self.scope));
             }
             Ast::Expr(expr) => {
                 let mut dumper = Dumper::new(&self.scope);
-                println!("dump: {}", dumper.dump(&expr));
+                let mut term = dumper.dump(&expr);
+                println!("dump: {term}");
+                term.beta_redex();
+                println!("reduced: {term}");
+                println!("similar: {:?}", self.scope.get_like(&term));
             }
         }
         Ok(())
