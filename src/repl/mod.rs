@@ -1,4 +1,4 @@
-use church::{scope::Scope, Body, Term, VarId};
+use church::{cci::runner::Runner, scope::Scope, Body, Term, VarId};
 use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
 use std::{
@@ -32,6 +32,7 @@ pub struct Repl {
     mode: Mode,
     quit: bool,
     rl: DefaultEditor,
+    runner: Runner,
 }
 
 impl Default for Repl {
@@ -49,6 +50,7 @@ impl Default for Repl {
             quit: false,
             prompt: String::from("λ> "),
             rl,
+            runner: Runner::default(),
         }
     }
 }
@@ -76,16 +78,7 @@ impl Repl {
 
     pub fn parse(&mut self, input: &str) {
         let input = input.trim();
-        {
-            use church::cci;
-            let cci_parser_out = cci::parser::ProgramParser::new().parse(input);
-            println!("cci parser output: {cci_parser_out:?}",);
-            let ubody = cci_parser_out.unwrap().into_ubody();
-            let mut scope = cci::scope::Scope::default();
-            scope.include("Russia".to_string(), Term::new(Body::Id(0)));
-            let mut dumper = cci::ubody::Dumper::new(&scope);
-            println!("cci code dump: {}", dumper.dump(&ubody));
-        }
+        assert!(self.runner.run(input).is_ok());
         if input.starts_with(':') {
             let args: Vec<_> = parser::Arg::parse(&input).collect();
             self.handle(&args);
