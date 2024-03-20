@@ -15,6 +15,8 @@ impl Scope {
     }
 
     pub fn get_like(&self, t: &Term) -> Option<&str> {
-        self.alias.get(t).map(|s| s.as_str())
+        self.alias
+            .get(&t.clone().debrejin_reduced())
+            .map(|s| s.as_str())
     }
 }
