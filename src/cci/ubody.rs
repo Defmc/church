@@ -75,9 +75,7 @@ impl<'a> Dumper<'a> {
     }
 
     pub fn is_var_used(&self, v: &str) -> bool {
-        self.renames.contains_key(v)
-            || self.scope.definitions.contains_key(v)
-            || self.scope.reserved_vars.contains(v)
+        self.renames.contains_key(v) || self.scope.definitions.contains_key(v)
     }
 }
 
@@ -89,6 +87,11 @@ pub enum UnprocessedBody {
 }
 
 impl UnprocessedBody {
+    pub fn delta_redex(&self, scope: &Scope) -> Term {
+        let mut dumper = Dumper::new(scope);
+        dumper.dump(self)
+    }
+
     pub fn get_used_vars(&self, set: &mut HashSet<String>) {
         match self {
             Self::Var(_) => {}
