@@ -18,6 +18,7 @@ pub fn get_global_parser() -> &'static parser::ProgramParser {
 pub enum Ast {
     Expr(Box<UnprocessedBody>),
     LetExpr(String, Box<UnprocessedBody>),
+    Program(Vec<Box<Self>>),
 }
 
 impl Ast {
@@ -25,6 +26,14 @@ impl Ast {
         assert!(matches!(self, Self::Expr(..)));
         match self {
             Self::Expr(e) => e,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn into_program(self) -> Vec<Box<Self>> {
+        assert!(matches!(self, Self::Program(..)));
+        match self {
+            Self::Program(v) => v,
             _ => unreachable!(),
         }
     }
