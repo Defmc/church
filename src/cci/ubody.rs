@@ -30,8 +30,9 @@ impl<'a> Dumper<'a> {
         match expr {
             UnprocessedBody::Var(v) => self.handle_vars(v),
             UnprocessedBody::App(lhs, rhs) => {
-                self.dump_with(lhs);
-                self.dump_with(rhs)
+                let lhs = self.dump_with(lhs);
+                let rhs = self.dump_with(rhs);
+                Term::new(Body::App(lhs, rhs))
             }
             UnprocessedBody::Abs(v, l) => {
                 let (var_id, body) = self.do_binding(v, |s| s.dump_with(l));
