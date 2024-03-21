@@ -20,7 +20,7 @@ impl Runner {
         for inst in program {
             match *inst {
                 Ast::LetExpr(def, imp) => {
-                    self.scope.include(&def, imp.delta_redex(&self.scope));
+                    self.scope.include_from_ubody(&def, imp.as_ref());
                 }
                 Ast::Expr(expr) => {
                     let mut dumper = Dumper::new(&self.scope);

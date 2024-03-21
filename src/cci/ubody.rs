@@ -5,6 +5,22 @@ use std::num::NonZeroUsize;
 
 use super::scope::Scope;
 
+pub fn get_y_combinator() -> Term {
+    Term::new(Body::Abs(
+        0,
+        Term::new(Body::App(
+            Term::new(Body::Abs(
+                1,
+                Term::new(Body::App(Term::new(Body::Id(1)), Term::new(Body::Id(1)))),
+            )),
+            Term::new(Body::Abs(
+                1,
+                Term::new(Body::App(Term::new(Body::Id(1)), Term::new(Body::Id(1)))),
+            )),
+        )),
+    ))
+}
+
 pub struct Dumper<'a> {
     scope: &'a Scope,
     renames: HashMap<String, VarId>,
@@ -38,6 +54,23 @@ impl<'a> Dumper<'a> {
                 let (var_id, body) = self.do_binding(v, |s| s.dump_with(l));
                 Term::new(Body::Abs(var_id, body))
             }
+        }
+    }
+
+    pub fn rec_dump(&mut self, def: &str, imp: &UnprocessedBody) -> Term {
+        let rec_var_id = if imp.contains(def) {
+            let var_id = self.get_next_free_name();
+            self.renames.insert(def.to_string(), var_id);
+            Some(var_id)
+        } else {
+            None
+        };
+        let imp = self.dump(imp);
+        if let Some(var_id) = rec_var_id {
+            let imp = Term::new(Body::Abs(var_id, imp.into()));
+            Term::new(Body::App(get_y_combinator(), imp))
+        } else {
+            imp
         }
     }
 
@@ -115,6 +148,15 @@ impl UnprocessedBody {
             Self::Var(..) => 1.try_into().unwrap(),
             Self::App(ref f, ref x) => f.len().saturating_add(x.len().into()),
             Self::Abs(_, ref b) => b.len().saturating_add(1),
+        }
+    }
+
+    #[must_use]
+    pub fn contains(&self, what: &str) -> bool {
+        match self {
+            Self::Var(s) => what == s,
+            Self::App(lhs, rhs) => lhs.contains(what) || rhs.contains(what),
+            Self::Abs(_, l) => l.contains(what),
         }
     }
 }
