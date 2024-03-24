@@ -4,7 +4,7 @@ use crate::cci::ubody::UnprocessedBody;
 grammar;
 
 InstSeq: Vec<Box<Ast>> = {
-    <mut v:(<ProgramAtom> "\n")*> <e:ProgramAtom?> => match e {
+    <mut v:(<ProgramAtom> "\n(?!\t)")*> <e:ProgramAtom?> => match e {
         None => v,
         Some(e) => {
             v.push(e);
