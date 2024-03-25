@@ -18,13 +18,13 @@ pub fn get_global_parser() -> &'static parser::ProgramParser {
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord)]
 pub enum Ast {
-    Expr(Box<UnprocessedBody>),
-    LetExpr(String, Box<UnprocessedBody>),
-    Program(Vec<Box<Self>>),
+    Expr(UnprocessedBody),
+    LetExpr(String, UnprocessedBody),
+    Program(Vec<Self>),
 }
 
 impl Ast {
-    pub fn into_ubody(self) -> Box<UnprocessedBody> {
+    pub fn into_ubody(self) -> UnprocessedBody {
         assert!(matches!(self, Self::Expr(..)));
         match self {
             Self::Expr(e) => e,
@@ -32,7 +32,11 @@ impl Ast {
         }
     }
 
-    pub fn into_program(self) -> Vec<Box<Self>> {
+    pub fn boxed_ubody(self) -> Box<UnprocessedBody> {
+        self.into_ubody().into()
+    }
+
+    pub fn into_program(self) -> Vec<Self> {
         assert!(matches!(self, Self::Program(..)));
         match self {
             Self::Program(v) => v,

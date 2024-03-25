@@ -23,12 +23,12 @@ impl Runner {
         })?;
         let program = parsed.into_program();
         for inst in program {
-            match *inst {
+            match inst {
                 Ast::LetExpr(def, imp) => {
-                    self.scope.include_from_ubody(&def, imp.as_ref());
+                    self.scope.include_from_ubody(&def, &imp);
                 }
                 Ast::Expr(expr) => {
-                    let expr = self.scope.delta_redex(expr.as_ref());
+                    let expr = self.scope.delta_redex(&expr);
                     self.mode.run(&self.ui, &self.scope, expr);
                 }
                 _ => unreachable!(),
@@ -43,7 +43,7 @@ impl Runner {
             Error::CantParse
         })?;
         let program = parsed.into_program();
-        match program.first().unwrap().as_ref() {
+        match program.first().unwrap() {
             Ast::LetExpr(..) => (),
             Ast::Expr(expr) => {
                 let mut dumper = Dumper::new(&self.scope);

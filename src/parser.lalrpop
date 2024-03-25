@@ -15,7 +15,7 @@ match {
     ";" => SEMICOLON
 }
 
-InstSeq: Vec<Box<Ast>> = {
+InstSeq: Vec<Ast> = {
     <mut v:(<ProgramAtom> SEMICOLON)*> <e:ProgramAtom?> => match e {
         None => v,
         Some(e) => {
@@ -25,29 +25,29 @@ InstSeq: Vec<Box<Ast>> = {
     }
 }
 
-pub Program: Box<Ast> = InstSeq => Ast::Program(<>).into();
+pub Program: Ast = InstSeq => Ast::Program(<>);
 
-ProgramAtom: Box<Ast> = {
+ProgramAtom: Ast = {
     LetExpr,
     App,
 };
 
-LetExpr: Box<Ast> = {
-    <id:Ident> EQ_SYM <e:App> => Ast::LetExpr(id, e.into_ubody()).into()
+LetExpr: Ast = {
+    <id:Ident> EQ_SYM <e:App> => Ast::LetExpr(id, e.into_ubody())
 };
 
-Expr: Box<Ast> = {
+Expr: Ast = {
     OPEN_PAREN <App> CLOSE_PAREN,
     Abs,
-    Ident => Ast::Expr(UnprocessedBody::Var(<>).into()).into()
+    Ident => Ast::Expr(UnprocessedBody::Var(<>))
 };
 
-Abs: Box<Ast> = {
-    LAMBDA_SYM <id:Ident> IMPL_SYM OPEN_PAREN <a:App> CLOSE_PAREN => Ast::Expr(UnprocessedBody::Abs(id, a.into_ubody()).into()).into()
+Abs: Ast = {
+    LAMBDA_SYM <id:Ident> IMPL_SYM OPEN_PAREN <a:App> CLOSE_PAREN => Ast::Expr(UnprocessedBody::Abs(id, a.boxed_ubody()))
 };
 
-App: Box<Ast> = {
-    <a:App> <e:Expr> => Ast::Expr(UnprocessedBody::App(a.into_ubody(), e.into_ubody()).into()).into(),
+App: Ast = {
+    <a:App> <e:Expr> => Ast::Expr(UnprocessedBody::App(a.boxed_ubody(), e.boxed_ubody())),
     Expr,
 };
 
