@@ -3,8 +3,20 @@ use crate::cci::ubody::UnprocessedBody;
 
 grammar;
 
+match {
+    r"\s*" => { },
+    r"#.*\n?" => {},
+    "=" => EQ_SYM,
+    "(" => OPEN_PAREN,
+    ")" => CLOSE_PAREN,
+    r"[a-zA-Z0-9_]+" => IDENT,
+    r"[λ|\^|\\]" => LAMBDA_SYM,
+    r"\.|(->)" => IMPL_SYM,
+    ";" => SEMICOLON
+}
+
 InstSeq: Vec<Box<Ast>> = {
-    <mut v:(<ProgramAtom> "\n(?!\t)")*> <e:ProgramAtom?> => match e {
+    <mut v:(<ProgramAtom> SEMICOLON)*> <e:ProgramAtom?> => match e {
         None => v,
         Some(e) => {
             v.push(e);
@@ -21,17 +33,17 @@ ProgramAtom: Box<Ast> = {
 };
 
 LetExpr: Box<Ast> = {
-    <id:Ident> "=" <e:App> => Ast::LetExpr(id, e.into_ubody()).into()
+    <id:Ident> EQ_SYM <e:App> => Ast::LetExpr(id, e.into_ubody()).into()
 };
 
 Expr: Box<Ast> = {
-    "(" <App> ")",
+    OPEN_PAREN <App> CLOSE_PAREN,
     Abs,
     Ident => Ast::Expr(UnprocessedBody::Var(<>).into()).into()
 };
 
 Abs: Box<Ast> = {
-    AbsPrefix <id:Ident> AbsBody "(" <a:App> ")" => Ast::Expr(UnprocessedBody::Abs(id, a.into_ubody()).into()).into()
+    LAMBDA_SYM <id:Ident> IMPL_SYM OPEN_PAREN <a:App> CLOSE_PAREN => Ast::Expr(UnprocessedBody::Abs(id, a.into_ubody()).into()).into()
 };
 
 App: Box<Ast> = {
@@ -39,8 +51,4 @@ App: Box<Ast> = {
     Expr,
 };
 
-Ident: String = r"[a-zA-Z_]\w*" => <>.to_string();
-
-AbsPrefix: () = r"[λ|\^|\\]" => ();
-
-AbsBody: () = r"\.|(->)" => ();
+Ident: String = IDENT => <>.to_string();

@@ -10,9 +10,6 @@ pub const ALPHABET: &str = "abcdefghijklmnopqrstuvwxyz";
 /// Parsing lib
 pub mod parser;
 
-/// Delta Reductions
-pub mod scope;
-
 /// Striaghtforward beta reduction
 pub mod straight;
 

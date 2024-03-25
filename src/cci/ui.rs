@@ -78,11 +78,11 @@ impl Ui {
                 Body::Id(id) => church::id_to_str(*id),
                 Body::App(ref f, ref x) => format!(
                     "{} {}",
-                    self.format_value(s, t),
+                    self.format_value(s, f),
                     if usize::from(x.len()) > 1 {
-                        format!("({})", self.format_value(s, t))
+                        format!("({})", self.format_value(s, x))
                     } else {
-                        self.format_value(s, t)
+                        self.format_value(s, x)
                     }
                 ),
                 Body::Abs(v, l) => {

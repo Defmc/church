@@ -1,7 +1,5 @@
-use std::str::FromStr;
-
-use super::{CmdEntry, Repl};
-use church::{scope::Scope, straight::StraightRedex, Body};
+use super::CmdEntry;
+use church::{straight::StraightRedex, Body};
 
 pub fn delta(mut e: CmdEntry) {
     match e.into_expr() {
@@ -35,7 +33,7 @@ pub fn alpha(mut e: CmdEntry) {
 
 pub fn closed(mut e: CmdEntry) {
     match e.into_expr() {
-        Ok(expr) => {
+        Ok(_) => {
             // Repl::print_closed(&expr);
             todo!()
         }
@@ -57,19 +55,20 @@ pub fn debrejin(mut e: CmdEntry) {
     }
 }
 
-pub fn fix_point(e: CmdEntry) {
-    e.repl
-        .runner
-        .mode
-        .bench("fix point", || match Scope::from_str(&e.inputs.join(" ")) {
-            Ok(s) => {
-                Scope::solve_recursion(&s.aliases[0], &s.defs[0]).map_or_else(
-                    || println!("{} = {}", s.aliases[0], s.defs[0]),
-                    |imp| println!("{} = {imp}", s.aliases[0]),
-                );
-            }
-            Err(e) => eprintln!("error while parsing scope: {e:?}"),
-        })
+pub fn fix_point(_: CmdEntry) {
+    // e.repl
+    //     .runner
+    //     .mode
+    //     .bench("fix point", || match Scope::from_str(&e.inputs.join(" ")) {
+    //         Ok(s) => {
+    //             Scope::solve_recursion(&s.aliases[0], &s.defs[0]).map_or_else(
+    //                 || println!("{} = {}", s.aliases[0], s.defs[0]),
+    //                 |imp| println!("{} = {imp}", s.aliases[0]),
+    //             );
+    //         }
+    //         Err(e) => eprintln!("error while parsing scope: {e:?}"),
+    //     })
+    todo!()
 }
 
 pub fn len(mut e: CmdEntry) {

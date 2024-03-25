@@ -1,7 +1,7 @@
-use church::{scope::Scope, Body, Term, VarId};
+use church::Term;
 use rustc_hash::FxHashSet as HashSet;
 use rustyline::{config::Configurer, error::ReadlineError, DefaultEditor};
-use std::{path::PathBuf, str::FromStr, sync::atomic::Ordering};
+use std::{path::PathBuf, sync::atomic::Ordering};
 
 use crate::{cci::runner::Runner, repl::cmds::CmdEntry};
 
@@ -15,7 +15,6 @@ pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
 #[derive(Debug)]
 pub struct Repl {
-    scope: Scope,
     loaded_files: HashSet<PathBuf>,
     prompt: String,
     readable: bool,
@@ -31,7 +30,6 @@ impl Default for Repl {
         rl.set_auto_add_history(true);
         rl.set_history_ignore_space(true);
         Repl {
-            scope: Scope::default(),
             loaded_files: HashSet::default(),
             readable: true,
             binary_numbers: false,
@@ -72,13 +70,10 @@ impl Repl {
             let args: Vec<_> = parser::Arg::parse(&input).collect();
             self.handle(&args);
         } else {
-            self.runner.run(input);
-        }
-    }
-    pub fn alias(&mut self, input: &str) {
-        match Scope::from_str(input) {
-            Ok(nscope) => self.scope.extend(nscope),
-            Err(e) => eprintln!("error: {e:?}"),
+            match self.runner.run(input) {
+                Ok(()) => (),
+                Err(e) => eprintln!("error: {e:?}"),
+            }
         }
     }
 

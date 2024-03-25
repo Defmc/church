@@ -1,5 +1,5 @@
 use super::{cmds::COMMANDS, parser::Arg, CmdEntry};
-use church::{scope::Scope, Body, Term};
+use church::{Body, Term};
 use core::fmt;
 use rustyline::config::Configurer;
 use std::{io::Write, rc::Rc, str::FromStr};
@@ -101,16 +101,17 @@ pub fn gen_nats(e: CmdEntry) {
         println!("{:?} is not a valid range end", e.inputs[1]);
         return;
     };
-    let mut numbers = Scope::default();
     for i in start..=end {
-        numbers.aliases.push(i.to_string());
-        if e.repl.binary_numbers {
-            numbers.defs.push(num_to_bin_list(i));
+        let imp = if e.repl.binary_numbers {
+            num_to_bin_list(i)
         } else {
-            numbers.defs.push(num_to_church(i).to_string());
-        }
+            num_to_church(i).to_string()
+        };
+        e.repl.runner.scope.include(
+            &i.to_string(),
+            e.repl.runner.get_term_from_str(&imp).unwrap(),
+        );
     }
-    e.repl.scope.extend(numbers);
 }
 
 pub fn quit_fn(e: CmdEntry) {
@@ -124,8 +125,8 @@ pub fn show_fn(e: CmdEntry) {
     }
     match e.inputs[0] {
         "scope" => {
-            for (k, v) in e.repl.scope.aliases.iter().zip(e.repl.scope.defs.iter()) {
-                println!("{k} = {v}");
+            for (d, i) in e.repl.runner.scope.definitions.iter() {
+                println!("{d} = {}", e.repl.format_value(i));
             }
         }
         "env" => {
@@ -140,8 +141,8 @@ pub fn show_fn(e: CmdEntry) {
             COMMANDS.iter().for_each(|c| println!("{}", c.name));
         }
         _ => {
-            if let Some(def) = e.repl.scope.indexes.get(e.inputs[0]) {
-                println!("{}", e.repl.scope.defs[*def]);
+            if let Some(def) = e.repl.runner.scope.definitions.get(e.inputs[0]) {
+                e.repl.print(def);
             } else {
                 eprintln!("unknown option {:?}", e.inputs[0]);
             }

@@ -52,28 +52,10 @@ pub const COMMANDS: &[Command] = &[
             handler: env::assert_eq
     },
     Command {
-        name: "run",
-        help: "runs a file inside repl",
-        inputs_help: &[("<filepath>", "file to be runned")],
-        handler: io::run
-    },
-    Command {
         name: "load",
         help: "loads a file inside repl",
         inputs_help: &[("<filepath>", "file to be loaded"), ("-s", "strictly loads the file. Updating the lazy-evaluation system immediately")],
         handler: io::load
-    },
-    Command {
-        name: "rerun",
-        help: "reruns the environment",
-        inputs_help: &[]
-            ,handler: io::rerun
-    },
-    Command {
-        name: "reload",
-        help: "reloads the environment",
-        inputs_help: &[("-s", "strictly reloads the environment, updating the entire lazy-evaluating system immediately")]
-            ,handler: io::rerun
     },
     Command {
         name: "alpha_eq",
@@ -98,12 +80,6 @@ pub const COMMANDS: &[Command] = &[
         help: "debrejin-alpha reduces the lambda expression",
         inputs_help: &[("<expr>", "the expression to be reduced")],
         handler: proc::debrejin
-    },
-    Command {
-        name: "prepare",
-        help: "immediately updated the scope. Similar to `reload -s`, but way faster (because it doesn't need to load the files again)",
-        inputs_help: &[],
-        handler: io::prepare
     },
     Command {
         name: "gen_nats",
@@ -145,9 +121,8 @@ pub struct CmdEntry<'a> {
 }
 
 impl<'a> CmdEntry<'a> {
-    pub fn into_expr(&mut self) -> std::result::Result<Term, lrp::Error<church::parser::Sym>> {
+    pub fn into_expr(&mut self) -> std::result::Result<Term, crate::cci::runner::Error> {
         let input = self.inputs.join(" ");
-        let input = self.repl.scope.delta_redex(&input).0;
-        Term::try_from_str(input)
+        self.repl.runner.get_term_from_str(&input)
     }
 }

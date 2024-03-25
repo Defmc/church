@@ -17,9 +17,10 @@ pub enum Error {
 
 impl Runner {
     pub fn run(&mut self, s: &str) -> Result<(), Error> {
-        let parsed = super::get_global_parser()
-            .parse(s)
-            .map_err(|_| Error::CantParse)?;
+        let parsed = super::get_global_parser().parse(s).map_err(|e| {
+            eprintln!("parsing error: {e:?}");
+            Error::CantParse
+        })?;
         let program = parsed.into_program();
         for inst in program {
             match *inst {
@@ -37,9 +38,10 @@ impl Runner {
     }
 
     pub fn get_term_from_str(&self, s: &str) -> Result<Term, Error> {
-        let parsed = super::get_global_parser()
-            .parse(s)
-            .map_err(|_| Error::CantParse)?;
+        let parsed = super::get_global_parser().parse(s).map_err(|e| {
+            eprintln!("parsing error: {e:?}");
+            Error::CantParse
+        })?;
         let program = parsed.into_program();
         for inst in program {
             match *inst {
