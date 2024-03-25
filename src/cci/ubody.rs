@@ -67,7 +67,7 @@ impl<'a> Dumper<'a> {
         };
         let imp = self.dump(imp);
         if let Some(var_id) = rec_var_id {
-            let imp = Term::new(Body::Abs(var_id, imp.into()));
+            let imp = Term::new(Body::Abs(var_id, imp));
             Term::new(Body::App(get_y_combinator(), imp))
         } else {
             imp
@@ -101,8 +101,7 @@ impl<'a> Dumper<'a> {
 
     pub fn get_next_free_name(&mut self) -> VarId {
         let var_id = (self.last_var_id..)
-            .filter(|&i| !self.is_var_used(&id_to_str(i)))
-            .next()
+            .find(|&i| !self.is_var_used(&id_to_str(i)))
             .unwrap();
         self.last_var_id = var_id + 1;
         var_id

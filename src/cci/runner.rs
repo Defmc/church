@@ -43,18 +43,14 @@ impl Runner {
             Error::CantParse
         })?;
         let program = parsed.into_program();
-        for inst in program {
-            match *inst {
-                Ast::LetExpr(..) => {
-                    unreachable!()
-                }
-                Ast::Expr(expr) => {
-                    let mut dumper = Dumper::new(&self.scope);
-                    let term = dumper.dump(&expr);
-                    return Ok(term);
-                }
-                _ => unreachable!(),
+        match program.first().unwrap().as_ref() {
+            Ast::LetExpr(..) => (),
+            Ast::Expr(expr) => {
+                let mut dumper = Dumper::new(&self.scope);
+                let term = dumper.dump(expr);
+                return Ok(term);
             }
+            _ => (),
         }
         Err(Error::InvalidExpr)
     }

@@ -12,15 +12,15 @@ pub fn load(e: CmdEntry) {
     }
     match read_to_string(&input) {
         Ok(s) => match e.repl.runner.run(&s) {
-            Ok(()) => e.repl.loaded_files.insert(input),
+            Ok(()) => {
+                e.repl.loaded_files.insert(input);
+            }
             Err(e) => {
                 eprintln!("error: {e:?}");
-                return;
             }
         },
         Err(e) => {
             eprintln!("error: {e:?}");
-            return;
         }
     };
 }

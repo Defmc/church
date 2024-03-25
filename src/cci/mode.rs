@@ -22,10 +22,7 @@ pub enum Mode {
 
 impl Mode {
     pub fn should_show(&self) -> bool {
-        match self {
-            Self::Visual | Self::Debug | Self::VisualTrace => true,
-            _ => false,
-        }
+        matches!(self, Self::Visual | Self::Debug | Self::VisualTrace)
     }
 
     pub fn bench(&self, op: &str, f: impl FnOnce()) {
