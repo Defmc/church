@@ -4,11 +4,13 @@ use crate::cci::ubody::UnprocessedBody;
 grammar;
 
 match {
-    r"\s*" => { },
+    r"\s*" => {},
     r"#.*\n?" => {},
     "=" => EQ_SYM,
     "(" => OPEN_PAREN,
     ")" => CLOSE_PAREN,
+    "import" => IMPORT_STAT,
+    r#""([^"\\]|\\.)*""# => FILEPATH,
     r"[a-zA-Z0-9_]+" => IDENT,
     r"[λ|\^|\\]" => LAMBDA_SYM,
     r"\.|(->)" => IMPL_SYM,
@@ -28,9 +30,14 @@ InstSeq: Vec<Ast> = {
 pub Program: Ast = InstSeq => Ast::Program(<>);
 
 ProgramAtom: Ast = {
+    ImportExpr,
     LetExpr,
     App,
 };
+
+ImportExpr: Ast = {
+    IMPORT_STAT <FILEPATH> => Ast::Import(<>.into())
+}
 
 LetExpr: Ast = {
     <id:Ident> EQ_SYM <e:App> => Ast::LetExpr(id, e.into_ubody())

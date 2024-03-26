@@ -1,5 +1,5 @@
 use lalrpop_util::lalrpop_mod;
-use std::sync::OnceLock;
+use std::{path::PathBuf, sync::OnceLock};
 
 lalrpop_mod!(pub parser);
 pub mod mode;
@@ -20,6 +20,7 @@ pub fn get_global_parser() -> &'static parser::ProgramParser {
 pub enum Ast {
     Expr(UnprocessedBody),
     LetExpr(String, UnprocessedBody),
+    Import(PathBuf),
     Program(Vec<Self>),
 }
 

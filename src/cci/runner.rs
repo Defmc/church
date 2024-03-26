@@ -1,3 +1,5 @@
+use std::{fs, path::Path};
+
 use church::Term;
 
 use super::{mode::Mode, scope::Scope, ubody::Dumper, ui::Ui, Ast};
@@ -13,6 +15,7 @@ pub struct Runner {
 pub enum Error {
     CantParse,
     InvalidExpr,
+    CantLoadFile,
 }
 
 impl Runner {
@@ -31,7 +34,8 @@ impl Runner {
                     let expr = self.scope.delta_redex(&expr);
                     self.mode.run(&self.ui, &self.scope, expr);
                 }
-                _ => unreachable!(),
+                Ast::Import(path) => self.load(&path)?,
+                _ => todo!(),
             }
         }
         Ok(())
@@ -44,7 +48,6 @@ impl Runner {
         })?;
         let program = parsed.into_program();
         match program.first().unwrap() {
-            Ast::LetExpr(..) => (),
             Ast::Expr(expr) => {
                 let mut dumper = Dumper::new(&self.scope);
                 let term = dumper.dump(expr);
@@ -53,5 +56,15 @@ impl Runner {
             _ => (),
         }
         Err(Error::InvalidExpr)
+    }
+
+    pub fn load(&mut self, path: &Path) -> Result<(), Error> {
+        match fs::read_to_string(path) {
+            Err(e) => {
+                eprintln!("error loading file {path:?}: {e:?}");
+                Err(Error::CantLoadFile)
+            }
+            Ok(s) => self.run(&s),
+        }
     }
 }
