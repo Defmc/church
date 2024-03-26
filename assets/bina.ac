@@ -1,13 +1,13 @@
-:load assets/list.ac
-:load assets/combs.ac
+import "assets/list.ac"
+import "assets/combs.ac"
 
 # Numbers should be build like lists of `True` and `False` with a `Nil` at the end
 # I.e, 10110 (or 22) == [True, False, True, True, False]
 # But, they will be implemented in big endianness (aka from left to right instead of right to left)
-Bum = Cons
+Bum = Cons;
 
-HeadOrFalse = ^a.(If (IsNil a) False (Head a))
-TailOrNil = ^a.(If (IsNil a) Nil (Tail a))
+HeadOrFalse = ^a.(If (IsNil a) False (Head a));
+TailOrNil = ^a.(If (IsNil a) Nil (Tail a));
 
 # binary internal addition
 # inputs: 
@@ -27,7 +27,7 @@ biAdd = ^a.(^b.(^c.(
                 )
             )
         )
-    )))
+    )));
 
 # binary internal subtraction
 # inputs: 
@@ -51,33 +51,33 @@ biSub = ^a.(^b.(^c.(
                 )
             )
         )
-    )))
+    )));
 
-biShiftrOne = ^a.(Cons False a)
-biShiftlOne = TailOrNil
+biShiftrOne = ^a.(Cons False a);
+biShiftlOne = TailOrNil;
 
-biIsZero = All Not
-bi0 = Nil
-bi1 = Cons True Nil
+biIsZero = All Not;
+bi0 = Nil;
+bi1 = Cons True Nil;
 
 bShiftr = ^l.(^n.(
     If (biIsZero n)
         l
         (Cons False (bShiftr l (bSub n bi1)))
-    ))
+    ));
 
 bShiftl = ^l.(^n.(
     If (biIsZero n)
         l
         (TailOrNil (bShiftl l (bSub n bi1)))
-    ))
+    ));
 
 # Cmp = Eq | Lt | Gt
-Eq = ^a.(^b.(^c.(a)))
-Lt = ^a.(^b.(^c.(b)))
-Gt = ^a.(^b.(^c.(c)))
+Eq = ^a.(^b.(^c.(a)));
+Lt = ^a.(^b.(^c.(b)));
+Gt = ^a.(^b.(^c.(c)));
 
-biIsEq = ^c.(c True False False)
+biIsEq = ^c.(c True False False);
 # {} cmp {} == Eq
 # True, ... cmp False, ... == Gt
 # False, ... cmp True, ... == Lt
@@ -100,26 +100,26 @@ bCmp = ^a.(^b.(
                 (Not (HeadOrFalse a)))
                 Lt
                 (bCmp (TailOrNil a) (TailOrNil b))
-    ))))
+    ))));
 
 
 # ==
-bEq = ^a.(^b.(bCmp a b True False False))
+bEq = ^a.(^b.(bCmp a b True False False));
 
 # !=
-bNeq = ^a.(^b.(bCmp a b False True True))
+bNeq = ^a.(^b.(bCmp a b False True True));
 
 # <
-bLt = ^a.(^b.(bCmp a b False True False))
+bLt = ^a.(^b.(bCmp a b False True False));
 
 # >
-bGt = ^a.(^b.(bCmp a b False False True))
+bGt = ^a.(^b.(bCmp a b False False True));
 
 # <=
-bLeq = ^a.(^b.(bCmp a b True True False))
+bLeq = ^a.(^b.(bCmp a b True True False));
 
 # >=
-bGeq = ^a.(^b.(bCmp a b True False True))
+bGeq = ^a.(^b.(bCmp a b True False True));
 
 # binary internal multiplication
 # inputs:
@@ -133,7 +133,7 @@ biMul = ^a.(^b.(^f.(
         (If (HeadOrFalse b)
             (bAdd (f a) (biMul a (TailOrNil b) (Comp f biShiftrOne)))
             (biMul a (TailOrNil b) (Comp f biShiftrOne))
-    ))))
+    ))));
 
 # binary internal division
 # inputs:
@@ -142,7 +142,7 @@ biMul = ^a.(^b.(^f.(
 # ouputs: Pair
 #   - 0: binary integer quotient
 #   - 1: binary integer rest
-biOne = Cons True Nil
+biOne = Cons True Nil;
 biZero = Cons False Nil
 biDiv = ^a.(^b.(
         (If (bGeq a b))
@@ -150,9 +150,9 @@ biDiv = ^a.(^b.(
                 (biDiv (bSub a b) b)
             )
             (Pair Nil a)
-    ))
+    ));
 
-bIsOdd = HeadOrFalse
+bIsOdd = HeadOrFalse;
 
 # binary internal potence in logaritic time:
 # inputs:
@@ -166,11 +166,11 @@ biPow = ^b.(^e.(
             (bMul b (biPow (bMul b b) (biShiftlOne (bSub e biOne))))
             (biPow (bMul b b) (biShiftlOne e))
         )
-    ))
+    ));
 
-bPow = biPow
-bDiv = ^a.(^b.(Fst (biDiv a b)))
-bMod = ^a.(^b.(Snd (biDiv a b)))
-bMul = ^a.(^b.(biMul a b I))
-bAdd = ^a.(^b.(biAdd a b False))
-bSub = ^a.(^b.(biSub a b False))
+bPow = biPow;
+bDiv = ^a.(^b.(Fst (biDiv a b)));
+bMod = ^a.(^b.(Snd (biDiv a b)));
+bMul = ^a.(^b.(biMul a b I));
+bAdd = ^a.(^b.(biAdd a b False));
+bSub = ^a.(^b.(biSub a b False));
