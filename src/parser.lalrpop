@@ -36,7 +36,7 @@ ProgramAtom: Ast = {
 };
 
 ImportExpr: Ast = {
-    IMPORT_STAT <FILEPATH> => Ast::Import(<>.into())
+    IMPORT_STAT <FILEPATH> => Ast::Import(<>[1..<>.len() - 1].into())
 }
 
 LetExpr: Ast = {
