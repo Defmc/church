@@ -7,9 +7,6 @@ pub type VarId = usize;
 
 pub const ALPHABET: &str = "abcdefghijklmnopqrstuvwxyz";
 
-/// Parsing lib
-pub mod parser;
-
 /// Striaghtforward beta reduction
 pub mod straight;
 
@@ -447,11 +444,6 @@ impl Term {
         }
     }
 
-    pub fn try_from_str<T: AsRef<str>>(s: T) -> Result<Self, lrp::Error<parser::Sym>> {
-        let lex = parser::try_lexer(s.as_ref())?;
-        parser::parse(lex)
-    }
-
     pub fn debrejin_reduced(mut self) -> Self {
         self.debrejin_redex();
         self
@@ -519,14 +511,6 @@ impl Term {
             Body::App(lhs, rhs) => lhs.check_is_debrejin(lvl + 1) && rhs.check_is_debrejin(lvl + 1),
             Body::Abs(v, l) => *v == lvl && l.check_is_debrejin(lvl + 1),
         }
-    }
-}
-
-impl FromStr for Term {
-    type Err = lrp::Error<parser::Sym>;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let lex = parser::lexer(s);
-        parser::parse(lex)
     }
 }
 
@@ -612,33 +596,5 @@ impl fmt::Display for Body {
             )),
             Self::Abs(v, l) => w.write_fmt(format_args!("λ{}.({l})", id_to_str(*v))),
         }
-    }
-}
-
-#[cfg(test)]
-pub mod tests {
-    use crate::Term;
-
-    #[test]
-    pub fn valid_syntax() {
-        const SCRIPTS: &[&str] = &[
-            "^x.(a)",
-            "\\x.(x (a c))",
-            "deadbeef",
-            "λl.(l l)",
-            "(x (x) a)",
-            "\\i->(a c)",
-        ];
-        SCRIPTS
-            .iter()
-            .for_each(|s| assert!(Term::try_from_str(s).is_ok()))
-    }
-
-    #[test]
-    pub fn invalid_syntax() {
-        const SCRIPTS: &[&str] = &["^x.()", "(x x) a)", "^x(a)", "DEADBEEF", "\\\\x.(a)"];
-        SCRIPTS
-            .iter()
-            .for_each(|s| assert!(Term::try_from_str(s).is_err()))
     }
 }

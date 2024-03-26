@@ -112,13 +112,24 @@ impl Ui {
         None
     }
 
+    pub fn get_true() -> Term {
+        Term::new(Body::Abs(
+            0,
+            Term::new(Body::Abs(1, Term::new(Body::Id(0)))),
+        ))
+    }
+    pub fn get_false() -> Term {
+        Term::new(Body::Abs(
+            0,
+            Term::new(Body::Abs(1, Term::new(Body::Id(1)))),
+        ))
+    }
+
     pub fn from_binary_number(list: &[Term]) -> Option<u128> {
-        let one = Term::from_str("^a.(^b.(a))").unwrap();
-        let zero = Term::from_str("^a.(^b.(b))").unwrap();
-        if list.first()?.alpha_eq(&one) {
+        if list.first()?.alpha_eq(&Self::get_true()) {
             let buf = Self::from_binary_number(&list[1..]).unwrap_or(0) << 1;
             Some(1 + buf)
-        } else if list.first()?.alpha_eq(&zero) {
+        } else if list.first()?.alpha_eq(&Self::get_false()) {
             let buf = Self::from_binary_number(&list[1..]).unwrap_or(0) << 1;
             Some(buf)
         } else {
