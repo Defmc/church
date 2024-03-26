@@ -40,6 +40,12 @@ pub const COMMANDS: &[Command] = &[
         handler: env::set,
     },
     Command {
+name: "reload",
+help: "reloads the loaded files in the environment, discard any other changes",
+inputs_help: &[],
+handler: io::reload,
+    },
+    Command {
         name: "delta",
         help: "delta reduces the expression"
         ,inputs_help: &[("<expr>", "the lambda expression")],
@@ -50,12 +56,6 @@ pub const COMMANDS: &[Command] = &[
         help: "asserts equality between two lambda expressions. If they're different, panics.",
             inputs_help: &[("<lhs-expr> <rhs-expr>", "the lambda expressions to be compared"), ("-q", "quiet mode: just runs and crashes if needed. Don't should anything more than the panic message")],
             handler: env::assert_eq
-    },
-    Command {
-        name: "load",
-        help: "loads a file inside repl",
-        inputs_help: &[("<filepath>", "file to be loaded"), ("-s", "strictly loads the file. Updating the lazy-evaluation system immediately")],
-        handler: io::load
     },
     Command {
         name: "alpha_eq",

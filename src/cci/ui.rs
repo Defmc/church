@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use church::{Body, Term, VarId};
 
 use super::scope::Scope;
@@ -118,6 +116,7 @@ impl Ui {
             Term::new(Body::Abs(1, Term::new(Body::Id(0)))),
         ))
     }
+
     pub fn get_false() -> Term {
         Term::new(Body::Abs(
             0,

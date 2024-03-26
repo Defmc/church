@@ -1,7 +1,7 @@
 use core::fmt;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::rc::Rc;
-use std::{iter::Peekable, num::NonZeroUsize, str::FromStr};
+use std::{iter::Peekable, num::NonZeroUsize};
 
 pub type VarId = usize;
 
