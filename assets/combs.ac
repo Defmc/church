@@ -1,5 +1,10 @@
 Y = ^f.(^x.(f (x x)) ^x.(f (x x))); # recursive combinator: Y f = Y (f (f (f (...))))
 I = ^x.(x); # identity function: I x = x
+S = ^x.(^y.(^z.(x z (y z))));
+B = ^x.(^y.(^z.(x (y z))));
+C = ^x.(^y.(^z.(x z y)));
+K = ^x.(^y.(x));
+W = ^x.(^y.(x y y));
 True = ^a.(^b.(a));
 False = ^a.(^b.(b));
 If = I; # (if c, then i, else e) == c
