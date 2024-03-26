@@ -126,7 +126,7 @@ pub fn show_fn(e: CmdEntry) {
     match e.inputs[0] {
         "scope" => {
             for (d, i) in e.repl.runner.scope.definitions.iter() {
-                println!("{d} = {}", e.repl.format_value(i));
+                println!("{d} = {i}");
             }
         }
         "env" => {
@@ -142,7 +142,7 @@ pub fn show_fn(e: CmdEntry) {
         }
         _ => {
             if let Some(def) = e.repl.runner.scope.definitions.get(e.inputs[0]) {
-                e.repl.print(def);
+                println!("{def}");
             } else {
                 eprintln!("unknown option {:?}", e.inputs[0]);
             }
