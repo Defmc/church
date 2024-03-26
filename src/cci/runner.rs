@@ -1,4 +1,7 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use church::Term;
 
@@ -8,6 +11,7 @@ use super::{mode::Mode, scope::Scope, ubody::Dumper, ui::Ui, Ast};
 pub struct Runner {
     pub scope: Scope,
     pub mode: Mode,
+    pub loaded_files: Vec<PathBuf>,
     pub ui: Ui,
 }
 
@@ -59,12 +63,19 @@ impl Runner {
     }
 
     pub fn load(&mut self, path: &Path) -> Result<(), Error> {
-        match fs::read_to_string(path) {
+        let path = path.into();
+        if self.loaded_files.contains(&path) {
+            return Ok(());
+        }
+        match fs::read_to_string(&path) {
             Err(e) => {
                 eprintln!("error loading file {path:?}: {e:?}");
                 Err(Error::CantLoadFile)
             }
-            Ok(s) => self.run(&s),
+            Ok(s) => {
+                self.loaded_files.push(path);
+                self.run(&s)
+            }
         }
     }
 }
