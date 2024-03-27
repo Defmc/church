@@ -17,7 +17,6 @@ pub type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 pub struct Repl {
     loaded_files: HashSet<PathBuf>,
     prompt: String,
-    binary_numbers: bool,
     quit: bool,
     rl: DefaultEditor,
     runner: Runner,
@@ -30,7 +29,6 @@ impl Default for Repl {
         rl.set_history_ignore_space(true);
         Repl {
             loaded_files: HashSet::default(),
-            binary_numbers: false,
             quit: false,
             prompt: String::from("λ> "),
             rl,
