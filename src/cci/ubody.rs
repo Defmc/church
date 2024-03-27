@@ -11,11 +11,17 @@ pub fn get_y_combinator() -> Term {
         Term::new(Body::App(
             Term::new(Body::Abs(
                 1,
-                Term::new(Body::App(Term::new(Body::Id(1)), Term::new(Body::Id(1)))),
+                Term::new(Body::App(
+                    Term::new(Body::Id(0)),
+                    Term::new(Body::App(Term::new(Body::Id(1)), Term::new(Body::Id(1)))),
+                )),
             )),
             Term::new(Body::Abs(
                 1,
-                Term::new(Body::App(Term::new(Body::Id(1)), Term::new(Body::Id(1)))),
+                Term::new(Body::App(
+                    Term::new(Body::Id(0)),
+                    Term::new(Body::App(Term::new(Body::Id(1)), Term::new(Body::Id(1)))),
+                )),
             )),
         )),
     ))
