@@ -2,9 +2,9 @@ import "assets/combs.ac";
 
 # Pairs: (x, y)
 Pair = ^x.(^y.(^z.(z x y)));
-MapPair = ^f.(^m.(Pair (f (Fst m)) (f (Snd m))));
 Fst = ^z.(z True);
 Snd = ^z.(z False);
+MapPair = ^f.(^m.(Pair (f (Fst m)) (f (Snd m))));
 
 # Lists: [x, y, z]
 Cons = Pair;
@@ -14,8 +14,8 @@ Head = Fst;
 Tail = Snd;
 FoldR = ^f.(^z.(^l.(If (IsNil l) z (f (Head l) (FoldR f z (Tail l))))));
 FoldL = ^f.(^z.(^l.(If (IsNil l) z (FoldL f (f z (Head l)) (Tail l)))));
-Map = ^f.(FoldR (Comp Cons f) Nil);
 Comp = ^f.(^g.(^x.(f (g x))));
+Map = ^f.(FoldR (Comp Cons f) Nil);
 # Sum = FoldR Add 0;
 # Length = FoldR ^n.(^z.(Succ z)) 0;
 # Take = ^n.(^l.(Or (IsNil l) (IsZero n) Nil (Cons (Head l) (Take (Pred n) (Take l)))));
