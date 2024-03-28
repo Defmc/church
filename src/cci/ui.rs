@@ -22,6 +22,25 @@ impl Ui {
         println!("{}", self.format_value(s, t));
     }
 
+    pub fn format_in_level(&self, s: &Scope, t: &Term, lvl: usize) -> String {
+        if lvl == 0 {
+            return self.format_value(s, t);
+        }
+        match t.body.as_ref() {
+            Body::Id(id) => church::id_to_str(*id),
+            Body::App(lhs, rhs) => format!(
+                "{} {}",
+                self.format_in_level(s, lhs, lvl - 1),
+                self.format_in_level(s, rhs, lvl - 1)
+            ),
+            Body::Abs(v, l) => format!(
+                "󰘧{}.({})",
+                church::id_to_str(*v),
+                self.format_in_level(s, l, lvl - 1)
+            ),
+        }
+    }
+
     pub fn natural_from_church_encoding(s: &Term) -> Option<usize> {
         fn get_natural(f: VarId, x: VarId, s: &Term) -> Option<usize> {
             if let Body::App(lhs, rhs) = s.body.as_ref() {

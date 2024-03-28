@@ -1,6 +1,26 @@
 use super::CmdEntry;
 use church::{straight::StraightRedex, Body, Term};
 
+pub fn printl(mut e: CmdEntry) {
+    let lvl = match e.inputs[0].parse::<usize>() {
+        Ok(n) => n,
+        Err(e) => {
+            eprintln!("error: {e:?}");
+            return;
+        }
+    };
+    match e.into_expr(1..) {
+        Ok(expr) => println!(
+            "{}",
+            e.repl
+                .runner
+                .ui
+                .format_in_level(&e.repl.runner.scope, &expr, lvl)
+        ),
+        Err(e) => eprintln!("error: {e:?}"),
+    }
+}
+
 pub fn delta(mut e: CmdEntry) {
     match e.into_expr(..) {
         Ok(expr) => {

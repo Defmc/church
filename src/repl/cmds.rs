@@ -11,6 +11,12 @@ pub const COMMANDS: &[Command] = &[
         handler: env::quit_fn,
     },
     Command {
+        name: "printl",
+        help: "prints the passed expression without aliases until the passed level",
+        inputs_help: &[("<lvl>", "level to start aliasing"), ("<expr>", "the expression to print")],
+        handler: proc::printl
+    },
+    Command {
         name: "show",
         help: "shows something from the repl",
         inputs_help: &[("<thing>", "thing to be shown, including:\n\t\t\tscope: all the aliases and expressions defined by the user\n\t\t\tenv: the repl environment\n\t\t\tloaded: all the loaded files as the filepaths\n\t\t\t<alias>: the expression from the scope")],
