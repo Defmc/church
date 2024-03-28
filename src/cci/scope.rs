@@ -15,10 +15,15 @@ impl Scope {
         self.alias.insert(t.debrejin_reduced(), def.to_string());
     }
 
-    pub fn include_from_ubody(&mut self, def: &str, imp: &UnprocessedBody) {
+    pub fn include_from_ubody(&mut self, def: &str, imp: &UnprocessedBody) -> bool {
         let mut dumper = Dumper::new(self);
-        let t = dumper.rec_dump(def, imp);
-        self.include(def, t);
+        match dumper.rec_dump(def, imp) {
+            Some(t) => {
+                self.include(def, t);
+                true
+            }
+            None => false,
+        }
     }
 
     pub fn get_like(&self, t: &Term) -> Option<&str> {
@@ -27,7 +32,7 @@ impl Scope {
             .map(|s| s.as_str())
     }
 
-    pub fn delta_redex(&self, u: &UnprocessedBody) -> Term {
+    pub fn delta_redex(&self, u: &UnprocessedBody) -> Option<Term> {
         let mut dumper = Dumper::new(self);
         dumper.dump(u)
     }

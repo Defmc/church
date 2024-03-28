@@ -42,28 +42,29 @@ impl<'a> Dumper<'a> {
         }
     }
 
-    pub fn dump(&mut self, expr: &UnprocessedBody) -> Term {
+    pub fn dump(&mut self, expr: &UnprocessedBody) -> Option<Term> {
         let mut used_vars = HashSet::default();
         expr.get_used_vars(&mut used_vars);
         self.dump_with(expr)
     }
 
-    pub fn dump_with(&mut self, expr: &UnprocessedBody) -> Term {
-        match expr {
-            UnprocessedBody::Var(v) => self.handle_vars(v),
+    pub fn dump_with(&mut self, expr: &UnprocessedBody) -> Option<Term> {
+        let t = match expr {
+            UnprocessedBody::Var(v) => self.handle_vars(v)?,
             UnprocessedBody::App(lhs, rhs) => {
-                let lhs = self.dump_with(lhs);
-                let rhs = self.dump_with(rhs);
+                let lhs = self.dump_with(lhs)?;
+                let rhs = self.dump_with(rhs)?;
                 Term::new(Body::App(lhs, rhs))
             }
             UnprocessedBody::Abs(v, l) => {
                 let (var_id, body) = self.do_binding(v, |s| s.dump_with(l));
-                Term::new(Body::Abs(var_id, body))
+                Term::new(Body::Abs(var_id, body?))
             }
-        }
+        };
+        Some(t)
     }
 
-    pub fn rec_dump(&mut self, def: &str, imp: &UnprocessedBody) -> Term {
+    pub fn rec_dump(&mut self, def: &str, imp: &UnprocessedBody) -> Option<Term> {
         let rec_var_id = if imp.contains(def) {
             let var_id = self.get_next_free_name();
             self.renames.insert(def.to_string(), var_id);
@@ -71,13 +72,14 @@ impl<'a> Dumper<'a> {
         } else {
             None
         };
-        let imp = self.dump(imp);
-        if let Some(var_id) = rec_var_id {
+        let imp = self.dump(imp)?;
+        let t = if let Some(var_id) = rec_var_id {
             let imp = Term::new(Body::Abs(var_id, imp));
             Term::new(Body::App(get_y_combinator(), imp))
         } else {
             imp
-        }
+        };
+        Some(t)
     }
 
     pub fn do_binding<T>(&mut self, v: &str, f: impl FnOnce(&mut Self) -> T) -> (usize, T) {
@@ -95,16 +97,17 @@ impl<'a> Dumper<'a> {
         (var_id, f_ret)
     }
 
-    pub fn handle_vars(&mut self, var: &str) -> Term {
-        if let Some(id) = self.renames.get(var) {
+    pub fn handle_vars(&mut self, var: &str) -> Option<Term> {
+        let t = if let Some(id) = self.renames.get(var) {
             Term::new(Body::Id(*id))
         } else if let Some(def) = self.scope.definitions.get(var) {
             def.clone()
         } else if let Some(id) = Self::str_to_id(var) {
             Term::new(Body::Id(id))
         } else {
-            panic!("cannot find a definition for {var:?}");
-        }
+            return None;
+        };
+        Some(t)
     }
 
     pub fn str_to_id(s: &str) -> Option<VarId> {
@@ -142,11 +145,6 @@ pub enum UnprocessedBody {
 }
 
 impl UnprocessedBody {
-    pub fn delta_redex(&self, scope: &Scope) -> Term {
-        let mut dumper = Dumper::new(scope);
-        dumper.dump(self)
-    }
-
     pub fn get_used_vars(&self, set: &mut HashSet<String>) {
         match self {
             Self::Var(_) => {}

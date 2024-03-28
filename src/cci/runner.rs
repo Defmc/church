@@ -20,6 +20,7 @@ pub enum Error {
     CantParse,
     InvalidExpr,
     CantLoadFile,
+    InvalidReference,
 }
 
 impl Runner {
@@ -35,7 +36,10 @@ impl Runner {
                     self.scope.include_from_ubody(&def, &imp);
                 }
                 Ast::Expr(expr) => {
-                    let expr = self.scope.delta_redex(&expr);
+                    let expr = self
+                        .scope
+                        .delta_redex(&expr)
+                        .ok_or(Error::InvalidReference)?;
                     self.mode.run(&self.ui, &self.scope, expr);
                 }
                 Ast::Import(path) => self.load(&path)?,
@@ -54,7 +58,7 @@ impl Runner {
         match program.first().unwrap() {
             Ast::Expr(expr) => {
                 let mut dumper = Dumper::new(&self.scope);
-                let term = dumper.dump(expr);
+                let term = dumper.dump(expr).ok_or(Error::InvalidReference)?;
                 return Ok(term);
             }
             _ => (),
