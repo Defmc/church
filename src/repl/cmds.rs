@@ -121,8 +121,12 @@ pub struct CmdEntry<'a> {
 }
 
 impl<'a> CmdEntry<'a> {
-    pub fn into_expr(&mut self) -> std::result::Result<Term, crate::cci::runner::Error> {
-        let input = self.inputs.join(" ");
+    pub fn into_expr(
+        &mut self,
+        r: impl std::slice::SliceIndex<[&'a str], Output = [&'a str]>,
+    ) -> std::result::Result<Term, crate::cci::runner::Error> {
+        let input: &[&str] = &self.inputs[r];
+        let input = input.join(" ");
         self.repl.runner.get_term_from_str(&input)
     }
 }

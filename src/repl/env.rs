@@ -151,7 +151,7 @@ pub fn show_fn(e: CmdEntry) {
 }
 
 pub fn assert_eq(mut e: CmdEntry) {
-    match e.into_expr() {
+    match e.into_expr(..) {
         Ok(mut expr) => match Rc::make_mut(&mut expr.body) {
             Body::App(ref mut lhs, ref mut rhs) => {
                 let (lhs_s, rhs_s) = (e.repl.format_value(lhs), e.repl.format_value(rhs));

@@ -2,7 +2,7 @@ use super::CmdEntry;
 use church::{straight::StraightRedex, Body, Term};
 
 pub fn delta(mut e: CmdEntry) {
-    match e.into_expr() {
+    match e.into_expr(..) {
         Ok(expr) => {
             println!("{}", expr);
         }
@@ -11,7 +11,7 @@ pub fn delta(mut e: CmdEntry) {
 }
 
 pub fn alpha_eq(mut e: CmdEntry) {
-    match e.into_expr() {
+    match e.into_expr(..) {
         Ok(expr) => match expr.body.as_ref() {
             Body::App(ref lhs, ref rhs) => {
                 println!("{}", lhs.alpha_eq(rhs));
@@ -23,7 +23,7 @@ pub fn alpha_eq(mut e: CmdEntry) {
 }
 
 pub fn alpha(mut e: CmdEntry) {
-    match e.into_expr() {
+    match e.into_expr(..) {
         Ok(expr) => {
             println!("{}", expr.alpha_reduced());
         }
@@ -49,7 +49,7 @@ pub fn closed(mut e: CmdEntry) {
         }
     }
 
-    match e.into_expr() {
+    match e.into_expr(..) {
         Ok(expr) => {
             print_closed(&e, &expr, 0);
         }
@@ -58,7 +58,7 @@ pub fn closed(mut e: CmdEntry) {
 }
 
 pub fn debrejin(mut e: CmdEntry) {
-    match e.into_expr() {
+    match e.into_expr(..) {
         Ok(l) => {
             println!("{}", l.clone().debrejin_reduced());
             e.repl.runner.mode.bench("printing", || {
@@ -88,7 +88,7 @@ pub fn fix_point(_: CmdEntry) {
 }
 
 pub fn len(mut e: CmdEntry) {
-    match e.into_expr() {
+    match e.into_expr(..) {
         Ok(l) => {
             e.repl.runner.mode.bench("printing", || {
                 println!("{}", l.len());
@@ -101,7 +101,7 @@ pub fn len(mut e: CmdEntry) {
 }
 
 pub fn straight(mut e: CmdEntry) {
-    match e.into_expr() {
+    match e.into_expr(..) {
         Ok(l) => {
             let mut l = l.clone();
             e.repl.runner.mode.bench("beta straight reducing", || {
