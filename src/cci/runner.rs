@@ -55,13 +55,10 @@ impl Runner {
             Error::CantParse
         })?;
         let program = parsed.into_program();
-        match program.first().unwrap() {
-            Ast::Expr(expr) => {
-                let mut dumper = Dumper::new(&self.scope);
-                let term = dumper.dump(expr).ok_or(Error::InvalidReference)?;
-                return Ok(term);
-            }
-            _ => (),
+        if let Ast::Expr(ref expr) = program[0] {
+            let mut dumper = Dumper::new(&self.scope);
+            let term = dumper.dump(expr).ok_or(Error::InvalidReference)?;
+            return Ok(term);
         }
         Err(Error::InvalidExpr)
     }
