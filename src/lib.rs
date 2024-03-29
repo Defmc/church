@@ -460,29 +460,26 @@ impl Term {
                 rhs.redex_by_debrejin(binds, lvl + 1);
             }
             Body::Abs(ref mut v, ref mut l) => {
-                let lvl = Self::get_next_free(lvl, binds);
+                let new_lvl = Self::get_next_free(lvl, binds);
                 let old_v = *v;
-                *v = lvl;
-                let old = binds.insert(old_v, lvl);
-                l.redex_by_debrejin(binds, lvl + 1);
+                *v = new_lvl;
+                let old = binds.insert(old_v, new_lvl);
+                l.redex_by_debrejin(binds, new_lvl + 1);
                 if let Some(old) = old {
                     *binds.get_mut(&old_v).unwrap() = old;
                 } else {
-                    binds.remove(&lvl);
+                    binds.remove(&old_v);
                 }
             }
         }
     }
 
     pub fn get_next_free(start: VarId, binds: &HashMap<VarId, VarId>) -> VarId {
-        for k in start.. {
-            // just FVs and already rebinds are { i: i }, but there should'nt be two rebinds in the
-            // same level. So { i: i } is always a FV.
-            if binds.get(&k) != Some(&k) {
-                return k;
-            }
-        }
-        unreachable!("how the 2^64 - 1 possible var ids was used, my man?");
+        // just FVs and already rebinds are { i: i }, but there should'nt be two rebinds in the
+        // same level. So { i: i } is always a FV.
+        (start..)
+            .find(|i| binds.get(&i) != Some(&i))
+            .expect("how the 2^64 - 1 possible var ids was used, my man?")
     }
 
     /// Checks if an expression is debrejin alpha compatible. Notice that, the set of `is_debrejin`
