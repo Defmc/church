@@ -478,7 +478,7 @@ impl Term {
         // just FVs and already rebinds are { i: i }, but there should'nt be two rebinds in the
         // same level. So { i: i } is always a FV.
         (start..)
-            .find(|i| binds.get(&i) != Some(&i))
+            .find(|i| binds.get(i) != Some(i))
             .expect("how the 2^64 - 1 possible var ids was used, my man?")
     }
 
