@@ -67,43 +67,48 @@ impl Ui {
         None
     }
 
-    pub fn format_value(&self, s: &Scope, t: &Term) -> String {
+    pub fn beautify(&self, s: &Scope, t: &Term) -> Option<String> {
         if !self.readable {
-            return format!("{t}");
-        }
-        if let Some(alias) = s.get_like(t) {
-            return alias.to_string();
-        }
-        if !self.bina_ext {
+            return Some(format!("{t}"));
+        } else if let Some(alias) = s.get_like(t) {
+            return Some(alias.to_string());
+        } else if !self.bina_ext {
             if let Some(n) = Self::natural_from_church_encoding(t) {
-                return n.to_string();
+                return Some(n.to_string());
             }
-        }
-        if let Some(v) = Self::from_list(t) {
+        } else if let Some(v) = Self::from_list(t) {
             if self.bina_ext {
                 if let Some(bin_n) = Self::from_binary_number(&v) {
-                    return format!("{bin_n}");
+                    return Some(format!("{bin_n}"));
                 }
             }
-            return format!(
+            let s = format!(
                 "[{}]",
                 v.into_iter()
                     .map(|e| self.format_value(s, &e))
                     .collect::<Vec<_>>()
                     .join(", ")
             );
+            return Some(s);
+        };
+        None
+    }
+
+    pub fn format_value(&self, s: &Scope, t: &Term) -> String {
+        if let Some(s) = self.beautify(s, t) {
+            return s;
         }
         return match t.body.as_ref() {
             Body::Id(id) => church::id_to_str(*id),
-            Body::App(ref f, ref x) => format!(
-                "{} {}",
-                self.format_value(s, f),
-                if usize::from(x.len()) > 1 {
+            Body::App(ref f, ref x) => format!("{} {}", self.format_value(s, f), {
+                if let Some(s) = self.beautify(s, x) {
+                    s
+                } else if usize::from(x.len()) > 1 {
                     format!("({})", self.format_value(s, x))
                 } else {
                     self.format_value(s, x)
                 }
-            ),
+            }),
             Body::Abs(v, l) => {
                 format!("λ{}.({})", church::id_to_str(*v), self.format_value(s, l))
             }
