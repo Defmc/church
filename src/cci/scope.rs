@@ -11,8 +11,9 @@ pub struct Scope {
 
 impl Scope {
     pub fn include(&mut self, def: &str, t: Term) {
+        let t = t.debrejin_reduced();
         self.definitions.insert(def.to_string(), t.clone());
-        self.alias.insert(t.debrejin_reduced(), def.to_string());
+        self.alias.insert(t, def.to_string());
     }
 
     pub fn include_from_ubody(&mut self, def: &str, imp: &UnprocessedBody) -> bool {
@@ -27,6 +28,12 @@ impl Scope {
     }
 
     pub fn get_like(&self, t: &Term) -> Option<&str> {
+        // println!(
+        //     "found like: {:?}",
+        //     self.alias
+        //         .get(&t.clone().debrejin_reduced())
+        //         .map(String::as_str)
+        // );
         self.alias
             .get(&t.clone().debrejin_reduced())
             .map(String::as_str)
