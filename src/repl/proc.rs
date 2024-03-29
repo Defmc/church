@@ -1,4 +1,5 @@
 use super::CmdEntry;
+use crate::repl::HashSet;
 use church::{straight::StraightRedex, Body, Term};
 
 pub fn printl(mut e: CmdEntry) {
@@ -131,6 +132,26 @@ pub fn straight(mut e: CmdEntry) {
         }
         Err(e) => {
             eprintln!("error: {e:?}");
+        }
+    }
+}
+
+pub fn cycle(mut e: CmdEntry) {
+    let mut steps = HashSet::default();
+    let mut l = match e.into_expr(..) {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("error: {e:?}");
+            return;
+        }
+    };
+    while l.beta_redex_step() {
+        l.debrejin_redex();
+        if steps.contains(&l) {
+            e.repl.print(&l);
+            return;
+        } else {
+            steps.insert(l.clone());
         }
     }
 }

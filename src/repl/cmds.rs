@@ -11,6 +11,11 @@ pub const COMMANDS: &[Command] = &[
         handler: env::quit_fn,
     },
     Command {
+name: "cycle",
+help: "check if the function turns into a cyclic expression at some time",
+inputs_help: &[("<expr>", "expression to be checked")],handler: proc::cycle
+    },
+    Command {
         name: "printl",
         help: "prints the passed expression without aliases until the passed level",
         inputs_help: &[("<lvl>", "level to start aliasing"), ("<expr>", "the expression to print")],
