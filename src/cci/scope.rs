@@ -29,7 +29,7 @@ impl Scope {
     pub fn get_like(&self, t: &Term) -> Option<&str> {
         self.alias
             .get(&t.clone().debrejin_reduced())
-            .map(|s| s.as_str())
+            .map(String::as_str)
     }
 
     pub fn delta_redex(&self, u: &UnprocessedBody) -> Option<Term> {

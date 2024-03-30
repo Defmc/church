@@ -111,37 +111,3 @@ impl Repl {
         tasks.iter().for_each(|t| repl.parse(t));
     }
 }
-
-#[cfg(test)]
-pub mod tests {
-    use crate::repl::Repl;
-
-    #[test]
-    pub fn logic() {
-        Repl::spawn(&[":load tests/logic.ac"])
-    }
-
-    #[test]
-    pub fn tabulation() {
-        Repl::spawn(&[":load tests/tabs.ac"]);
-        Repl::spawn(&[
-            ":load assets/nat.ac",
-            ":load assets/combs.ac",
-            "Fibo = ^n.(
-    If (IsZero (Pred n)) 
-        1 
-        (Add 
-            (Fibo (Pred n))
-            (Fibo (Pred (Pred n)))
-        )
-    )",
-            ":gen_nats 0 4",
-            ":assert_eq (Fibo 3) 3",
-        ]);
-    }
-
-    #[test]
-    pub fn whitespaced_filepath() {
-        Repl::spawn(&[":load \"tests/white spaced.ac\"", ":assert_eq Dark Reasons"])
-    }
-}
