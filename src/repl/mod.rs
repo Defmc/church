@@ -111,3 +111,73 @@ impl Repl {
         tasks.iter().for_each(|t| repl.parse(t));
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use crate::repl::Repl;
+
+    #[test]
+    pub fn logic_from_combs() {
+        type LogicOp = (bool, bool, bool);
+        const TABLES: &[(&str, &[LogicOp])] = &[
+            (
+                "Or",
+                &[
+                    (false, false, false),
+                    (true, false, true),
+                    (false, true, true),
+                    (true, true, true),
+                ],
+            ),
+            (
+                "And",
+                &[
+                    (false, false, false),
+                    (true, false, false),
+                    (false, true, false),
+                    (true, true, true),
+                ],
+            ),
+            (
+                "Xor",
+                &[
+                    (false, false, false),
+                    (true, false, true),
+                    (false, true, true),
+                    (true, true, false),
+                ],
+            ),
+            (
+                "Nand",
+                &[
+                    (false, false, true),
+                    (true, false, true),
+                    (false, true, true),
+                    (true, true, false),
+                ],
+            ),
+            (
+                "Xnor",
+                &[
+                    (false, false, true),
+                    (true, false, false),
+                    (false, true, false),
+                    (true, true, true),
+                ],
+            ),
+        ];
+
+        let mut repl = Repl::default();
+
+        repl.parse("import \"assets/combs.ac\"");
+        repl.parse("true = True");
+        repl.parse("false = False");
+
+        for (op, table) in TABLES {
+            println!("testing '{op}'");
+            for (a, b, r) in table.iter() {
+                repl.parse(&format!(":assert_eq ({op} {a} {b}) {r}"));
+            }
+        }
+    }
+}
