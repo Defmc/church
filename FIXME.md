@@ -154,3 +154,34 @@ Succ (2)
 λb.(λc.(b (c (c c))))
 ```
 - [x] Check definition of `Term::set_closeds`
+
+# Erroneous debrejin reduction
+```
+λ> ^x.(^x.(x) ^x.(x) a)
+λa.(λb.(b) (λb.(b)) a)
+λa.(λb.(b) a)
+λa.(a)
+λ> 
+```
+```
+λ> :closed ^x.(^x.(x) ^x.(x) a)
+λa.(λb.(b) (λb.(b)) a): true
+  λb.(b) (λb.(b)) a: false
+    λb.(b) (λb.(b)): true
+      λb.(b): true
+        b: false
+      λb.(b): true
+        b: false
+    a: false
+λ> :closed ^a.(^a.(a) ^a.(a) z)
+λa.(λb.(b) (λb.(b)) z): false
+  λb.(b) (λb.(b)) z: false
+    λb.(b) (λb.(b)): true
+      λb.(b): true
+        b: false
+      λb.(b): true
+        b: false
+    z: false
+```
+
+- [x] store `used_vars` to check for free definitions

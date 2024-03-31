@@ -30,6 +30,7 @@ pub fn get_y_combinator() -> Term {
 pub struct Dumper<'a> {
     scope: &'a Scope,
     renames: HashMap<String, VarId>,
+    used_vars: HashSet<String>,
     last_var_id: VarId,
 }
 
@@ -38,6 +39,7 @@ impl<'a> Dumper<'a> {
         Self {
             scope,
             renames: HashMap::default(),
+            used_vars: HashSet::default(),
             last_var_id: 0,
         }
     }
@@ -45,6 +47,7 @@ impl<'a> Dumper<'a> {
     pub fn dump(&mut self, expr: &UnprocessedBody) -> Option<Term> {
         let mut used_vars = HashSet::default();
         expr.get_used_vars(&mut used_vars);
+        self.used_vars = used_vars;
         self.dump_with(expr)
     }
 
@@ -133,7 +136,9 @@ impl<'a> Dumper<'a> {
     }
 
     pub fn is_var_used(&self, v: &str) -> bool {
-        self.renames.contains_key(v) || self.scope.definitions.contains_key(v)
+        self.renames.contains_key(v)
+            || self.scope.definitions.contains_key(v)
+            || self.used_vars.contains(v)
     }
 }
 
@@ -147,7 +152,9 @@ pub enum UnprocessedBody {
 impl UnprocessedBody {
     pub fn get_used_vars(&self, set: &mut HashSet<String>) {
         match self {
-            Self::Var(_) => {}
+            Self::Var(id) => {
+                set.insert(id.to_string());
+            }
             Self::Abs(arg, fun) => {
                 if !set.contains(arg) {
                     set.insert(arg.clone());
