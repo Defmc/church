@@ -63,4 +63,12 @@ pub mod tests {
         assert!(get_global_parser().parse("Const = Value").is_ok());
         assert!(get_global_parser().parse("Sum = FoldR Add 0").is_ok());
     }
+
+    #[test]
+    fn idents_with_apostrophe() {
+        assert!(get_global_parser().parse("^x'.(x')").is_ok());
+        assert!(get_global_parser()
+            .parse("^A_Param'''.(A_Param''')")
+            .is_ok());
+    }
 }
