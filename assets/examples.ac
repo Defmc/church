@@ -1,4 +1,4 @@
-:load assets/nat.ac
-Fact = ^n.(If (IsZero n) 1 (Mult n (Fact (Pred n))))
-Fibo = ^n.(If (IsZero (Pred n)) 1 (Add (Fibo (Pred n)) (Fibo (Pred (Pred n)))))
-Ack = ^p.((p (^a.(^q.(a (q a 1)))) Succ))
+import "assets/nat.ac";
+Fact = ^n.(If (IsZero n) 1 (Mult n (Fact (Pred n))));
+Fibo = ^n.(If (IsZero (Pred n)) 1 (Add (Fibo (Pred n)) (Fibo (Pred (Pred n)))));
+Ack = ^p.((p (^a.(^q.(a (q a 1)))) Succ));

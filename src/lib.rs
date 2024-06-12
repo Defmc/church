@@ -1,17 +1,14 @@
 use core::fmt;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::rc::Rc;
-use std::{iter::Peekable, num::NonZeroUsize, str::FromStr};
+use std::{iter::Peekable, num::NonZeroUsize};
 
 pub type VarId = usize;
 
 pub const ALPHABET: &str = "abcdefghijklmnopqrstuvwxyz";
 
-/// Parsing lib
-pub mod parser;
-
-/// Delta Reductions
-pub mod scope;
+/// Striaghtforward beta reduction
+pub mod straight;
 
 /// # Panics
 /// Never.
@@ -26,7 +23,7 @@ pub fn id_to_str(i: usize) -> String {
     )
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Term {
     pub body: Rc<Body>,
     /// closedness. A optimization tech.
@@ -72,46 +69,30 @@ impl Term {
     /// check for free_variables in combinators. For example, in `Fact 6`, without `update_closed`,
     /// the computation takes 11s, while when enabled, it's 3.04s.
     pub fn update_closed(&mut self) {
-        let mut frees = self.body.free_variables();
-        let mut len = frees.len();
-        self.set_closeds(&mut frees, &mut len);
+        self.set_closeds(&mut HashSet::default(), &mut 0);
     }
 
     pub fn set_closeds(&mut self, frees: &mut HashSet<VarId>, len: &mut usize) {
-        let is_empty = *len == 0;
-        self.closed = self.fast_inner_closed_check() || is_empty;
         match Rc::make_mut(&mut self.body) {
-            Body::Id(..) => (),
+            Body::Id(id) => {
+                if !frees.contains(id) {
+                    frees.insert(*id);
+                    *len += 1;
+                }
+            }
             Body::App(ref mut lhs, ref mut rhs) => {
-                if !lhs.closed {
-                    lhs.set_closeds(frees, len);
-                }
-                if !rhs.closed {
-                    rhs.set_closeds(frees, len);
-                }
+                lhs.set_closeds(frees, len);
+                rhs.set_closeds(frees, len);
             }
             Body::Abs(v, ref mut l) => {
-                if !l.closed {
-                    let old = frees.remove(v);
-                    if old {
-                        *len -= 1;
-                    }
-                    l.set_closeds(frees, len);
-                    if old {
-                        frees.insert(*v);
-                        *len += 1;
-                    }
+                l.set_closeds(frees, len);
+                if frees.contains(v) {
+                    frees.remove(v);
+                    *len -= 1;
                 }
             }
-        }
-    }
-
-    pub fn fast_inner_closed_check(&self) -> bool {
-        match self.body.as_ref() {
-            Body::Id(..) => false,
-            Body::App(lhs, rhs) => lhs.closed && rhs.closed,
-            Body::Abs(_, l) => l.closed,
-        }
+        };
+        self.closed = *len == 0;
     }
 
     #[must_use]
@@ -392,7 +373,8 @@ impl Term {
                 }
             }
             Body::Abs(..) => {
-                self.eta_redex_step() || self.as_mut_abs().unwrap().1.beta_redex_step()
+                /*self.eta_redex_step() || */
+                self.as_mut_abs().unwrap().1.beta_redex_step()
             }
         }
     }
@@ -447,11 +429,6 @@ impl Term {
         }
     }
 
-    pub fn try_from_str<T: AsRef<str>>(s: T) -> Result<Self, lrp::Error<parser::Sym>> {
-        let lex = parser::try_lexer(s.as_ref())?;
-        parser::parse(lex)
-    }
-
     pub fn debrejin_reduced(mut self) -> Self {
         self.debrejin_redex();
         self
@@ -483,27 +460,26 @@ impl Term {
                 rhs.redex_by_debrejin(binds, lvl + 1);
             }
             Body::Abs(ref mut v, ref mut l) => {
-                let lvl = Self::get_next_free(lvl, binds);
+                let new_lvl = Self::get_next_free(lvl, binds);
                 let old_v = *v;
-                *v = lvl;
-                let old = binds.insert(old_v, lvl);
-                l.redex_by_debrejin(binds, lvl + 1);
+                *v = new_lvl;
+                let old = binds.insert(old_v, new_lvl);
+                l.redex_by_debrejin(binds, new_lvl + 1);
                 if let Some(old) = old {
                     *binds.get_mut(&old_v).unwrap() = old;
                 } else {
-                    binds.remove(&lvl);
+                    binds.remove(&old_v);
                 }
             }
         }
     }
 
     pub fn get_next_free(start: VarId, binds: &HashMap<VarId, VarId>) -> VarId {
-        for k in start.. {
-            if !binds.contains_key(&k) {
-                return k;
-            }
-        }
-        unreachable!("how the 2^64 - 1 possible var ids was used, my man?");
+        // just FVs and already rebinds are { i: i }, but there should'nt be two rebinds in the
+        // same level. So { i: i } is always a FV.
+        (start..)
+            .find(|i| binds.get(i) != Some(i))
+            .expect("how the 2^64 - 1 possible var ids was used, my man?")
     }
 
     /// Checks if an expression is debrejin alpha compatible. Notice that, the set of `is_debrejin`
@@ -522,15 +498,7 @@ impl Term {
     }
 }
 
-impl FromStr for Term {
-    type Err = lrp::Error<parser::Sym>;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let lex = parser::lexer(s);
-        parser::parse(lex)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub enum Body {
     /* identity */ Id(VarId),
     /* application */ App(Term, /* ( */ Term /* ) */),
@@ -612,33 +580,5 @@ impl fmt::Display for Body {
             )),
             Self::Abs(v, l) => w.write_fmt(format_args!("λ{}.({l})", id_to_str(*v))),
         }
-    }
-}
-
-#[cfg(test)]
-pub mod tests {
-    use crate::Term;
-
-    #[test]
-    pub fn valid_syntax() {
-        const SCRIPTS: &[&str] = &[
-            "^x.(a)",
-            "\\x.(x (a c))",
-            "deadbeef",
-            "λl.(l l)",
-            "(x (x) a)",
-            "\\i->(a c)",
-        ];
-        SCRIPTS
-            .iter()
-            .for_each(|s| assert!(Term::try_from_str(s).is_ok()))
-    }
-
-    #[test]
-    pub fn invalid_syntax() {
-        const SCRIPTS: &[&str] = &["^x.()", "(x x) a)", "^x(a)", "DEADBEEF", "\\\\x.(a)"];
-        SCRIPTS
-            .iter()
-            .for_each(|s| assert!(Term::try_from_str(s).is_err()))
     }
 }

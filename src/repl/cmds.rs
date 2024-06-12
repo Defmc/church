@@ -11,6 +11,17 @@ pub const COMMANDS: &[Command] = &[
         handler: env::quit_fn,
     },
     Command {
+name: "cycle",
+help: "check if the function turns into a cyclic expression at some time",
+inputs_help: &[("<expr>", "expression to be checked")],handler: proc::cycle
+    },
+    Command {
+        name: "printl",
+        help: "prints the passed expression without aliases until the passed level",
+        inputs_help: &[("<lvl>", "level to start aliasing"), ("<expr>", "the expression to print")],
+        handler: proc::printl
+    },
+    Command {
         name: "show",
         help: "shows something from the repl",
         inputs_help: &[("<thing>", "thing to be shown, including:\n\t\t\tscope: all the aliases and expressions defined by the user\n\t\t\tenv: the repl environment\n\t\t\tloaded: all the loaded files as the filepaths\n\t\t\t<alias>: the expression from the scope")],
@@ -40,6 +51,12 @@ pub const COMMANDS: &[Command] = &[
         handler: env::set,
     },
     Command {
+name: "reload",
+help: "reloads the loaded files in the environment, discard any other changes",
+inputs_help: &[],
+handler: io::reload,
+    },
+    Command {
         name: "delta",
         help: "delta reduces the expression"
         ,inputs_help: &[("<expr>", "the lambda expression")],
@@ -50,30 +67,6 @@ pub const COMMANDS: &[Command] = &[
         help: "asserts equality between two lambda expressions. If they're different, panics.",
             inputs_help: &[("<lhs-expr> <rhs-expr>", "the lambda expressions to be compared"), ("-q", "quiet mode: just runs and crashes if needed. Don't should anything more than the panic message")],
             handler: env::assert_eq
-    },
-    Command {
-        name: "run",
-        help: "runs a file inside repl",
-        inputs_help: &[("<filepath>", "file to be runned")],
-        handler: io::run
-    },
-    Command {
-        name: "load",
-        help: "loads a file inside repl",
-        inputs_help: &[("<filepath>", "file to be loaded"), ("-s", "strictly loads the file. Updating the lazy-evaluation system immediately")],
-        handler: io::load
-    },
-    Command {
-        name: "rerun",
-        help: "reruns the environment",
-        inputs_help: &[]
-            ,handler: io::rerun
-    },
-    Command {
-        name: "reload",
-        help: "reloads the environment",
-        inputs_help: &[("-s", "strictly reloads the environment, updating the entire lazy-evaluating system immediately")]
-            ,handler: io::rerun
     },
     Command {
         name: "alpha_eq",
@@ -100,12 +93,6 @@ pub const COMMANDS: &[Command] = &[
         handler: proc::debrejin
     },
     Command {
-        name: "prepare",
-        help: "immediately updated the scope. Similar to `reload -s`, but way faster (because it doesn't need to load the files again)",
-        inputs_help: &[],
-        handler: io::prepare
-    },
-    Command {
         name: "gen_nats",
         help: "binds the natural numbers of the interval",
         inputs_help: &[("<number from> <number to>", "the range of numbers to be binded")],
@@ -117,6 +104,18 @@ pub const COMMANDS: &[Command] = &[
         inputs_help: &[("<expr>", "the expression to be fixed")],
         handler: proc::fix_point
     },
+    Command {
+        name: "len",
+        help: "get the length of an expression - how many elements/symbols there are",
+        inputs_help: &[("<expr>", "the expression to get length")],
+        handler: proc::len
+    },
+    Command {
+        name: "straight",
+        help: "straightforward beta redex an expression",
+        inputs_help: &[("<expr>", "the expression to reduce")],
+        handler: proc::straight
+    }
 ];
 
 pub struct Command {
@@ -133,9 +132,12 @@ pub struct CmdEntry<'a> {
 }
 
 impl<'a> CmdEntry<'a> {
-    pub fn into_expr(&mut self) -> std::result::Result<Term, lrp::Error<church::parser::Sym>> {
-        let input = self.inputs.join(" ");
-        let input = self.repl.scope.delta_redex(&input).0;
-        Term::try_from_str(input)
+    pub fn into_expr(
+        &mut self,
+        r: impl std::slice::SliceIndex<[&'a str], Output = [&'a str]>,
+    ) -> std::result::Result<Term, crate::cci::runner::Error> {
+        let input: &[&str] = &self.inputs[r];
+        let input = input.join(" ");
+        self.repl.runner.get_term_from_str(&input)
     }
 }

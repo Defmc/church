@@ -1,0 +1,181 @@
+import "assets/list.ac";
+import "assets/combs.ac";
+
+# Numbers should be build like lists of `True` and `False` with a `Nil` at the end
+# I.e, 10110 (or 22) == [True, False, True, True, False]
+# But, they will be implemented in big endianness (aka from left to right instead of right to left)
+Bum = Cons;
+
+HeadOrFalse = ^a.(If (IsNil a) False (Head a));
+TailOrNil = ^a.(If (IsNil a) Nil (Tail a));
+
+# binary internal addition
+# inputs: 
+#   - a: lhs binary integer
+#   - b: rhs binary integer
+#   - c: carry bit
+biAdd = ^a.(^b.(^c.(
+    If (And (IsNil a) (IsNil b))
+        (If c (Cons True Nil) Nil)
+        (Cons
+            (Xor (Xor (HeadOrFalse a) (HeadOrFalse b)) c)
+            (biAdd
+                (TailOrNil a) (TailOrNil b)
+                (Or 
+                    (And (HeadOrFalse a) (HeadOrFalse b))
+                    (And (Xor (HeadOrFalse a) (HeadOrFalse b)) c)
+                )
+            )
+        )
+    )));
+bAdd = ^a.(^b.(biAdd a b False));
+
+# binary internal subtraction
+# inputs: 
+#   - a: lhs binary integer
+#   - b: rhs binary integer
+#   - c: borrow (carry) bit
+biSub = ^a.(^b.(^c.(
+    If (And (IsNil a) (IsNil b))
+        (If c False Nil)
+        (Cons
+            (Xor (Xor (HeadOrFalse a) (HeadOrFalse b)) c)
+            (biSub
+                (TailOrNil a)
+                (TailOrNil b)
+                (Or
+                    (Or
+                        (And (Not (HeadOrFalse a)) c)
+                        (And (Not (HeadOrFalse a)) (HeadOrFalse b))
+                    )
+                    (And (HeadOrFalse b) c)
+                )
+            )
+        )
+    )));
+bSub = ^a.(^b.(biSub a b False));
+
+biShiftrOne = ^a.(Cons False a);
+biShiftlOne = TailOrNil;
+
+biIsZero = All Not;
+bi0 = Nil;
+bi1 = Cons True Nil;
+
+bShiftr = ^l.(^n.(
+    If (biIsZero n)
+        l
+        (Cons False (bShiftr l (bSub n bi1)))
+    ));
+
+bShiftl = ^l.(^n.(
+    If (biIsZero n)
+        l
+        (TailOrNil (bShiftl l (bSub n bi1)))
+    ));
+
+# Cmp = Eq | Lt | Gt
+Eq = ^a.(^b.(^c.(a)));
+Lt = ^a.(^b.(^c.(b)));
+Gt = ^a.(^b.(^c.(c)));
+
+biIsEq = ^c.(c True False False);
+# {} cmp {} == Eq
+# True, ... cmp False, ... == Gt
+# False, ... cmp True, ... == Lt
+# otherwise cmp ... ...
+bCmp = ^a.(^b.(
+    If (And (IsNil a) (IsNil b))
+        (Eq)
+        (If (And
+            (And
+                (biIsEq (bCmp (TailOrNil a) (TailOrNil b)))
+                (HeadOrFalse a)
+            )
+            (Not (HeadOrFalse b)))
+            Gt
+            (If (And
+                (And
+                    (biIsEq (bCmp (TailOrNil a) (TailOrNil b)))
+                    (HeadOrFalse b)
+                )
+                (Not (HeadOrFalse a)))
+                Lt
+                (bCmp (TailOrNil a) (TailOrNil b))
+    ))));
+
+
+# ==
+bEq = ^a.(^b.(bCmp a b True False False));
+
+# !=
+bNeq = ^a.(^b.(bCmp a b False True True));
+
+# <
+bLt = ^a.(^b.(bCmp a b False True False));
+
+# >
+bGt = ^a.(^b.(bCmp a b False False True));
+
+# <=
+bLeq = ^a.(^b.(bCmp a b True True False));
+
+# >=
+bGeq = ^a.(^b.(bCmp a b True False True));
+
+# binary internal multiplication
+# inputs:
+#   - a: lhs binary integer
+#   - b: rhs binary integer
+#   - f: right shifting function
+# output: lhs * rhs
+biMul = ^a.(^b.(^f.(
+    If (IsNil b)
+        Nil
+        (If (HeadOrFalse b)
+            (bAdd (f a) (biMul a (TailOrNil b) (Comp f biShiftrOne)))
+            (biMul a (TailOrNil b) (Comp f biShiftrOne))
+    ))));
+bMul = ^a.(^b.(biMul a b I));
+
+# binary internal division
+# inputs:
+#   - a: dividend binary integer
+#   - b: divisor binary integer
+# ouputs: Pair
+#   - 0: binary integer quotient
+#   - 1: binary integer rest
+biOne = Cons True Nil;
+biZero = Cons False Nil;
+biDiv = ^a.(^b.(
+    If (bGeq a b)
+        ^d.(
+            ^r.(
+                (If (bGeq r b)
+                    (Pair (bAdd (Fst d) biOne) (bSub r b))
+                    (Pair (Fst d) r)
+                )
+            ) (If (HeadOrFalse a) (bAdd (Snd d) biOne) (Snd d))
+        ) (MapPair biShiftrOne (biDiv (biShiftlOne a) b))
+        (Pair Nil a)
+    ));
+
+bIsOdd = HeadOrFalse;
+
+# binary internal potence in logaritic time:
+# inputs:
+#   - b: base binary integer
+#   - e: exponent binary integer
+# outputs: an binary integer b^e
+biPow = ^b.(^e.(
+    If (biIsZero e)
+        biOne
+        (If (bIsOdd e)
+            (bMul b (biPow (bMul b b) (biShiftlOne (bSub e biOne))))
+            (biPow (bMul b b) (biShiftlOne e))
+        )
+    ));
+
+bPow = biPow;
+bDiv = ^a.(^b.(Fst (biDiv a b)));
+bMod = ^a.(^b.(Snd (biDiv a b)));

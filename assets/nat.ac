@@ -1,15 +1,15 @@
-:load assets/combs.ac
+import "assets/combs.ac";
 
-Succ = λn.(λf.(λx.(f (n f x)))) 
-Pred = λx.(λy.(λz.(((x (λp.(λq.(q (p y))))) (λy.(z))) ^x.(x))))
-Add = λm.(λn.(λf.(λx.(m f (n f x)))))
-Mult = λm.(λn.(λf.(m (n f))))
-Pow = λb.(λe.(e b))
-Monus = λm.(λn.(n Pred m))
-IsZero = λn.(n (λx.(False)) True)
-Eq = λa.(λb.(And (IsZero (Monus a b)) (IsZero (Monus b a))))
-Leq = λa.(λb.(IsZero (Monus a b)))
-Geq = λa.(λb.(IsZero (Monus b a)))
+Succ = λn.(λf.(λx.(f (n f x))));
+Pred = λx.(λy.(λz.(((x (λp.(λq.(q (p y))))) (λy.(z))) ^x.(x))));
+Add = λm.(λn.(λf.(λx.(m f (n f x)))));
+Mult = λm.(λn.(λf.(m (n f))));
+Pow = λb.(λe.(e b));
+Monus = λm.(λn.(n Pred m));
+IsZero = λn.(n (λx.(False)) True);
+Eq = λa.(λb.(And (IsZero (Monus a b)) (IsZero (Monus b a))));
+Leq = λa.(λb.(IsZero (Monus a b)));
+Geq = λa.(λb.(IsZero (Monus b a)));
 
-0 = λa.(λb.(b))
-1 = λa.(λb.(a b))
+0 = λa.(λb.(b));
+1 = λa.(λb.(a b));

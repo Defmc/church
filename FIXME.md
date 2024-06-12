@@ -90,3 +90,98 @@ false
 Should show `Y` again, but internally it's the beta reduction expression into `^f.(^x.(f (x x)) ^x.(f (x x)))`.
 
 - [ ] Use normal order strategy
+
+## Scope delta-reducing without parenthesis in constants
+```
+λ> :load assets/bina.ac
+λ> Add 3
+[True, Nil]
+λ> Add (3)
+λb.([λb.(0), If, Nil])
+λ> 
+```
+
+- [x] just add a parenthesis
+
+## `error: UnexpectedToken(OpenParen, [Var])` in pair functions
+```
+λ> :load assets/list.ac
+λ> p = ^a.(Pair False a)
+λ> p True
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+error: UnexpectedToken(OpenParen, [Var])
+Not
+λ> 
+
+```
+
+### Hints
+- It's in [scope:121](src/scope.rs)
+```
+λ> ^p.(p ^x.(b))
+error: UnexpectedToken(OpenParen, [Var])
+```
+- Todas as expressões que relatam este erro sofrem com `solve_recursion` de `Scope`, provavelmente o binding está usando uma variável que conforme as reduções acontecem, ela é utilizada, oq impede a recursão de ocorrer quando sofre shadowing.
+R: Não faz sentido ser isso, pois uma função sempre será recursiva se for chamada dentro dela mesma. Caso haja uma referência cíclica, o redutor delta nem terminaria.
+```
+λ> A = ^a.(A a)
+A = Some("((^f.(^x.(f (x x)) ^x.(f (x x)))) ^a.(^a.(a a)))")
+λ> A a
+a a
+```
+``` 
+λ> P True
+updating
+updated
+[src/scope.rs:42:1] self.redex_by_delta(b) = (
+    "((^f.(^x.(f (x x)) ^x.(f (x x)))) ^b.(^p.(bair (^a.(^b.(b))) p))) (^a.(^b.(a)))",
+    true,
+)
+```
+- Renomeou `P` para `b` em `Pair` e ficou `bair`. Ele não reconhece nomes se forem menores, justamente o que está ocorrendo em `MapPair` em `biDiv` da `bina`.
+
+# Capture-avoiding system not working (fixed)
+```
+λ> Succ 2
+Succ (2)
+λb.(λc.(b (2 b c)))
+λb.(λc.(b (λb.(b (b b)) c)))
+λb.(λc.(b (c (c c))))
+```
+- [x] Check definition of `Term::set_closeds`
+
+# Erroneous debrejin reduction
+```
+λ> ^x.(^x.(x) ^x.(x) a)
+λa.(λb.(b) (λb.(b)) a)
+λa.(λb.(b) a)
+λa.(a)
+λ> 
+```
+```
+λ> :closed ^x.(^x.(x) ^x.(x) a)
+λa.(λb.(b) (λb.(b)) a): true
+  λb.(b) (λb.(b)) a: false
+    λb.(b) (λb.(b)): true
+      λb.(b): true
+        b: false
+      λb.(b): true
+        b: false
+    a: false
+λ> :closed ^a.(^a.(a) ^a.(a) z)
+λa.(λb.(b) (λb.(b)) z): false
+  λb.(b) (λb.(b)) z: false
+    λb.(b) (λb.(b)): true
+      λb.(b): true
+        b: false
+      λb.(b): true
+        b: false
+    z: false
+```
+
+- [x] store `used_vars` to check for free definitions
