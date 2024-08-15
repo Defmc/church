@@ -27,6 +27,12 @@ impl Term {
         frees
     }
 
+    pub fn coerce(&self, f: impl Fn(&mut Self)) -> Self {
+        let mut clone = self.clone();
+        f(&mut clone);
+        clone
+    }
+
     fn free_vars_from(&self, closeds: &mut HashSet<usize>, frees: &mut HashSet<usize>) {
         match self.body.as_ref() {
             Body::Var(v) => {
@@ -169,9 +175,8 @@ mod tests {
 
     #[test]
     fn uniq_redex() {
-        let expr = abs!(10, var!(10));
-        let mut reduced_expr = expr.clone();
-        reduced_expr.unique_alpha_redex();
-        assert_ne!(expr, reduced_expr);
+        let expr = abs!(10, var!(10)).coerce(Term::unique_alpha_redex);
+        let reduced_expr = abs!(0, var!(0));
+        assert_eq!(expr, reduced_expr);
     }
 }
