@@ -202,28 +202,8 @@ impl From<Body> for Term {
     }
 }
 
-#[cfg(not(feature = "aliased-vars"))]
 pub fn write_alias(idx: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     fmt::Display::fmt(&idx, f)
-}
-
-#[cfg(feature = "aliased-vars")]
-pub fn write_alias(var: usize, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    const ALIASES: &[char] = &[
-        'α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'ς',
-        'τ', 'υ', 'φ', 'χ', 'ψ', 'ω', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
-        'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3',
-        '4', '5', '6', '7', '8', '9',
-    ];
-    let mut counter = var;
-    loop {
-        let idx = counter % ALIASES.len();
-        fmt::Display::fmt(&ALIASES[idx], f)?;
-        counter /= ALIASES.len();
-        if counter == 0 {
-            return fmt::Result::Ok(());
-        }
-    }
 }
 
 impl fmt::Display for Term {

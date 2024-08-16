@@ -14,5 +14,3 @@ members = [
 
 [features]
 aliased-vars = []
-
-default = ["aliased-vars"]
