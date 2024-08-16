@@ -66,13 +66,17 @@ where
     I: Iterator<Item = LexerTy>,
 {
     let mut result = try_atom(it, src)?;
-    while let Some((t, _)) = it.peek() {
-        match t {
-            Ok(Token::CloseParen) => break,
-            _ => result = UTerm::from(UBody::App(result, try_atom(it, src)?)),
+    loop {
+        match it.peek() {
+            Some((Ok(Token::CloseParen), _)) | None => break,
+            _ => result = UBody::App(result, try_atom(it, src)?).into(),
         }
     }
     Ok(result)
+}
+
+fn next(it: &mut impl Iterator<Item = LexerTy>) -> Result<LexerTy> {
+    it.next().ok_or(ParserBodyError::UnexpectedEof)
 }
 
 pub fn try_atom<I>(it: &mut Peekable<I>, src: &str) -> Result<UTerm>
@@ -82,13 +86,13 @@ where
     let (tok, span) = it.next().ok_or(ParserBodyError::UnexpectedEof)?;
     match tok.as_ref().unwrap() {
         Token::Lambda => {
-            let next = it.next().ok_or(ParserBodyError::UnexpectedEof)?;
-            let ident = if let Token::Ident = next.0.unwrap() {
-                src[next.1].to_string()
+            let next_tk = next(it)?;
+            let ident = if let Token::Ident = next_tk.0.unwrap() {
+                src[next_tk.1].to_string()
             } else {
                 return Err(ParserBodyError::IdentNotFound);
             };
-            if it.next().ok_or(ParserBodyError::UnexpectedEof)?.0.unwrap() != Token::Dot {
+            if next(it)?.0.unwrap() != Token::Dot {
                 return Err(ParserBodyError::MissingDot);
             }
             let b = UBody::Abs(ident, try_from_iter(it, src)?);
@@ -96,7 +100,7 @@ where
         }
         Token::OpenParen => {
             let val = try_from_iter(it, src)?;
-            if it.next().ok_or(ParserBodyError::UnexpectedEof)?.0.unwrap() != Token::CloseParen {
+            if next(it)?.0.unwrap() != Token::CloseParen {
                 return Err(ParserBodyError::ParenUnclosed);
             }
             Ok(val)
