@@ -92,6 +92,7 @@ impl Term {
     /// Applicates the normal β-reduction on the term,
     /// where the leftmost outmost term is evaluated first,
     /// returns a `bool` indicating if it's on its normal form (a.f.k irreducible)
+    /// I.e, it computes the function before each argument.
     pub fn normal_beta_redex_step(&mut self) -> bool {
         match self.body.as_mut() {
             Body::App(m, n) => {
@@ -168,12 +169,20 @@ impl fmt::Display for Term {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.body.as_ref() {
             Body::Var(v) => write_alias(*v, f),
-            Body::App(m, n) => write!(f, "{m} {n}"),
+            Body::App(m, n) => write!(
+                f,
+                "{} {n}",
+                if !matches!(m.body.as_ref(), Body::Var(..)) {
+                    format!("({m})")
+                } else {
+                    m.to_string()
+                }
+            ),
             Body::Abs(v, m) => {
-                f.write_str("(λ")?;
+                f.write_str("λ")?;
                 write_alias(*v, f)?;
                 f.write_char('.')?;
-                write!(f, "{m})")
+                write!(f, "{m}")
             }
         }
     }
