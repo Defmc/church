@@ -113,6 +113,30 @@ impl Term {
         }
     }
 
+    /// Applicates the call-by-value β-reduction on the term,
+    /// where the innermost right term is evaluated first,
+    /// returns a `bool` indicating if it's on its normal form (a.f.k irreducible)
+    /// I.e, it computes the arguments before function.
+    pub fn cbv_beta_redex_step(&mut self) -> bool {
+        match self.body.as_mut() {
+            Body::App(m, n) => {
+                if n.cbv_beta_redex_step() {
+                    if let Body::Abs(v, b) = m.body.as_mut() {
+                        b.apply(*v, n);
+                        *self = b.clone(); // FIXME: Shouldn't clone
+                        false
+                    } else {
+                        true
+                    }
+                } else {
+                    false
+                }
+            }
+            Body::Abs(_, m) => m.cbv_beta_redex_step(),
+            Body::Var(..) => true,
+        }
+    }
+
     pub fn apply(&mut self, var: usize, val: &Self) {
         match self.body.as_mut() {
             Body::Var(v) => {
