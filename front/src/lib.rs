@@ -4,6 +4,7 @@ use church::Term;
 use parser::ParserBodyError;
 use scope::Scope;
 
+pub mod former;
 pub mod parser;
 pub mod scope;
 

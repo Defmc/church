@@ -21,8 +21,10 @@ pub enum ParserBodyError {
     #[error("Missing a closing parenthesis")]
     ParenUnclosed,
 }
+
 #[derive(Logos, PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
-#[logos(skip r"[ \t\n\f]+")]
+#[logos(skip r"#.*[\n#]")]
+#[logos(skip r"[ \f]+")]
 pub enum Token {
     #[token("λ")]
     #[token("\\")]
@@ -40,6 +42,15 @@ pub enum Token {
 
     #[regex("[a-zA-Z0-9α-κμ-ωΑ-ΚΜ-Ω_]+")]
     Ident,
+
+    #[token("\n")]
+    NewLine,
+
+    #[token("\t")]
+    Tab,
+
+    #[token("=")]
+    Assign,
 }
 
 pub type LexerTy = (std::result::Result<Token, ()>, Range<usize>);
