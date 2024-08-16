@@ -1,6 +1,22 @@
 use crate::parser::Token;
-use crate::{UBody, UTerm};
+use crate::{UBody, UTerm, Ast};
 grammar;
+
+pub Program: Ast = {
+    <e:ProgramAtom> "\n" => Ast::Program(vec![e]),
+    <mut p:Program> <e:ProgramAtom> "\n" => {
+        if let Ast::Program(ref mut v) = p {
+            v.push(e);
+        }
+        p
+    }
+}
+
+pub ProgramAtom: Ast = {
+    Assign => <>
+}
+
+pub Assign: Ast = <i:Ident> "=" <e:Expr> => Ast::Assign(i, e);
 
 pub Expr: UTerm = {
     AtomExpr => <>,

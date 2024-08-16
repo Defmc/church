@@ -18,7 +18,7 @@ where
         let elm = self.it.next()?;
         match elm.0 {
             Ok(Token::NewLine) => {
-                if matches!(self.it.peek(), Some((Ok(Token::Tab), _))) {
+                if matches!(self.it.peek(), Some((Ok(Token::Tab | Token::NewLine), _))) {
                     let _ = self.it.next();
                     return self.next();
                 }

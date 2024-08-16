@@ -1,7 +1,7 @@
 use church::{Body, Term};
 use color_eyre::eyre::{eyre, Result};
 use command::Command;
-use front::scope::Scope;
+use front::cu::CodeUnit;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use settings::Settings;
 use std::{collections::HashMap, time::Instant};
@@ -15,7 +15,7 @@ pub mod settings;
 pub use err::Error;
 
 pub struct Repl {
-    pub scope: Scope,
+    pub cu: CodeUnit,
     pub rl: DefaultEditor,
     pub settings: Settings,
     pub commands: HashMap<String, Command>,
@@ -25,7 +25,7 @@ pub struct Repl {
 impl Default for Repl {
     fn default() -> Self {
         Self {
-            scope: Scope::default(),
+            cu: CodeUnit::default(),
             rl: DefaultEditor::new().unwrap(),
             settings: Settings::default(),
             commands: command::COMMANDS
@@ -81,7 +81,7 @@ impl Repl {
     }
 
     pub fn eval(&mut self, src: &str) -> Result<()> {
-        let mut p = self.scope.into_term(src)?;
+        let mut p = self.cu.scope.into_term(src)?;
         if self.settings.show_ast {
             Self::show_ast(&p, 0);
         }
@@ -89,7 +89,7 @@ impl Repl {
 
         while !self.redex_step(&mut p) {
             if self.settings.prettify {
-                println!("{}", self.scope.pretty_show(&p));
+                println!("{}", self.cu.scope.pretty_show(&p));
             } else {
                 println!("{p}");
             }
@@ -142,8 +142,8 @@ impl Repl {
         } else {
             return Err(eyre!("{s} should be just `var = M`"));
         };
-        let m = self.scope.into_term(params[1])?;
-        self.scope.insert(var.to_string(), m)?;
+        let m = self.cu.scope.into_term(params[1])?;
+        self.cu.scope.insert(var.to_string(), m)?;
         Ok(())
     }
 }

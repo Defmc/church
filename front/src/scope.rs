@@ -19,7 +19,7 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Scope {
     pub defs: HashMap<String, Term>,
     pub aliases: HashMap<Term, String>,

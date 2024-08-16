@@ -5,13 +5,13 @@ lalrpop_mod!(pub grammar);
 
 pub enum Ast {
     Program(Vec<Ast>),
-    Assign(String, Box<Ast>),
-    Expr(UTerm),
+    Assign(String, UTerm),
 }
 
 use church::Term;
 use scope::Scope;
 
+pub mod cu;
 pub mod former;
 pub mod parser;
 pub mod scope;
