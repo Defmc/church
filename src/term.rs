@@ -7,14 +7,14 @@ use std::{
 /// x is a variable.
 /// M N is an application where M and N are lambda terms.
 /// λx.M is an abstraction (function) where x is the introduced variable and M the function's body.
-#[derive(Eq, Clone, PartialEq, Debug)]
+#[derive(Eq, Clone, PartialEq, Debug, Hash)]
 pub enum Body {
     Var(usize),
     App(Term, Term),
     Abs(usize, Term),
 }
 
-#[derive(Eq, Clone, PartialEq, Debug)]
+#[derive(Eq, Clone, PartialEq, Debug, Hash)]
 pub struct Term {
     pub body: Box<Body>,
 }

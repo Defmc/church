@@ -1,4 +1,4 @@
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{eyre, Result};
 use command::Command;
 use front::scope::Scope;
 use rustyline::{error::ReadlineError, DefaultEditor};
@@ -55,7 +55,11 @@ impl Repl {
         if let Some(s) = input.strip_prefix(":") {
             self.cmd(s)
         } else {
-            self.eval(input)
+            if input.contains('=') {
+                self.set(input)
+            } else {
+                self.eval(input)
+            }
         }
         .unwrap_or_else(|e| eprintln!("err: {e:?}"))
     }
@@ -77,7 +81,11 @@ impl Repl {
         let mut p = self.scope.into_term(src)?;
         println!("{src} -> {p}");
         while !p.normal_beta_redex_step() {
-            println!("{p}");
+            if self.settings.prettify {
+                println!("{}", self.scope.pretty_show(&p));
+            } else {
+                println!("{p}");
+            }
         }
         Ok(())
     }
@@ -90,5 +98,21 @@ impl Repl {
             println!("time {task}: {elapsed:?}");
         }
         v
+    }
+
+    pub fn set(&mut self, s: &str) -> Result<()> {
+        let params: Vec<_> = s.split('=').collect();
+        if params.len() != 2 {
+            return Err(eyre!("{s} should be just `var = M`"));
+        }
+        let var = front::parser::try_from_str(&params[0]).unwrap();
+        let var = if let front::UBody::Var(s) = *var.body {
+            s
+        } else {
+            return Err(eyre!("{s} should be just `var = M`"));
+        };
+        let m = self.scope.into_term(params[1])?;
+        self.scope.insert(var.to_string(), m)?;
+        Ok(())
     }
 }
