@@ -1,4 +1,3 @@
-pub mod parser;
 pub mod term;
 
 pub use term::{Body, Term};

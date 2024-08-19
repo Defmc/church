@@ -1,7 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt::{self, Write},
-    str::FromStr,
 };
 
 /// An lambda body's expression
@@ -93,12 +92,23 @@ impl Term {
     /// Applicates the normal β-reduction on the term,
     /// where the leftmost outmost term is evaluated first,
     /// returns a `bool` indicating if it's on its normal form (a.f.k irreducible)
-    fn normal_beta_redex_step(&mut self) -> bool {
+    pub fn normal_beta_redex_step(&mut self) -> bool {
         match self.body.as_mut() {
-            _ => false,
             Body::App(m, n) => {
-                
+                if m.normal_beta_redex_step() {
+                    if let Body::Abs(v, b) = m.body.as_mut() {
+                        b.apply(*v, n);
+                        *self = b.clone(); // FIXME: Shouldn't clone
+                        false
+                    } else {
+                        true
+                    }
+                } else {
+                    false
+                }
             }
+            Body::Abs(_, m) => m.normal_beta_redex_step(),
+            Body::Var(..) => true,
         }
     }
 
@@ -127,14 +137,6 @@ impl From<Body> for Term {
         Self {
             body: Box::new(value),
         }
-    }
-}
-
-impl FromStr for Term {
-    type Err = crate::parser::ParserBodyError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        crate::parser::try_from_str(s)
     }
 }
 
