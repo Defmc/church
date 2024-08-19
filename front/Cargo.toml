@@ -1,0 +1,9 @@
+[package]
+name = "front"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thiserror = "1.0.63"
+church = { path = ".." }
+logos = "0.14.1"
