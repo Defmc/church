@@ -21,16 +21,16 @@ pub struct Term {
 }
 
 impl Term {
-    pub fn free_vars(&self) -> HashSet<usize> {
-        let (mut closeds, mut frees) = (HashSet::new(), HashSet::new());
-        self.free_vars_from(&mut closeds, &mut frees);
-        frees
-    }
-
     pub fn coerce(&self, f: impl Fn(&mut Self)) -> Self {
         let mut clone = self.clone();
         f(&mut clone);
         clone
+    }
+
+    pub fn free_vars(&self) -> HashSet<usize> {
+        let (mut closeds, mut frees) = (HashSet::new(), HashSet::new());
+        self.free_vars_from(&mut closeds, &mut frees);
+        frees
     }
 
     fn free_vars_from(&self, closeds: &mut HashSet<usize>, frees: &mut HashSet<usize>) {
@@ -86,6 +86,37 @@ impl Term {
                 *v = nv;
                 *next = nv + 1;
                 m.unique_alpha_replace(next, replaces, frees);
+            }
+        }
+    }
+
+    /// Applicates the normal β-reduction on the term,
+    /// where the leftmost outmost term is evaluated first,
+    /// returns a `bool` indicating if it's on its normal form (a.f.k irreducible)
+    fn normal_beta_redex_step(&mut self) -> bool {
+        match self.body.as_mut() {
+            _ => false,
+            Body::App(m, n) => {
+                
+            }
+        }
+    }
+
+    pub fn apply(&mut self, var: usize, val: &Self) {
+        match self.body.as_mut() {
+            Body::Var(v) => {
+                if *v == var {
+                    *self = val.clone();
+                }
+            }
+            Body::App(m, n) => {
+                m.apply(var, val);
+                n.apply(var, val);
+            }
+            Body::Abs(v, m) => {
+                if *v != var {
+                    m.apply(var, val)
+                }
             }
         }
     }
