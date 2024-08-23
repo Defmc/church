@@ -38,7 +38,7 @@ pub enum Token {
     #[token(")")]
     CloseParen,
 
-    #[regex("[a-zA-Z0-9α-κμ-ωΑ-ΚΜ-Ω]+")]
+    #[regex("[a-zA-Z0-9α-κμ-ωΑ-ΚΜ-Ω_]+")]
     Ident,
 }
 
