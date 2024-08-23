@@ -170,10 +170,10 @@ impl fmt::Display for Term {
             Body::Var(v) => write_alias(*v, f),
             Body::App(m, n) => write!(f, "{m} {n}"),
             Body::Abs(v, m) => {
-                f.write_char('λ')?;
+                f.write_str("(λ")?;
                 write_alias(*v, f)?;
                 f.write_char('.')?;
-                write!(f, "{m}")
+                write!(f, "{m})")
             }
         }
     }
