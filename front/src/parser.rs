@@ -85,7 +85,7 @@ where
         }
     };
     match it.peek().map(|(t, _)| t) {
-        Some(Ok(Token::Lambda)) | None => Ok(expr),
+        Some(Ok(Token::CloseParen)) | None => Ok(expr),
         _ => {
             let rhs = try_from_iter(it, src)?;
             let b = UBody::App(expr, rhs);
