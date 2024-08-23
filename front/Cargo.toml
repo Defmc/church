@@ -7,3 +7,4 @@ edition = "2021"
 thiserror = "1.0.63"
 church = { path = ".." }
 logos = "0.14.1"
+once_cell = "1.19.0"

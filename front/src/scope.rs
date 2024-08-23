@@ -1,6 +1,6 @@
-use std::{collections::HashMap, str::FromStr, sync::atomic::AtomicUsize};
-
 use church::{Body, Term};
+use once_cell::sync::Lazy;
+use std::{collections::HashMap, str::FromStr, sync::atomic::AtomicUsize};
 
 use crate::{parser::ParserBodyError, UBody, UTerm};
 use thiserror::Error;
@@ -58,7 +58,43 @@ impl Scope {
                 || self.defs.get(v).cloned(),
                 |v| Some(Term::from(Body::Var(*v))),
             )
+            .or_else(|| Self::into_free_var(v))
             .ok_or_else(|| Error::DefNotFound(v.to_string()))
+    }
+
+    //#[cfg(not(feature = "aliased-vars"))]
+    //fn get_idx(f: impl Iterator<Item = char>) -> Option<usize> {
+    //    todo!()
+    //}
+
+    //#[cfg(feature = "aliased-vars")]
+    fn get_idx(s: impl Iterator<Item = char>) -> Option<usize> {
+        const ALIASES: &[char] = &[
+            'α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ',
+            'ς', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+            'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0',
+            '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        ];
+        static LAZY_MAP: Lazy<HashMap<char, usize>> = Lazy::new(|| {
+            ALIASES
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(i, c)| (c, i))
+                .collect()
+        });
+
+        let mut counter = 0;
+        for c in s {
+            let n = LAZY_MAP.get(&c)?;
+            counter = counter * 10 + n;
+        }
+        Some(counter)
+    }
+
+    fn into_free_var(s: &str) -> Option<Term> {
+        let t = Body::Var(Self::get_idx(s.chars())?);
+        Some(t.into())
     }
 
     fn get_new_ident() -> usize {

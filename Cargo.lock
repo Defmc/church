@@ -160,6 +160,7 @@ version = "0.1.0"
 dependencies = [
  "church",
  "logos",
+ "once_cell",
  "thiserror",
 ]
 
