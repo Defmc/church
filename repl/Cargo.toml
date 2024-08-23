@@ -1,0 +1,10 @@
+[package]
+name = "repl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+color-eyre = "0.6.3"
+rustyline = "14.0.0"
+thiserror = "1.0.63"
+front = { path = "../front"}
