@@ -74,6 +74,7 @@ const SET_CMD: Command = Command {
             "show_output" => set_arg(&mut r.settings.show_output, &input[1])?,
             "bench" => set_arg(&mut r.settings.bench, &input[1])?,
             "run" => set_arg(&mut r.settings.run, &input[1])?,
+            "prettify" => set_arg(&mut r.settings.prettify, &input[1])?,
             _ => Err(crate::Err::UnknownSetting(input[0].clone()))?,
         };
         Ok(())
