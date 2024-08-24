@@ -54,8 +54,22 @@ pub fn try_from_iter<I>(it: &mut Peekable<I>, src: &str) -> Result<UTerm>
 where
     I: Iterator<Item = LexerTy>,
 {
+    let mut result = try_atom(it, src)?;
+    while let Some((t, _)) = it.peek() {
+        match t {
+            Ok(Token::CloseParen) => break,
+            _ => result = UTerm::from(UBody::App(result, try_atom(it, src)?)),
+        }
+    }
+    Ok(result)
+}
+
+pub fn try_atom<I>(it: &mut Peekable<I>, src: &str) -> Result<UTerm>
+where
+    I: Iterator<Item = LexerTy>,
+{
     let (tok, span) = it.next().ok_or(ParserBodyError::UnexpectedEof)?;
-    let expr = match tok.as_ref().unwrap() {
+    match tok.as_ref().unwrap() {
         Token::Lambda => {
             let next = it.next().ok_or(ParserBodyError::UnexpectedEof)?;
             let ident = if let Token::Ident = next.0.unwrap() {
@@ -67,30 +81,20 @@ where
                 return Err(ParserBodyError::MissingDot);
             }
             let b = UBody::Abs(ident, try_from_iter(it, src)?);
-            return Ok(UTerm::from(b));
+            Ok(UTerm::from(b))
         }
         Token::OpenParen => {
             let val = try_from_iter(it, src)?;
             if it.next().ok_or(ParserBodyError::UnexpectedEof)?.0.unwrap() != Token::CloseParen {
                 return Err(ParserBodyError::ParenUnclosed);
             }
-            val
+            Ok(val)
         }
         Token::Ident => {
-            let ident = src[span].to_string();
-            UTerm::from(UBody::Var(ident))
+            let ident = src[span.clone()].to_string();
+            Ok(UTerm::from(UBody::Var(ident)))
         }
-        _ => {
-            return Err(ParserBodyError::UnexpectedToken(tok));
-        }
-    };
-    match it.peek().map(|(t, _)| t) {
-        Some(Ok(Token::CloseParen)) | None => Ok(expr),
-        _ => {
-            let rhs = try_from_iter(it, src)?;
-            let b = UBody::App(expr, rhs);
-            Ok(UTerm::from(b))
-        }
+        _ => Err(ParserBodyError::UnexpectedToken(tok.clone())),
     }
 }
 
