@@ -7,4 +7,5 @@ edition = "2021"
 color-eyre = "0.6.3"
 rustyline = "14.0.0"
 thiserror = "1.0.63"
-front = { path = "../front"}
+front = { path = "../front" }
+church = { path = ".." }

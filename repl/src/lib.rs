@@ -1,3 +1,4 @@
+use church::{Body, Term};
 use color_eyre::eyre::{eyre, Result};
 use command::Command;
 use front::scope::Scope;
@@ -79,6 +80,9 @@ impl Repl {
 
     pub fn eval(&mut self, src: &str) -> Result<()> {
         let mut p = self.scope.into_term(src)?;
+        if self.settings.show_ast {
+            Self::show_ast(&p, 0);
+        }
         println!("{src} -> {p}");
         while !p.normal_beta_redex_step() {
             if self.settings.prettify {
@@ -88,6 +92,23 @@ impl Repl {
             }
         }
         Ok(())
+    }
+
+    pub fn show_ast(p: &Term, depth: usize) {
+        let tab = "\t".repeat(depth);
+        print!("{tab}");
+        match p.body.as_ref() {
+            Body::Var(v) => println!("var {v}"),
+            Body::App(m, n) => {
+                println!("app:");
+                Self::show_ast(m, depth + 1);
+                Self::show_ast(n, depth + 1);
+            }
+            Body::Abs(v, m) => {
+                println!("abs {v}:");
+                Self::show_ast(m, depth + 1);
+            }
+        }
     }
 
     pub fn bench<T>(&mut self, task: &str, f: impl FnOnce(&mut Self) -> T) -> T {
