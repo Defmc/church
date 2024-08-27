@@ -85,6 +85,8 @@ impl Repl {
         }
         println!("{src} -> {p}");
         while !p.normal_beta_redex_step() {
+
+        while !self.redex_step(&mut p) {
             if self.settings.prettify {
                 println!("{}", self.scope.pretty_show(&p));
             } else {
@@ -92,6 +94,13 @@ impl Repl {
             }
         }
         Ok(())
+    }
+
+    fn redex_step(&self, p: &mut Term) -> bool {
+        match self.settings.b_order {
+            settings::BetaOrder::Normal => p.normal_beta_redex_step(),
+            settings::BetaOrder::CallByValue => p.cbv_beta_redex_step(),
+        }
     }
 
     pub fn show_ast(p: &Term, depth: usize) {
