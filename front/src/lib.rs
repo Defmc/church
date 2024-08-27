@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
+use church::Term;
 use parser::ParserBodyError;
+use scope::Scope;
 
 pub mod parser;
 pub mod scope;
@@ -20,6 +22,20 @@ pub struct UTerm {
 impl From<UBody> for UTerm {
     fn from(value: UBody) -> Self {
         Self { body: value.into() }
+    }
+}
+
+impl TryFrom<UBody> for Term {
+    type Error = scope::Error;
+    fn try_from(value: UBody) -> Result<Self, Self::Error> {
+        UTerm::from(value).try_into()
+    }
+}
+
+impl TryFrom<UTerm> for Term {
+    type Error = scope::Error;
+    fn try_from(value: UTerm) -> Result<Self, Self::Error> {
+        Scope::default().dump(&value)
     }
 }
 

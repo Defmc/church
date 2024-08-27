@@ -98,34 +98,40 @@ where
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use crate::{parser, UBody, UTerm};
-//
-//     use church::{assert_alpha_eq, assert_alpha_ne};
-//
-//     #[test]
-//     fn id() {
-//         let parsed = parser::try_from_str("λx.x").unwrap();
-//         let built: UTerm = UBody::Abs(0, UBody::Var(0).into()).into();
-//         assert_alpha_eq!(built, parsed);
-//     }
-//
-//     #[test]
-//     fn ambiguous_expr() {
-//         const EQUIVALENTS: &[&str] = &["λx.x λy.y x", "λx . (x λy.y x)"];
-//         const DIFFERENTS: &[&str] = &["(λx.x) (λy.y) x"];
-//         for e in EQUIVALENTS {
-//             assert_alpha_eq!(
-//                 parser::try_from_str(EQUIVALENTS[0]).unwrap(),
-//                 parser::try_from_str(e).unwrap()
-//             );
-//         }
-//         for d in DIFFERENTS {
-//             assert_alpha_ne!(
-//                 parser::try_from_str(EQUIVALENTS[0]).unwrap(),
-//                 parser::try_from_str(d).unwrap()
-//             );
-//         }
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use crate::parser;
+    use church::{assert_alpha_eq, assert_alpha_ne, Body, Term};
+
+    fn assert_ast_eq(lhs: &str, rhs: &str) {
+        assert_alpha_eq!(
+            Term::try_from(parser::try_from_str(lhs).unwrap()).unwrap(),
+            Term::try_from(parser::try_from_str(rhs).unwrap()).unwrap()
+        )
+    }
+
+    fn assert_ast_ne(lhs: &str, rhs: &str) {
+        assert_alpha_ne!(
+            Term::try_from(parser::try_from_str(lhs).unwrap()).unwrap(),
+            Term::try_from(parser::try_from_str(rhs).unwrap()).unwrap()
+        )
+    }
+
+    #[test]
+    fn id() {
+        let parsed: Term = parser::try_from_str("λx.x").unwrap().try_into().unwrap();
+        let built: Term = Body::Abs(0, Body::Var(0).into()).into();
+        assert_alpha_eq!(built, parsed);
+    }
+
+    #[test]
+    fn greedy_expr() {
+        assert_ast_eq("λx.x λy.y x", "λx . (x λy.y x)");
+    }
+
+    #[test]
+    fn right_assoc_app() {
+        assert_ast_eq("a b (c d) e f", "(((a b) (c d)) e) f");
+        assert_ast_ne("a b (c d) e f", "a (((b (c d)) e) f)");
+    }
+}
