@@ -10,7 +10,9 @@ pub use args::Err;
 
 pub mod args;
 pub mod command;
+pub mod err;
 pub mod settings;
+pub use err::Error;
 
 pub struct Repl {
     pub scope: Scope,
@@ -84,7 +86,6 @@ impl Repl {
             Self::show_ast(&p, 0);
         }
         println!("{src} -> {p}");
-        while !p.normal_beta_redex_step() {
 
         while !self.redex_step(&mut p) {
             if self.settings.prettify {

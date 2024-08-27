@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 pub struct Settings {
     pub prompt: String,
     pub show_tokens: bool,
@@ -6,6 +8,7 @@ pub struct Settings {
     pub bench: bool,
     pub show_output: bool,
     pub prettify: bool,
+    pub b_order: BetaOrder,
 }
 
 impl Default for Settings {
@@ -18,6 +21,26 @@ impl Default for Settings {
             bench: false,
             show_output: true,
             prettify: true,
+            b_order: BetaOrder::default(),
+        }
+    }
+}
+
+#[derive(Default)]
+pub enum BetaOrder {
+    #[default]
+    Normal,
+    CallByValue,
+}
+
+impl FromStr for BetaOrder {
+    type Err = crate::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "normal" => Ok(Self::Normal),
+            "call-by-value" => Ok(Self::CallByValue),
+            _ => Err(crate::Error::UnknownBetaOrder),
         }
     }
 }
