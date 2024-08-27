@@ -5,13 +5,11 @@ pub use term::{Body, Term};
 #[macro_export]
 macro_rules! assert_alpha_eq {
     ($left:expr, $right:expr $(,)?) => {
-        assert_eq!($left.coerce(Term::unique_alpha_redex),
-                   $right.coerce(Term::unique_alpha_redex))
+        $crate::assert_alpha_eq!($left, $right, "{} is alpha-different from {}", $left, $right)
      };
-    ($left:expr, $right:expr, $($arg:tt)+) => {
-        assert_eq!($left.coerce(Term::unique_alpha_redex),
-                   $right.coerce(Term::unique_alpha_redex), $($arg)+)
-     };
+    ($left:expr, $right:expr, $($arg:tt)+) => {{
+        assert_eq!($left.coerce(Term::unique_alpha_redex), $right.coerce(Term::unique_alpha_redex), $($arg)+);
+     }};
 }
 
 #[macro_export]
