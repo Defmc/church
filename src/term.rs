@@ -26,6 +26,26 @@ impl Term {
         clone
     }
 
+    pub fn bounded_vars(&self) -> HashSet<usize> {
+        let mut bounds = HashSet::new();
+        self.bounded_vars_from(&mut bounds);
+        bounds
+    }
+
+    fn bounded_vars_from(&self, set: &mut HashSet<usize>) {
+        match self.body.as_ref() {
+            Body::Var(..) => (),
+            Body::App(m, n) => {
+                m.bounded_vars_from(set);
+                n.bounded_vars_from(set);
+            }
+            Body::Abs(v, m) => {
+                set.insert(*v);
+                m.bounded_vars_from(set);
+            }
+        }
+    }
+
     pub fn free_vars(&self) -> HashSet<usize> {
         let (mut closeds, mut frees) = (HashSet::new(), HashSet::new());
         self.free_vars_from(&mut closeds, &mut frees);
