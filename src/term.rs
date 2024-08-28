@@ -248,3 +248,49 @@ impl fmt::Display for Term {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::assert_alpha_eq;
+
+    use super::{Body, Term};
+
+    #[test]
+    fn capture_free_subst() {
+        // (λf x . f x) (λf x . f x)
+        let expr: Term = Body::App(
+            Body::Abs(
+                0,
+                Body::Abs(
+                    1,
+                    Body::App(Body::Var(0).into(), Body::Var(1).into()).into(),
+                )
+                .into(),
+            )
+            .into(),
+            Body::Abs(
+                0,
+                Body::Abs(
+                    1,
+                    Body::App(Body::Var(0).into(), Body::Var(1).into()).into(),
+                )
+                .into(),
+            )
+            .into(),
+        )
+        .into();
+
+        let mut redex = expr;
+        let expected: Term = Body::Abs(
+            0,
+            Body::Abs(
+                1,
+                Body::App(Body::Var(0).into(), Body::Var(1).into()).into(),
+            )
+            .into(),
+        )
+        .into();
+        while !redex.normal_beta_redex_step() {}
+        assert_alpha_eq!(redex, expected);
+    }
+}
