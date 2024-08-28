@@ -89,7 +89,7 @@ impl Term {
                 if let Some(nv) = replaces.get(v) {
                     *v = *nv;
                 } else {
-                    assert!(frees.contains(v));
+                    debug_assert!(frees.contains(v));
                 }
             }
             Body::App(m, n) => {
@@ -157,7 +157,24 @@ impl Term {
         }
     }
 
+    /// checks if VARS(`self`) ⊂ FREE(`val`)
+    /// if then, so it alpha-redex `self` to don't match with the already used variables
+    pub fn safe_context_check(&mut self, val: &Self) {
+        let vars_self = self.bounded_vars();
+        let free_val = val.free_vars();
+        if vars_self.intersection(&free_val).count() != 0 {
+            let frees = free_val.union(&self.free_vars()).copied().collect();
+
+            self.unique_alpha_replace(&mut 0, &mut HashMap::new(), &frees);
+        }
+        debug_assert_eq!(
+            self.bounded_vars().intersection(&val.free_vars()).count(),
+            0
+        );
+    }
+
     pub fn apply(&mut self, var: usize, val: &Self) {
+        self.safe_context_check(val);
         match self.body.as_mut() {
             Body::Var(v) => {
                 if *v == var {
