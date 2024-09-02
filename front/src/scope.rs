@@ -2,7 +2,7 @@ use church::{Body, Term};
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, str::FromStr, sync::atomic::AtomicUsize};
 
-use crate::{parser::ParserBodyError, UBody, UTerm};
+use crate::{UBody, UTerm};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -10,8 +10,8 @@ pub enum Error {
     #[error("Definition for `{0}` wasn't found")]
     DefNotFound(String),
 
-    #[error("{0}")]
-    ParserError(ParserBodyError),
+    #[error("{0:?}")]
+    ParserError(crate::parser::Error),
 
     #[error("Variable {0}'ve been already deifned as {1}")]
     AlreadyDefined(String, Term),
@@ -68,7 +68,10 @@ impl Scope {
     //}
 
     //#[cfg(feature = "aliased-vars")]
-    fn get_idx(s: impl Iterator<Item = char>) -> Option<usize> {
+    fn get_idx<I>(s: I) -> Option<usize>
+    where
+        I: Iterator<Item = char> + DoubleEndedIterator,
+    {
         const ALIASES: &[char] = &[
             'α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ',
             'ς', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
@@ -85,7 +88,7 @@ impl Scope {
         });
 
         let mut counter = 0;
-        for c in s {
+        for c in s.rev() {
             let n = LAZY_MAP.get(&c)?;
             counter = counter * 10 + n;
         }

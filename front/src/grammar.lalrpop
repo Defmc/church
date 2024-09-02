@@ -1,0 +1,32 @@
+use crate::parser::{self, Token};
+use crate::{Ast, UBody, UTerm};
+grammar;
+
+pub Expr: UTerm = {
+    AtomExpr => <>,
+    <e:Expr> <atom:AtomExpr> => UBody::App(e, atom).into()
+}
+
+AtomExpr: UTerm = {
+    LambdaAbs => <>,
+    Ident => UBody::Var(<>).into(),
+    "(" <e:Expr> ")" => e,
+}
+
+LambdaAbs: UTerm = LambdaSym <i:Ident> DotSym "(" <e:Expr> ")" => UBody::Abs(i, e).into();
+
+extern {
+    type Location = usize;
+    type Error = ();
+    
+    enum Token {
+        LambdaSym => Token::Lambda,
+        DotSym => Token::Dot,
+        "(" => Token::OpenParen,
+        ")" => Token::CloseParen,
+        "=" => Token::Assign,
+        "\t" => Token::Tab,
+        "\n" => Token::NewLine,
+        Ident => Token::Ident(<String>)
+    }
+}

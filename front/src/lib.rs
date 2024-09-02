@@ -1,7 +1,15 @@
 use std::str::FromStr;
 
+use lalrpop_util::{lalrpop_mod, ParseError};
+lalrpop_mod!(pub grammar);
+
+pub enum Ast {
+    Program(Vec<Ast>),
+    Assign(String, Box<Ast>),
+    Expr(UTerm),
+}
+
 use church::Term;
-use parser::ParserBodyError;
 use scope::Scope;
 
 pub mod former;
@@ -41,7 +49,7 @@ impl TryFrom<UTerm> for Term {
 }
 
 impl FromStr for UTerm {
-    type Err = ParserBodyError;
+    type Err = parser::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         parser::try_from_str(s)

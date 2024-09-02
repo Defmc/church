@@ -1,26 +1,8 @@
-use std::{iter::Peekable, ops::Range};
+use std::ops::Range;
 
-use crate::{UBody, UTerm};
+use crate::UTerm;
+use lalrpop_util::ParseError;
 use logos::Logos;
-use thiserror::Error;
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Error)]
-pub enum ParserBodyError {
-    #[error("Missing a dot (`.`) after a variable in a lambda abstraction")]
-    MissingDot,
-
-    #[error("Unexpected token {0:?}")]
-    UnexpectedToken(std::result::Result<Token, ()>),
-
-    #[error("Unexpected eof")]
-    UnexpectedEof,
-
-    #[error("Expected Ident wasn't found")]
-    IdentNotFound,
-
-    #[error("Missing a closing parenthesis")]
-    ParenUnclosed,
-}
 
 #[derive(Logos, PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
 #[logos(skip r"#.*[\n#]")]
@@ -40,8 +22,8 @@ pub enum Token {
     #[token(")")]
     CloseParen,
 
-    #[regex("[a-zA-Z0-9α-κμ-ωΑ-ΚΜ-Ω_]+")]
-    Ident,
+    #[regex("[a-zA-Z0-9α-κμ-ωΑ-ΚΜ-Ω_]+", |lex| lex.slice().to_string())]
+    Ident(String),
 
     #[token("\n")]
     NewLine,
@@ -54,63 +36,16 @@ pub enum Token {
 }
 
 pub type LexerTy = (std::result::Result<Token, ()>, Range<usize>);
-
-pub type Result<T> = std::result::Result<T, ParserBodyError>;
+pub type Result<T> = std::result::Result<T, ParseError<usize, Token, ()>>;
+pub type Error = lalrpop_util::ParseError<usize, Token, ()>;
 
 pub fn try_from_str(s: &str) -> Result<UTerm> {
-    try_from_iter(&mut Token::lexer(s).spanned().peekable(), s)
+    try_from_iter(Token::lexer(s).spanned())
 }
 
-pub fn try_from_iter<I>(it: &mut Peekable<I>, src: &str) -> Result<UTerm>
-where
-    I: Iterator<Item = LexerTy>,
-{
-    let mut result = try_atom(it, src)?;
-    loop {
-        match it.peek() {
-            Some((Ok(Token::CloseParen), _)) | None => break,
-            _ => result = UBody::App(result, try_atom(it, src)?).into(),
-        }
-    }
-    Ok(result)
-}
-
-fn next(it: &mut impl Iterator<Item = LexerTy>) -> Result<LexerTy> {
-    it.next().ok_or(ParserBodyError::UnexpectedEof)
-}
-
-pub fn try_atom<I>(it: &mut Peekable<I>, src: &str) -> Result<UTerm>
-where
-    I: Iterator<Item = LexerTy>,
-{
-    let (tok, span) = it.next().ok_or(ParserBodyError::UnexpectedEof)?;
-    match tok.as_ref().unwrap() {
-        Token::Lambda => {
-            let next_tk = next(it)?;
-            let ident = if let Token::Ident = next_tk.0.unwrap() {
-                src[next_tk.1].to_string()
-            } else {
-                return Err(ParserBodyError::IdentNotFound);
-            };
-            if next(it)?.0.unwrap() != Token::Dot {
-                return Err(ParserBodyError::MissingDot);
-            }
-            let b = UBody::Abs(ident, try_from_iter(it, src)?);
-            Ok(UTerm::from(b))
-        }
-        Token::OpenParen => {
-            let val = try_from_iter(it, src)?;
-            if next(it)?.0.unwrap() != Token::CloseParen {
-                return Err(ParserBodyError::ParenUnclosed);
-            }
-            Ok(val)
-        }
-        Token::Ident => {
-            let ident = src[span.clone()].to_string();
-            Ok(UTerm::from(UBody::Var(ident)))
-        }
-        _ => Err(ParserBodyError::UnexpectedToken(tok.clone())),
-    }
+pub fn try_from_iter(iter: impl Iterator<Item = LexerTy>) -> Result<UTerm> {
+    let iter = iter.map(|(r, sp)| (sp.start, r.unwrap(), sp.end));
+    crate::grammar::ExprParser::new().parse(iter)
 }
 
 #[cfg(test)]
