@@ -1,5 +1,5 @@
-use crate::parser::{self, Token};
-use crate::{Ast, UBody, UTerm};
+use crate::parser::Token;
+use crate::{UBody, UTerm};
 grammar;
 
 pub Expr: UTerm = {

@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use lalrpop_util::{lalrpop_mod, ParseError};
+use lalrpop_util::lalrpop_mod;
 lalrpop_mod!(pub grammar);
 
 pub enum Ast {
