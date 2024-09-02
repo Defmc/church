@@ -6,5 +6,5 @@ I = λx.x
 K = λx.λy.x
 S = λx.λy.λz.xz (yz)
 
-# Avoides repitition
+# Avoids repitition
 Let = λa.λf.f a
