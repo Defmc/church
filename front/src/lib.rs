@@ -3,9 +3,11 @@ use std::str::FromStr;
 use lalrpop_util::lalrpop_mod;
 lalrpop_mod!(pub grammar);
 
+#[derive(Debug)]
 pub enum Ast {
     Program(Vec<Ast>),
     Assign(String, UTerm),
+    Expr(UTerm),
 }
 
 use church::Term;

@@ -1,46 +1,54 @@
+use church::Term;
 use logos::Logos;
 
 use crate::former::Former;
-use crate::grammar::ProgramParser;
+use crate::grammar::{ProgramAtomParser, ProgramParser};
 use crate::parser::Token;
 use crate::scope::Scope;
 use crate::Ast;
 
 pub struct CodeUnit {
     pub scope: Scope,
-    pub parser: ProgramParser,
+    pub program_parser: ProgramParser,
+    pub atom_parser: ProgramAtomParser,
 }
 
 impl Default for CodeUnit {
     fn default() -> Self {
         Self {
             scope: Scope::default(),
-            parser: ProgramParser::new(),
+            program_parser: ProgramParser::new(),
+            atom_parser: ProgramAtomParser::new(),
         }
     }
 }
 
 impl CodeUnit {
-    pub fn load_from_src(&mut self, src: impl AsRef<str>) -> Result<(), ()> {
-        let parsed = self.parse(src.as_ref())?;
-        self.load(parsed)
-    }
-
-    pub fn parse(&mut self, src: &str) -> Result<Ast, ()> {
+    pub fn into_iter<'a>(
+        &mut self,
+        src: &'a str,
+    ) -> impl Iterator<Item = (usize, Token, usize)> + 'a {
         let lexer = Token::lexer(src).spanned();
-        let former = Former::from(lexer).map(|(tk, sp)| (sp.start, tk.unwrap(), sp.end));
-        let parser = self.parser.parse(former).unwrap();
-        Ok(parser)
+        Former::from(lexer).map(|(tk, sp)| (sp.start, tk.unwrap(), sp.end))
     }
 
-    pub fn eval(&mut self, program: Ast) -> Result<(), ()> {
+    pub fn eval(&mut self, program: Ast) -> Result<Option<Term>, ()> {
         match program {
             Ast::Program(p) => {
                 for atom in p {
-                    self.eval(atom);
+                    self.eval(atom).unwrap();
                 }
+                Ok(None)
+            }
+            Ast::Expr(e) => {
+                let dumped = self.scope.dump(&e).unwrap();
+                Ok(Some(dumped))
+            }
+            Ast::Assign(v, m) => {
+                let dump = self.scope.dump(&m).unwrap();
+                self.scope.insert(v, dump).unwrap();
+                Ok(None)
             }
         }
-        Ok(())
     }
 }

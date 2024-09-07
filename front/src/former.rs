@@ -2,11 +2,17 @@ use std::iter::Peekable;
 
 use crate::parser::{LexerTy, Token};
 
+pub enum ParenTy {
+    Implicit,
+    Explicit
+}
+
 pub struct Former<I>
 where
     I: Iterator<Item = LexerTy>,
 {
     pub it: Peekable<I>,
+    pub paren_stack: Vec<ParenTy>
 }
 
 impl<I> Iterator for Former<I>
@@ -37,6 +43,7 @@ where
     fn from(value: I) -> Self {
         Former {
             it: value.peekable(),
+            paren_stack: Vec::new()
         }
     }
 }

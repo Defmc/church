@@ -81,20 +81,23 @@ impl Repl {
     }
 
     pub fn eval(&mut self, src: &str) -> Result<()> {
-        let mut p = self.cu.scope.into_term(src)?;
-        if self.settings.show_ast {
-            Self::show_ast(&p, 0);
-        }
-        println!("{src} -> {p}");
-
-        while !self.redex_step(&mut p) {
-            if self.settings.prettify {
-                println!("{}", self.cu.scope.pretty_show(&p));
-            } else {
-                println!("{p}");
+        let iter = self.cu.into_iter(src);
+        let parsed = self.cu.atom_parser.parse(iter).unwrap();
+        if let Some(mut p) = self.cu.eval(parsed).unwrap() {
+            println!("{p}");
+            while !self.redex_step(&mut p) {
+                self.print_term(&p);
             }
         }
         Ok(())
+    }
+
+    pub fn print_term(&mut self, t: &Term) {
+        if self.settings.prettify {
+            println!("{}", self.cu.scope.pretty_show(&t));
+        } else {
+            println!("{t}");
+        }
     }
 
     fn redex_step(&self, p: &mut Term) -> bool {
