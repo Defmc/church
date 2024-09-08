@@ -1,8 +1,10 @@
-use church::Term;
+use std::fs;
+use std::path::Path;
+
 use logos::Logos;
 
 use crate::former::Former;
-use crate::grammar::{ProgramAtomParser, ProgramParser};
+use crate::grammar::ProgramParser;
 use crate::parser::Token;
 use crate::scope::Scope;
 use crate::Ast;
@@ -10,7 +12,6 @@ use crate::Ast;
 pub struct CodeUnit {
     pub scope: Scope,
     pub program_parser: ProgramParser,
-    pub atom_parser: ProgramAtomParser,
 }
 
 impl Default for CodeUnit {
@@ -18,7 +19,6 @@ impl Default for CodeUnit {
         Self {
             scope: Scope::default(),
             program_parser: ProgramParser::new(),
-            atom_parser: ProgramAtomParser::new(),
         }
     }
 }
@@ -32,23 +32,26 @@ impl CodeUnit {
         Former::from(lexer).map(|(tk, sp)| (sp.start, tk.unwrap(), sp.end))
     }
 
-    pub fn eval(&mut self, program: Ast) -> Result<Option<Term>, ()> {
+    pub fn parse(&mut self, src: impl AsRef<str>) -> Ast {
+        let iter = self.into_iter(src.as_ref());
+        self.program_parser.parse(iter).unwrap()
+    }
+
+    pub fn eval(&mut self, program: Ast) -> Result<(), ()> {
         match program {
             Ast::Program(p) => {
                 for atom in p {
                     self.eval(atom).unwrap();
                 }
-                Ok(None)
             }
             Ast::Expr(e) => {
-                let dumped = self.scope.dump(&e).unwrap();
-                Ok(Some(dumped))
+                eprintln!("[warn] discarding expression {e:?}");
             }
             Ast::Assign(v, m) => {
                 let dump = self.scope.dump(&m).unwrap();
                 self.scope.insert(v, dump).unwrap();
-                Ok(None)
             }
         }
+        Ok(())
     }
 }

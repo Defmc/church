@@ -81,13 +81,18 @@ impl Repl {
     }
 
     pub fn eval(&mut self, src: &str) -> Result<()> {
-        let iter = self.cu.into_iter(src);
-        let parsed = self.cu.atom_parser.parse(iter).unwrap();
-        if let Some(mut p) = self.cu.eval(parsed).unwrap() {
-            println!("{p}");
-            while !self.redex_step(&mut p) {
-                self.print_term(&p);
+        let parsed = self.cu.parse(src);
+        if let front::Ast::Program(v) = &parsed {
+            if let front::Ast::Expr(e) = &v[0] {
+                let mut p = self.cu.scope.dump(e).unwrap();
+                while !self.redex_step(&mut p) {
+                    self.print_term(&p);
+                }
+            } else {
+                self.cu.eval(parsed).unwrap();
             }
+        } else {
+            unreachable!()
         }
         Ok(())
     }
