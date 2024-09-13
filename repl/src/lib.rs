@@ -1,7 +1,7 @@
 use church::{Body, Term};
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::Result;
 use command::Command;
-use front::cu::CodeUnit;
+use front::{cu::CodeUnit, UTerm};
 use rustyline::{error::ReadlineError, DefaultEditor};
 use settings::Settings;
 use std::{collections::HashMap, time::Instant};
@@ -58,11 +58,7 @@ impl Repl {
         if let Some(s) = input.strip_prefix(":") {
             self.cmd(s)
         } else {
-            if input.contains('=') {
-                self.set(input)
-            } else {
-                self.eval(input)
-            }
+            self.eval(input)
         }
         .unwrap_or_else(|e| eprintln!("err: {e:?}"))
     }
@@ -81,20 +77,27 @@ impl Repl {
     }
 
     pub fn eval(&mut self, src: &str) -> Result<()> {
-        let parsed = self.cu.parse(src);
-        if let front::Ast::Program(v) = &parsed {
-            if let front::Ast::Expr(e) = &v[0] {
-                let mut p = self.cu.scope.dump(e).unwrap();
-                while !self.redex_step(&mut p) {
-                    self.print_term(&p);
-                }
-            } else {
-                self.cu.eval(parsed).unwrap();
-            }
+        let tks = self.cu.into_iter(src);
+        if Self::needs_program_parser(src) {
+            let ast = self.cu.program_parser.parse(tks).unwrap();
+            self.cu.eval(ast).unwrap();
         } else {
-            unreachable!()
+            let parsed = front::grammar::ExprParser::new().parse(tks).unwrap();
+            self.reduce_expr(src, &parsed);
         }
         Ok(())
+    }
+
+    fn reduce_expr(&mut self, src: &str, ut: &UTerm) {
+        let mut t = self.cu.scope.dump(ut).unwrap();
+        while !self.redex_step(&mut t) {
+            self.print_term(&t);
+        }
+    }
+
+    // Looks like a shitty function, but as the language evolves, it's going to be worth
+    fn needs_program_parser(src: &str) -> bool {
+        src.contains('=')
     }
 
     pub fn print_term(&mut self, t: &Term) {
@@ -137,21 +140,5 @@ impl Repl {
             println!("time {task}: {elapsed:?}");
         }
         v
-    }
-
-    pub fn set(&mut self, s: &str) -> Result<()> {
-        let params: Vec<_> = s.split('=').collect();
-        if params.len() != 2 {
-            return Err(eyre!("{s} should be just `var = M`"));
-        }
-        let var = front::parser::try_from_str(&params[0]).unwrap();
-        let var = if let front::UBody::Var(s) = *var.body {
-            s
-        } else {
-            return Err(eyre!("{s} should be just `var = M`"));
-        };
-        let m = self.cu.scope.into_term(params[1])?;
-        self.cu.scope.insert(var.to_string(), m)?;
-        Ok(())
     }
 }
