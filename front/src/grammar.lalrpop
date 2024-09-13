@@ -15,7 +15,15 @@ pub ProgramAtom: Ast = {
     Expr => Ast::Expr(<>),
 }
 
-Assign: Ast = <i:Ident> "=" <e:Expr> => Ast::Assign(i, e);
+Assign: Ast = {
+    <i:Ident> <args:Ident*> "=" <e:Expr> => {
+        let mut e = e;
+        for arg in args {
+            e = UBody::Abs(arg, e).into();
+        }
+        Ast::Assign(i, e)
+    },
+}
 
 pub Expr: UTerm = {
     AtomExpr => <>,
