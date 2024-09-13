@@ -7,7 +7,6 @@ lalrpop_mod!(pub grammar);
 pub enum Ast {
     Program(Vec<Ast>),
     Assign(String, UTerm),
-    Expr(UTerm),
 }
 
 use church::Term;

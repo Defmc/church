@@ -52,9 +52,6 @@ impl CodeUnit {
                     self.eval(atom).unwrap();
                 }
             }
-            Ast::Expr(e) => {
-                eprintln!("[warn] discarding expression {e:?}");
-            }
             Ast::Assign(v, m) => {
                 let dump = self.scope.dump(&m).unwrap();
                 self.scope.insert(v, dump).unwrap();
