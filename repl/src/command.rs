@@ -8,7 +8,7 @@ pub struct Command {
 
 const SHOW_CMD: Command = Command {
     name: "show",
-    cmd: |_r, input| {
+    cmd: |r, input| {
         match input[0].as_str() {
             // "scope" => r.cu.runner.as_mut().unwrap().scope.order[0]
             // .iter()
@@ -16,6 +16,9 @@ const SHOW_CMD: Command = Command {
             //     println!("let {name} = {}", obj.with(|o| o.to_pretty_class_str(0)))
             // }),
             "env" => std::env::vars().for_each(|(k, v)| println!("{k:?} = {v:?}")),
+            _ if input.len() == 1 && r.cu.scope.defs.contains_key(&input[0]) => {
+                println!("{}", r.cu.scope.defs[&input[0]]);
+            }
             _ => eprintln!("what is {input:?}?"),
         }
         Ok(())
