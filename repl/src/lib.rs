@@ -83,12 +83,12 @@ impl Repl {
             self.cu.eval(ast).unwrap();
         } else {
             let parsed = front::grammar::ExprParser::new().parse(tks).unwrap();
-            self.reduce_expr(src, &parsed);
+            self.reduce_expr(&parsed);
         }
         Ok(())
     }
 
-    fn reduce_expr(&mut self, src: &str, ut: &UTerm) {
+    fn reduce_expr(&mut self, ut: &UTerm) {
         let mut t = self.cu.scope.dump(ut).unwrap();
         while !self.redex_step(&mut t) {
             self.print_term(&t);
@@ -102,7 +102,7 @@ impl Repl {
 
     pub fn print_term(&mut self, t: &Term) {
         if self.settings.prettify {
-            println!("{}", self.cu.scope.pretty_show(&t));
+            println!("{}", self.cu.scope.pretty_show(t));
         } else {
             println!("{t}");
         }

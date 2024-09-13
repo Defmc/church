@@ -106,7 +106,7 @@ impl Scope {
     }
 
     pub fn into_term(&self, s: &str) -> Result<Term> {
-        let t = UTerm::from_str(s).map_err(|e| Error::ParserError(e))?;
+        let t = UTerm::from_str(s).map_err(Error::ParserError)?;
         self.dump(&t)
     }
 
@@ -115,10 +115,8 @@ impl Scope {
             let t = self.defs[&name].clone();
             Err(Error::AlreadyDefined(name, t))
         } else {
-            let _ = self
-                .aliases
-                .insert(def.coerce(Term::unique_alpha_redex), name.clone())
-                .is_none();
+            self.aliases
+                .insert(def.coerce(Term::unique_alpha_redex), name.clone());
             self.defs.insert(name, def);
 
             Ok(())
