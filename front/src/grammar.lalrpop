@@ -7,12 +7,10 @@ pub Program: Ast = {
         v.push(last);
         Ast::Program(v)
     }
-    ,
 }
 
 pub ProgramAtom: Ast = {
     Assign => <>,
-    Expr => Ast::Expr(<>),
 }
 
 Assign: Ast = {
