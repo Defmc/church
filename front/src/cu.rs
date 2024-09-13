@@ -24,6 +24,14 @@ impl Default for CodeUnit {
 }
 
 impl CodeUnit {
+    pub fn load_file(&mut self, path: impl AsRef<Path>) -> Result<(), ()> {
+        let content = fs::read_to_string(path).unwrap();
+        let tokens = self.into_iter(&content);
+        let program = self.program_parser.parse(tokens).unwrap();
+        self.eval(program).unwrap();
+        Ok(())
+    }
+
     pub fn into_iter<'a>(
         &mut self,
         src: &'a str,
