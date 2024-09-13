@@ -16,7 +16,7 @@ pub ProgramAtom: Ast = {
 Assign: Ast = {
     <i:Ident> <args:Ident*> "=" <e:Expr> => {
         let mut e = e;
-        for arg in args {
+        for arg in args.into_iter().rev() {
             e = UBody::Abs(arg, e).into();
         }
         Ast::Assign(i, e)
