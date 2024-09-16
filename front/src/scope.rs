@@ -2,22 +2,7 @@ use church::{Body, Term};
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, str::FromStr, sync::atomic::AtomicUsize};
 
-use crate::{UBody, UTerm};
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("Definition for `{0}` wasn't found")]
-    DefNotFound(String),
-
-    #[error("{0:?}")]
-    ParserError(crate::parser::Error),
-
-    #[error("Variable {0}'ve been already deifned as {1}")]
-    AlreadyDefined(String, Term),
-}
-
-pub type Result<T> = std::result::Result<T, Error>;
+use crate::{Error, Result, UBody, UTerm};
 
 #[derive(Default, Clone)]
 pub struct Scope {

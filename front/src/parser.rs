@@ -33,6 +33,12 @@ pub enum Token {
 
     #[token("=")]
     Assign,
+
+    #[token("use")]
+    UseKw,
+
+    #[regex(r#"\"(?:[^\\"]|\\\\|\\")*\""#, |lex| lex.slice()[1..lex.slice().len() - 1].to_string())]
+    Path(String),
 }
 
 pub type LexerTy = (std::result::Result<Token, ()>, Range<usize>);

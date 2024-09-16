@@ -97,7 +97,7 @@ impl Repl {
 
     // Looks like a shitty function, but as the language evolves, it's going to be worth
     fn needs_program_parser(src: &str) -> bool {
-        src.contains('=')
+        src.contains('=') || src.contains("use")
     }
 
     pub fn print_term(&mut self, t: &Term) {

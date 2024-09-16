@@ -9,8 +9,9 @@ pub Program: Ast = {
     }
 }
 
-pub ProgramAtom: Ast = {
-    Assign => <>,
+ProgramAtom: Ast = {
+    Assign,
+    Use,
 }
 
 Assign: Ast = {
@@ -21,6 +22,10 @@ Assign: Ast = {
         }
         Ast::Assign(i, e)
     },
+}
+
+Use: Ast = {
+    "use" <p:Path> => Ast::Use(p)
 }
 
 pub Expr: UTerm = {
@@ -48,6 +53,8 @@ extern {
         "=" => Token::Assign,
         "\t" => Token::Tab,
         "\n" => Token::NewLine,
+        "use" => Token::UseKw,
+        Path => Token::Path(<String>),
         Ident => Token::Ident(<String>)
     }
 }
