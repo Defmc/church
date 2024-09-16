@@ -7,7 +7,7 @@ use crate::former::Former;
 use crate::grammar::ProgramParser;
 use crate::parser::Token;
 use crate::scope::Scope;
-use crate::Ast;
+use crate::{Ast, Error};
 
 pub struct CodeUnit {
     pub scope: Scope,
@@ -24,8 +24,9 @@ impl Default for CodeUnit {
 }
 
 impl CodeUnit {
-    pub fn load_file(&mut self, path: impl AsRef<Path>) -> Result<(), ()> {
-        let content = fs::read_to_string(path).unwrap();
+    pub fn load_file(&mut self, path: impl AsRef<Path>) -> Result<(), Error> {
+        let content = fs::read_to_string(path.as_ref())
+            .map_err(|_| Error::ModuleNotFound(path.as_ref().into()))?;
         let tokens = self.into_iter(&content);
         let program = self.program_parser.parse(tokens).unwrap();
         self.eval(program).unwrap();
@@ -45,17 +46,18 @@ impl CodeUnit {
         self.program_parser.parse(iter).unwrap()
     }
 
-    pub fn eval(&mut self, program: Ast) -> Result<(), ()> {
+    pub fn eval(&mut self, program: Ast) -> Result<(), Error> {
         match program {
             Ast::Program(p) => {
                 for atom in p {
-                    self.eval(atom).unwrap();
+                    self.eval(atom)?;
                 }
             }
             Ast::Assign(v, m) => {
-                let dump = self.scope.dump(&m).unwrap();
-                self.scope.insert(v, dump).unwrap();
+                let dump = self.scope.dump(&m)?;
+                self.scope.insert(v, dump)?;
             }
+            Ast::Use(path) => self.load_file(path)?,
         }
         Ok(())
     }
