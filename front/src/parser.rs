@@ -41,6 +41,7 @@ pub enum Token {
     Path(String),
 }
 
+pub type ParserTokenTy = (usize, Token, usize);
 pub type LexerTy = (std::result::Result<Token, ()>, Range<usize>);
 pub type Result<T> = std::result::Result<T, ParseError<usize, Token, ()>>;
 pub type Error = lalrpop_util::ParseError<usize, Token, ()>;

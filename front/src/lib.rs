@@ -70,6 +70,9 @@ pub enum Error {
     #[error("{0:?}")]
     ParserError(parser::Error),
 
+    #[error("{0:?}")]
+    LexerError(()),
+
     #[error("Variable {0}'ve been already deifned as {1}")]
     AlreadyDefined(String, Term),
 }
