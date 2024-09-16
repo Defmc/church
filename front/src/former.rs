@@ -4,7 +4,7 @@ use crate::parser::{LexerTy, Token};
 
 pub enum ParenTy {
     Implicit,
-    Explicit
+    Explicit,
 }
 
 pub struct Former<I>
@@ -12,7 +12,7 @@ where
     I: Iterator<Item = LexerTy>,
 {
     pub it: Peekable<I>,
-    pub paren_stack: Vec<ParenTy>
+    pub paren_stack: Vec<ParenTy>,
 }
 
 impl<I> Iterator for Former<I>
@@ -25,7 +25,6 @@ where
         match elm.0 {
             Ok(Token::NewLine) => {
                 if matches!(self.it.peek(), Some((Ok(Token::Tab | Token::NewLine), _))) {
-                    let _ = self.it.next();
                     return self.next();
                 }
             }
@@ -43,7 +42,7 @@ where
     fn from(value: I) -> Self {
         Former {
             it: value.peekable(),
-            paren_stack: Vec::new()
+            paren_stack: Vec::new(),
         }
     }
 }
