@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use crate::parser::{LexerTy, Token};
+use crate::parser::{ParserTokenTy, Token};
 
 pub enum ParenTy {
     Implicit,
@@ -9,7 +9,7 @@ pub enum ParenTy {
 
 pub struct Former<I>
 where
-    I: Iterator<Item = LexerTy>,
+    I: Iterator<Item = ParserTokenTy>,
 {
     pub it: Peekable<I>,
     pub paren_stack: Vec<ParenTy>,
@@ -17,18 +17,18 @@ where
 
 impl<I> Iterator for Former<I>
 where
-    I: Iterator<Item = LexerTy>,
+    I: Iterator<Item = ParserTokenTy>,
 {
-    type Item = LexerTy;
+    type Item = ParserTokenTy;
     fn next(&mut self) -> Option<Self::Item> {
         let elm = self.it.next()?;
-        match elm.0 {
-            Ok(Token::NewLine) => {
-                if matches!(self.it.peek(), Some((Ok(Token::Tab | Token::NewLine), _))) {
+        match elm.1 {
+            Token::NewLine => {
+                if matches!(self.it.peek(), Some((_, Token::Tab | Token::NewLine, _))) {
                     return self.next();
                 }
             }
-            Ok(Token::Tab) => return self.next(),
+            Token::Tab => return self.next(),
             _ => (),
         }
         Some(elm)
@@ -37,7 +37,7 @@ where
 
 impl<I> From<I> for Former<I>
 where
-    I: Iterator<Item = LexerTy>,
+    I: Iterator<Item = ParserTokenTy>,
 {
     fn from(value: I) -> Self {
         Former {
