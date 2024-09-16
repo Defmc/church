@@ -1,7 +1,11 @@
 use church::{Body, Term};
 use color_eyre::eyre::Result;
 use command::Command;
-use front::{cu::CodeUnit, UTerm};
+use front::{
+    cu::CodeUnit,
+    parser::{ParserTokenTy, Token},
+    UTerm,
+};
 use rustyline::{error::ReadlineError, DefaultEditor};
 use settings::Settings;
 use std::{collections::HashMap, time::Instant};
@@ -77,8 +81,8 @@ impl Repl {
     }
 
     pub fn eval(&mut self, src: &str) -> Result<()> {
-        let tks = self.cu.into_iter(src);
-        if Self::needs_program_parser(src) {
+        let tks: Vec<_> = self.cu.into_tokens(src)?.collect();
+        if Self::needs_program_parser(&mut tks.iter()) {
             let ast = self.cu.program_parser.parse(tks).unwrap();
             self.cu.eval(ast).unwrap();
         } else {
@@ -96,8 +100,8 @@ impl Repl {
     }
 
     // Looks like a shitty function, but as the language evolves, it's going to be worth
-    fn needs_program_parser(src: &str) -> bool {
-        src.contains('=') || src.contains("use")
+    fn needs_program_parser<'a>(tokens: &mut impl Iterator<Item = &'a ParserTokenTy>) -> bool {
+        tokens.any(|tk| matches!(tk.1, Token::Assign | Token::UseKw))
     }
 
     pub fn print_term(&mut self, t: &Term) {
