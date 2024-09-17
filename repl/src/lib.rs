@@ -3,7 +3,7 @@ use color_eyre::eyre::Result;
 use command::Command;
 use front::{
     cu::CodeUnit,
-    parser::{ParserTokenTy, Token},
+    parser::{ParserToken, Token},
     UTerm,
 };
 use rustyline::{error::ReadlineError, DefaultEditor};
@@ -86,28 +86,33 @@ impl Repl {
             self.show_tokens(&tks);
         }
         if Self::needs_program_parser(&mut tks.iter()) {
-            let ast = self.cu.program_parser.parse(tks).unwrap();
-            self.cu.eval(ast).unwrap();
+            let ast = self
+                .cu
+                .program_parser
+                .parse(tks)
+                .map_err(front::Error::ParserError)?;
+            self.cu.eval(ast)?;
         } else {
-            let parsed = front::grammar::ExprParser::new().parse(tks).unwrap();
+            let parsed = front::grammar::ExprParser::new()
+                .parse(tks)
+                .map_err(front::Error::ParserError)?;
             self.reduce_expr(&parsed);
         }
         Ok(())
     }
 
-    fn show_tokens(&mut self, tks: &[ParserTokenTy]) {
-        fn str_repr_size(n: usize) -> usize {
+    fn show_tokens(&mut self, tks: &[ParserToken]) {
+        fn str_n_size(n: usize) -> usize {
             (n as f32).log10() as usize + 1
         }
 
-        let max_span = tks.last().unwrap().2;
-        let max_char_span = str_repr_size(max_span);
-
+        let end = tks.last().unwrap().2;
+        let sp_size = str_n_size(end);
         for (start, tk, end) in tks {
             println!(
-                "{start}{} ..{} {end} {tk:?}",
-                " ".repeat(max_char_span - str_repr_size(*start)),
-                " ".repeat(max_char_span - str_repr_size(*end))
+                "{start}{} .. {}{end} {tk:?}",
+                " ".repeat(sp_size - str_n_size(*start)),
+                " ".repeat(sp_size - str_n_size(*end))
             );
         }
     }
@@ -120,7 +125,7 @@ impl Repl {
     }
 
     // Looks like a shitty function, but as the language evolves, it's going to be worth
-    fn needs_program_parser<'a>(tokens: &mut impl Iterator<Item = &'a ParserTokenTy>) -> bool {
+    fn needs_program_parser<'a>(tokens: &mut impl Iterator<Item = &'a ParserToken>) -> bool {
         tokens.any(|tk| matches!(tk.1, Token::Assign | Token::UseKw))
     }
 
