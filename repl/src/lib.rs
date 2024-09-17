@@ -82,6 +82,9 @@ impl Repl {
 
     pub fn eval(&mut self, src: &str) -> Result<()> {
         let tks: Vec<_> = self.cu.into_tokens(src)?.collect();
+        if self.settings.show_tokens {
+            self.show_tokens(&tks);
+        }
         if Self::needs_program_parser(&mut tks.iter()) {
             let ast = self.cu.program_parser.parse(tks).unwrap();
             self.cu.eval(ast).unwrap();
@@ -90,6 +93,23 @@ impl Repl {
             self.reduce_expr(&parsed);
         }
         Ok(())
+    }
+
+    fn show_tokens(&mut self, tks: &[ParserTokenTy]) {
+        fn str_repr_size(n: usize) -> usize {
+            (n as f32).log10() as usize + 1
+        }
+
+        let max_span = tks.last().unwrap().2;
+        let max_char_span = str_repr_size(max_span);
+
+        for (start, tk, end) in tks {
+            println!(
+                "{start}{} ..{} {end} {tk:?}",
+                " ".repeat(max_char_span - str_repr_size(*start)),
+                " ".repeat(max_char_span - str_repr_size(*end))
+            );
+        }
     }
 
     fn reduce_expr(&mut self, ut: &UTerm) {
