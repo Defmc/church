@@ -1,48 +1,42 @@
 use std::iter::Peekable;
 
-use crate::parser::{ParserTokenTy, Token};
+use crate::parser::{ParserToken, Token};
 
-pub enum ParenTy {
-    Implicit,
-    Explicit,
-}
-
-pub struct Former<I>
+pub fn form<I>(mut it: Peekable<I>) -> Vec<ParserToken>
 where
-    I: Iterator<Item = ParserTokenTy>,
+    I: Iterator<Item = ParserToken>,
 {
-    pub it: Peekable<I>,
-    pub paren_stack: Vec<ParenTy>,
-}
-
-impl<I> Iterator for Former<I>
-where
-    I: Iterator<Item = ParserTokenTy>,
-{
-    type Item = ParserTokenTy;
-    fn next(&mut self) -> Option<Self::Item> {
-        let elm = self.it.next()?;
-        match elm.1 {
-            Token::NewLine => {
-                if matches!(self.it.peek(), Some((_, Token::Tab | Token::NewLine, _))) {
-                    return self.next();
-                }
-            }
-            Token::Tab => return self.next(),
-            _ => (),
-        }
-        Some(elm)
+    let mut buf = Vec::new();
+    while it.peek().is_some() {
+        set_form(&mut it, &mut buf);
     }
+    buf
 }
 
-impl<I> From<I> for Former<I>
+fn set_form<I>(it: &mut Peekable<I>, buf: &mut Vec<ParserToken>)
 where
-    I: Iterator<Item = ParserTokenTy>,
+    I: Iterator<Item = ParserToken>,
 {
-    fn from(value: I) -> Self {
-        Former {
-            it: value.peekable(),
-            paren_stack: Vec::new(),
+    while let Some(tk) = it.next() {
+        match tk.1 {
+            Token::NewLine if matches!(it.peek(), Some((_, Token::NewLine | Token::Tab, _))) => (),
+            Token::NewLine => {
+                buf.push(tk);
+                break;
+            }
+            Token::Tab => (),
+            Token::Dot => {
+                let paren_sp = tk.2;
+                buf.push(tk);
+                buf.push((paren_sp, Token::OpenParen, paren_sp));
+                set_form(it, buf);
+                let paren_sp = buf.last().unwrap().2;
+                buf.push((paren_sp, Token::CloseParen, paren_sp));
+                let blen = buf.len();
+                buf.swap(blen - 1, blen - 2);
+                break;
+            }
+            _ => buf.push(tk),
         }
     }
 }
