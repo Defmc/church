@@ -1,6 +1,5 @@
-use crate::former::Former;
 use crate::grammar::ProgramParser;
-use crate::parser::{ParserTokenTy, Token};
+use crate::parser::{ParserToken, Token};
 use crate::scope::Scope;
 use crate::{Ast, Error};
 use logos::Logos;
@@ -30,7 +29,7 @@ impl CodeUnit {
         Ok(())
     }
 
-    pub fn into_raw_tokens(&mut self, src: &str) -> Result<Vec<ParserTokenTy>, Error> {
+    pub fn into_raw_tokens(&mut self, src: &str) -> Result<Vec<ParserToken>, Error> {
         Token::lexer(src)
             .spanned()
             .try_fold(Vec::new(), |mut ac, (tk, sp)| {
@@ -40,14 +39,17 @@ impl CodeUnit {
             .map_err(|e| Error::LexerError(e))
     }
 
-    pub fn into_tokens(&mut self, src: &str) -> Result<impl Iterator<Item = ParserTokenTy>, Error> {
+    pub fn into_tokens(&mut self, src: &str) -> Result<impl Iterator<Item = ParserToken>, Error> {
         let tks = self.into_raw_tokens(src)?.into_iter();
-        Ok(Former::from(tks))
+        Ok(crate::former::form(tks.peekable()).into_iter())
     }
 
     pub fn parse(&mut self, src: impl AsRef<str>) -> Result<Ast, Error> {
         let iter = self.into_tokens(src.as_ref())?;
-        let ast = self.program_parser.parse(iter).unwrap();
+        let ast = self
+            .program_parser
+            .parse(iter)
+            .map_err(|e| Error::ParserError(e))?;
         Ok(ast)
     }
 
