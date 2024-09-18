@@ -2,45 +2,93 @@ use std::iter::Peekable;
 
 use crate::parser::{ParserToken, Token};
 
-pub fn form<I>(mut it: Peekable<I>) -> Vec<ParserToken>
-where
-    I: Iterator<Item = ParserToken>,
-{
-    let mut buf = Vec::new();
-    while it.peek().is_some() {
-        set_form(&mut it, &mut buf);
-    }
-    buf
+pub struct Form<I: Iterator<Item = ParserToken>> {
+    stack: Vec<Implicit>,
+    buf: Vec<ParserToken>,
+    it: Peekable<I>,
 }
 
-fn set_form<I>(it: &mut Peekable<I>, buf: &mut Vec<ParserToken>)
+impl<I> Form<I>
 where
     I: Iterator<Item = ParserToken>,
 {
-    while let Some(tk) = it.next() {
-        match tk.1 {
-            Token::Tab | Token::NewLine
-                if matches!(it.peek(), Some((_, Token::NewLine | Token::Tab, _))) =>
-            {
-                ()
+    pub fn set(&mut self) {
+        while let Some(tk) = self.it.next() {
+            match tk.1 {
+                Token::Tab | Token::NewLine
+                    if matches!(self.it.peek(), Some((_, Token::NewLine | Token::Tab, _))) =>
+                {
+                    continue
+                }
+                Token::NewLine => self.finish_expr(),
+                Token::LetKw => {
+                    self.buf.push(tk);
+                    self.stack.push(Implicit::Let)
+                }
+                Token::InKw => {
+                    self.finish_let();
+                    self.buf.push(tk);
+                    self.push_depth(Implicit::In);
+                }
+                Token::Dot => {
+                    self.buf.push(tk);
+                    self.push_depth(Implicit::Fn)
+                }
+                _ => self.buf.push(tk),
             }
-            Token::NewLine | Token::InKw => {
-                buf.push(tk);
+        }
+        self.finish_expr();
+    }
+
+    pub fn finish_let(&mut self) {
+        while let Some(pop) = self.stack.pop() {
+            if matches!(pop, Implicit::Let) {
                 break;
+            } else {
+                self.push_meta(Token::CloseParen);
             }
-            Token::Dot => {
-                let paren_sp = tk.2;
-                buf.push(tk);
-                buf.push((paren_sp, Token::OpenParen, paren_sp));
-                set_form(it, buf);
-                let paren_sp = buf.last().unwrap().2;
-                buf.push((paren_sp, Token::CloseParen, paren_sp));
-                let blen = buf.len();
-                buf.swap(blen - 1, blen - 2);
-                break;
-            }
-            _ => buf.push(tk),
+        }
+    }
+
+    pub fn finish_expr(&mut self) {
+        while let Some(_) = self.stack.pop() {
+            self.push_meta(Token::CloseParen);
+        }
+    }
+
+    pub fn push_depth(&mut self, ty: Implicit) {
+        self.push_meta(Token::OpenParen);
+        self.stack.push(ty);
+    }
+
+    pub fn push_meta(&mut self, tk: Token) {
+        let last_sp = self.buf.last().unwrap().2;
+        self.buf.push((last_sp, tk, last_sp));
+    }
+}
+
+impl<I> From<I> for Form<I>
+where
+    I: Iterator<Item = ParserToken>,
+{
+    fn from(value: I) -> Self {
+        Self {
+            stack: Vec::default(),
+            buf: Vec::default(),
+            it: value.peekable(),
         }
     }
 }
+
+pub enum Implicit {
+    Fn,
+    Let,
+    In,
+}
+
+pub fn form(it: impl Iterator<Item = ParserToken>) -> Vec<ParserToken> {
+    let mut form = Form::from(it);
+    form.set();
     println!("generated code: {}", Token::rebuild_code(&form.buf));
+    form.buf
+}
