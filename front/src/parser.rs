@@ -8,11 +8,10 @@ use logos::Logos;
 #[logos(skip r"[ \f]+")]
 pub enum Token {
     #[token("λ")]
-    #[token("\\")]
+    #[token("fn")]
     Lambda,
 
-    #[token(".")]
-    #[token("->")]
+    #[token("=>")]
     Dot,
 
     #[token("(")]
@@ -54,8 +53,8 @@ impl Token {
         let mut buf = String::new();
         for (_, tk, _) in tokens {
             match tk {
-                Self::Dot => buf.push('.'),
-                Self::Lambda => buf.push('λ'),
+                Self::Dot => buf.push_str("=>"),
+                Self::Lambda => buf.push_str("fn"),
                 Self::Tab => buf.push('\t'),
                 Self::NewLine => buf.push('\n'),
                 Self::LetKw => buf.push_str("let"),
