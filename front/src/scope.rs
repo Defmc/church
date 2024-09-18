@@ -34,34 +34,46 @@ impl Scope {
                 let b = Body::Abs(v_alias, m);
                 Ok(Term::from(b))
             }
-            Ast::Let(defs, m) => {
-                let mut olds = Vec::new();
-                for component in defs {
-                    if let Ast::Assign(id, def) = component {
-                        let old = self.defs.remove(id);
-                        olds.push(old);
-                        let dump = self.dump(def)?;
-                        self.insert(id.clone(), dump)?;
-                    } else {
-                        unreachable!()
-                    }
-                }
-                let term = self.dump_with(ctx, m)?;
-                for (component, old) in defs.iter().zip(olds) {
-                    if let Ast::Assign(id, _) = component {
-                        if let Some(old) = old {
-                            *self.defs.get_mut(id).unwrap() = old;
-                        } else {
-                            self.defs.remove(id);
-                        }
-                    } else {
-                        unreachable!()
-                    }
-                }
-                Ok(term)
-            }
+            Ast::Let(defs, m) => self.dump_let(ctx, defs, m),
             _ => todo!(),
         }
+    }
+
+    fn dump_let(
+        &mut self,
+        ctx: &mut HashMap<String, usize>,
+        defs: &[Ast],
+        m: &Ast,
+    ) -> Result<Term> {
+        let mut olds = Vec::new();
+        for component in defs {
+            if let Ast::Assign(id, def) = component {
+                if let Some(old_bind) = self.defs.remove(id) {
+                    let old_alias = self.aliases.remove(&old_bind);
+                    olds.push((Some(old_bind), old_alias));
+                } else {
+                    olds.push((None, None));
+                }
+                let dump = self.dump(def)?;
+                self.insert(id.clone(), dump)?;
+            } else {
+                unreachable!()
+            }
+        }
+        let term = self.dump_with(ctx, m)?;
+        for (component, (old_bind, old_alias)) in defs.iter().zip(olds) {
+            if let Ast::Assign(id, _) = component {
+                if let Some(bind) = old_bind {
+                    *self.aliases.get_mut(&bind).unwrap() = old_alias.unwrap();
+                    *self.defs.get_mut(id).unwrap() = bind;
+                } else {
+                    self.defs.remove(id);
+                }
+            } else {
+                unreachable!()
+            }
+        }
+        Ok(term)
     }
 
     fn get_var_def(&self, ctx: &mut HashMap<String, usize>, v: &str) -> Result<Term> {
