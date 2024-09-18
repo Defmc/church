@@ -79,6 +79,7 @@ const SET_CMD: Command = Command {
             "run" => set_arg(&mut r.settings.run, &input[1])?,
             "prettify" => set_arg(&mut r.settings.prettify, &input[1])?,
             "order" => set_arg(&mut r.settings.b_order, &input[1])?,
+            "show_form" => set_arg(&mut r.settings.show_form, &input[1])?,
             _ => Err(crate::Err::UnknownSetting(input[0].clone()))?,
         };
         Ok(())

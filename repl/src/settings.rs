@@ -4,6 +4,7 @@ pub struct Settings {
     pub prompt: String,
     pub show_tokens: bool,
     pub show_ast: bool,
+    pub show_form: bool,
     pub run: bool,
     pub bench: bool,
     pub show_output: bool,
@@ -21,6 +22,7 @@ impl Default for Settings {
             bench: false,
             show_output: true,
             prettify: true,
+            show_form: false,
             b_order: BetaOrder::default(),
         }
     }

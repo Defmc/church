@@ -100,6 +100,5 @@ pub enum Implicit {
 pub fn form(it: impl Iterator<Item = ParserToken>) -> Vec<ParserToken> {
     let mut form = Form::from(it);
     form.set();
-    println!("generated code: {}", Token::rebuild_code(&form.buf));
     form.buf
 }

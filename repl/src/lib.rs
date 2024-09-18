@@ -81,10 +81,7 @@ impl Repl {
     }
 
     pub fn eval(&mut self, src: &str) -> Result<()> {
-        let tks: Vec<_> = self.cu.into_tokens(src)?.collect();
-        if self.settings.show_tokens {
-            self.show_tokens(&tks);
-        }
+        let tks = self.get_tokens(src)?;
         if Self::needs_program_parser(&tks) {
             let ast = self
                 .cu
@@ -99,6 +96,18 @@ impl Repl {
             self.reduce_expr(&parsed);
         }
         Ok(())
+    }
+
+    fn get_tokens(&mut self, src: &str) -> Result<Vec<ParserToken>> {
+        let tks = self.cu.into_raw_tokens(src)?;
+        if self.settings.show_tokens {
+            self.show_tokens(&tks);
+        }
+        let form = front::former::form(tks.into_iter());
+        if self.settings.show_form {
+            println!("{}", Token::rebuild_code(&form));
+        }
+        Ok(form)
     }
 
     fn show_tokens(&mut self, tks: &[ParserToken]) {
