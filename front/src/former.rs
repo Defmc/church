@@ -19,12 +19,15 @@ where
 {
     while let Some(tk) = it.next() {
         match tk.1 {
-            Token::NewLine if matches!(it.peek(), Some((_, Token::NewLine | Token::Tab, _))) => (),
-            Token::NewLine => {
+            Token::Tab | Token::NewLine
+                if matches!(it.peek(), Some((_, Token::NewLine | Token::Tab, _))) =>
+            {
+                ()
+            }
+            Token::NewLine | Token::InKw => {
                 buf.push(tk);
                 break;
             }
-            Token::Tab => (),
             Token::Dot => {
                 let paren_sp = tk.2;
                 buf.push(tk);
