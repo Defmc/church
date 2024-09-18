@@ -11,11 +11,11 @@ pub struct Scope {
 }
 
 impl Scope {
-    pub fn dump(&self, t: &Ast) -> Result<Term> {
+    pub fn dump(&mut self, t: &Ast) -> Result<Term> {
         self.dump_with(&mut HashMap::new(), t)
     }
 
-    fn dump_with(&self, ctx: &mut HashMap<String, usize>, t: &Ast) -> Result<Term> {
+    fn dump_with(&mut self, ctx: &mut HashMap<String, usize>, t: &Ast) -> Result<Term> {
         match t {
             Ast::Var(v) => self.get_var_def(ctx, v),
             Ast::App(m, n) => {
@@ -33,6 +33,32 @@ impl Scope {
                 }
                 let b = Body::Abs(v_alias, m);
                 Ok(Term::from(b))
+            }
+            Ast::Let(defs, m) => {
+                let mut olds = Vec::new();
+                for component in defs {
+                    if let Ast::Assign(id, def) = component {
+                        let old = self.defs.remove(id);
+                        olds.push(old);
+                        let dump = self.dump(def)?;
+                        self.insert(id.clone(), dump)?;
+                    } else {
+                        unreachable!()
+                    }
+                }
+                let term = self.dump_with(ctx, m)?;
+                for (component, old) in defs.iter().zip(olds) {
+                    if let Ast::Assign(id, _) = component {
+                        if let Some(old) = old {
+                            *self.defs.get_mut(id).unwrap() = old;
+                        } else {
+                            self.defs.remove(id);
+                        }
+                    } else {
+                        unreachable!()
+                    }
+                }
+                Ok(term)
             }
             _ => todo!(),
         }

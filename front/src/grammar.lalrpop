@@ -13,6 +13,11 @@ ProgramAtom: Ast = {
     Use,
 }
 
+Let: Vec<Ast> = "let" <mut v:(<Assign> ",")*> <last:Assign> "in" => {
+    v.push(last);
+    v
+};
+
 Assign: Ast = {
     <i:Ident> <args:Ident*> "=" <e:Expr> => {
         let mut e = e;
@@ -28,8 +33,13 @@ Use: Ast = {
 }
 
 pub Expr: Ast = {
-    AtomExpr => <>,
-    <e:Expr> <atom:AtomExpr> => Ast::App(e.into(), atom.into())
+    <l:Let> <a:InnerExpr> => Ast::Let(l, a.into()),
+    InnerExpr,
+}
+
+InnerExpr: Ast = {
+    AtomExpr,
+    <e:InnerExpr> <atom:AtomExpr> => Ast::App(e.into(), atom.into())
 }
 
 AtomExpr: Ast = {
