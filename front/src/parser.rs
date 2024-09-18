@@ -49,6 +49,31 @@ pub enum Token {
     Path(String),
 }
 
+impl Token {
+    pub fn rebuild_code(tokens: &[ParserToken]) -> String {
+        let mut buf = String::new();
+        for (_, tk, _) in tokens {
+            match tk {
+                Self::Dot => buf.push('.'),
+                Self::Lambda => buf.push('λ'),
+                Self::Tab => buf.push('\t'),
+                Self::NewLine => buf.push('\n'),
+                Self::LetKw => buf.push_str("let"),
+                Self::InKw => buf.push_str("in"),
+                Self::UseKw => buf.push_str("use"),
+                Self::Comma => buf.push(','),
+                Self::Assign => buf.push('='),
+                Self::Ident(id) => buf.push_str(id),
+                Self::Path(p) => buf.push_str(p),
+                Self::OpenParen => buf.push('('),
+                Self::CloseParen => buf.push(')'),
+            }
+            buf.push(' ');
+        }
+        buf
+    }
+}
+
 pub type ParserToken = (usize, Token, usize);
 pub type LexerTy = (std::result::Result<Token, ()>, Range<usize>);
 pub type Result<T> = std::result::Result<T, ParseError<usize, Token, ()>>;

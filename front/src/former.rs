@@ -43,3 +43,4 @@ where
         }
     }
 }
+    println!("generated code: {}", Token::rebuild_code(&form.buf));
