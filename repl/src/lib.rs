@@ -85,7 +85,7 @@ impl Repl {
         if self.settings.show_tokens {
             self.show_tokens(&tks);
         }
-        if Self::needs_program_parser(&mut tks.iter()) {
+        if Self::needs_program_parser(&tks) {
             let ast = self
                 .cu
                 .program_parser
@@ -126,8 +126,9 @@ impl Repl {
     }
 
     // Looks like a shitty function, but as the language evolves, it's going to be worth
-    fn needs_program_parser<'a>(tokens: &mut impl Iterator<Item = &'a ParserToken>) -> bool {
-        tokens.any(|tk| matches!(tk.1, Token::Assign | Token::UseKw))
+    fn needs_program_parser<'a>(tokens: &[ParserToken]) -> bool {
+        tokens[0].1 == Token::UseKw
+            || (tokens[0].1 != Token::LetKw && tokens.iter().any(|t| t.1 == Token::Assign))
     }
 
     pub fn print_term(&mut self, t: &Term) {
