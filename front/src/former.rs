@@ -25,6 +25,10 @@ where
                     self.buf.push(tk);
                     self.stack.push(Implicit::Let)
                 }
+                Token::Comma => {
+                    self.goto(Implicit::Let);
+                    self.buf.push(tk);
+                }
                 Token::InKw => {
                     self.finish_let();
                     self.buf.push(tk);
