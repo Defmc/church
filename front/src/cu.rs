@@ -65,6 +65,7 @@ impl CodeUnit {
                 self.scope.insert(v, dump)?;
             }
             Ast::Use(path) => self.load_file(path)?,
+            _ => unreachable!(),
         }
         Ok(())
     }

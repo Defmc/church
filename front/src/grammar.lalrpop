@@ -1,5 +1,4 @@
-use crate::parser::Token;
-use crate::{UBody, UTerm, Ast};
+use crate::{parser::Token, Ast};
 grammar;
 
 pub Program: Ast = {
@@ -18,9 +17,9 @@ Assign: Ast = {
     <i:Ident> <args:Ident*> "=" <e:Expr> => {
         let mut e = e;
         for arg in args.into_iter().rev() {
-            e = UBody::Abs(arg, e).into();
+            e = Ast::Abs(arg, e.into());
         }
-        Ast::Assign(i, e)
+        Ast::Assign(i, e.into())
     },
 }
 
@@ -28,18 +27,18 @@ Use: Ast = {
     "use" <p:Path> => Ast::Use(p)
 }
 
-pub Expr: UTerm = {
+pub Expr: Ast = {
     AtomExpr => <>,
-    <e:Expr> <atom:AtomExpr> => UBody::App(e, atom).into()
+    <e:Expr> <atom:AtomExpr> => Ast::App(e.into(), atom.into())
 }
 
-AtomExpr: UTerm = {
+AtomExpr: Ast = {
     LambdaAbs => <>,
-    Ident => UBody::Var(<>).into(),
+    Ident => Ast::Var(<>),
     "(" <e:Expr> ")" => e,
 }
 
-LambdaAbs: UTerm = LambdaSym <i:Ident> DotSym "(" <e:Expr> ")" => UBody::Abs(i, e).into();
+LambdaAbs: Ast = LambdaSym <i:Ident> DotSym "(" <e:Expr> ")" => Ast::Abs(i, e.into());
 
 extern {
     type Location = usize;
@@ -54,6 +53,9 @@ extern {
         "\t" => Token::Tab,
         "\n" => Token::NewLine,
         "use" => Token::UseKw,
+        "," => Token::Comma,
+        "let" => Token::LetKw,
+        "in" => Token::InKw,
         Path => Token::Path(<String>),
         Ident => Token::Ident(<String>)
     }

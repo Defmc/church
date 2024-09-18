@@ -4,7 +4,7 @@ use command::Command;
 use front::{
     cu::CodeUnit,
     parser::{ParserToken, Token},
-    UTerm,
+    Ast,
 };
 use rustyline::{error::ReadlineError, DefaultEditor};
 use settings::Settings;
@@ -117,7 +117,7 @@ impl Repl {
         }
     }
 
-    fn reduce_expr(&mut self, ut: &UTerm) {
+    fn reduce_expr(&mut self, ut: &Ast) {
         let mut t = self.cu.scope.dump(ut).unwrap();
         while !self.redex_step(&mut t) {
             self.print_term(&t);

@@ -1,8 +1,8 @@
 use church::{Body, Term};
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, str::FromStr, sync::atomic::AtomicUsize};
+use std::{collections::HashMap, sync::atomic::AtomicUsize};
 
-use crate::{Error, Result, UBody, UTerm};
+use crate::{Ast, Error, Result};
 
 #[derive(Default, Clone)]
 pub struct Scope {
@@ -11,20 +11,20 @@ pub struct Scope {
 }
 
 impl Scope {
-    pub fn dump(&self, t: &UTerm) -> Result<Term> {
+    pub fn dump(&self, t: &Ast) -> Result<Term> {
         self.dump_with(&mut HashMap::new(), t)
     }
 
-    fn dump_with(&self, ctx: &mut HashMap<String, usize>, t: &UTerm) -> Result<Term> {
-        match t.body.as_ref() {
-            UBody::Var(v) => self.get_var_def(ctx, v),
-            UBody::App(m, n) => {
+    fn dump_with(&self, ctx: &mut HashMap<String, usize>, t: &Ast) -> Result<Term> {
+        match t {
+            Ast::Var(v) => self.get_var_def(ctx, v),
+            Ast::App(m, n) => {
                 let m = self.dump_with(ctx, m)?;
                 let n = self.dump_with(ctx, n)?;
                 let b = Body::App(m, n);
                 Ok(Term::from(b))
             }
-            UBody::Abs(v, m) => {
+            Ast::Abs(v, m) => {
                 let v_alias = Self::get_new_ident();
                 let old = ctx.insert(v.clone(), v_alias);
                 let m = self.dump_with(ctx, m)?;
@@ -34,6 +34,7 @@ impl Scope {
                 let b = Body::Abs(v_alias, m);
                 Ok(Term::from(b))
             }
+            _ => todo!(),
         }
     }
 
@@ -88,11 +89,6 @@ impl Scope {
     fn get_new_ident() -> usize {
         static ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
         ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-    }
-
-    pub fn into_term(&self, s: &str) -> Result<Term> {
-        let t = UTerm::from_str(s).map_err(Error::ParserError)?;
-        self.dump(&t)
     }
 
     pub fn insert(&mut self, name: String, def: Term) -> Result<()> {
