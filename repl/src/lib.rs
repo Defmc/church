@@ -119,6 +119,7 @@ impl Repl {
 
     fn reduce_expr(&mut self, ut: &Ast) {
         let mut t = self.cu.scope.dump(ut).unwrap();
+        println!("{t}");
         while !self.redex_step(&mut t) {
             self.print_term(&t);
         }
