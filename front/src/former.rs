@@ -20,7 +20,7 @@ where
                 {
                     continue
                 }
-                Token::NewLine => self.finish_expr(),
+                Token::NewLine => self.finish_all(),
                 Token::LetKw => {
                     self.buf.push(tk);
                     self.stack.push(Implicit::Let)
@@ -30,7 +30,7 @@ where
                     self.buf.push(tk);
                 }
                 Token::InKw => {
-                    self.finish_let();
+                    self.finish(Implicit::Let);
                     self.buf.push(tk);
                     self.push_depth(Implicit::In);
                 }
@@ -41,20 +41,26 @@ where
                 _ => self.buf.push(tk),
             }
         }
-        self.finish_expr();
+        self.finish_all();
     }
 
-    pub fn finish_let(&mut self) {
-        while let Some(pop) = self.stack.pop() {
-            if matches!(pop, Implicit::Let) {
+    pub fn goto(&mut self, ty: Implicit) {
+        while let Some(top) = self.stack.last() {
+            if top == &ty {
                 break;
             } else {
                 self.push_meta(Token::CloseParen);
+                self.stack.pop();
             }
         }
     }
 
-    pub fn finish_expr(&mut self) {
+    pub fn finish(&mut self, ty: Implicit) {
+        self.goto(ty);
+        self.stack.pop();
+    }
+
+    pub fn finish_all(&mut self) {
         while let Some(_) = self.stack.pop() {
             self.push_meta(Token::CloseParen);
         }
@@ -84,6 +90,7 @@ where
     }
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum Implicit {
     Fn,
     Let,
