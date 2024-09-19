@@ -1,4 +1,4 @@
-use crate::{parser::Token, Ast};
+use crate::{parser::Token, Ast, Op};
 grammar;
 
 pub Program: Ast = {
@@ -40,11 +40,24 @@ pub Expr: Ast = {
 AtomExpr: Ast = {
     Let,
     LambdaAbs,
-    Ident => Ast::Var(<>),
+    Op,
     "(" <e:Expr> ")" => e,
 }
 
-LambdaAbs: Ast = LambdaSym <i:Ident> DotSym "(" <e:Expr> ")" => Ast::Abs(i, e.into());
+Op: Ast = {
+    #[precedence(level="0")]
+    Atom,
+
+    #[precedence(level="1")]
+    #[assoc(side="left")]
+    <l:Op> "." <r:Ident> => Ast::BinOp(l.into(), Op::Access, Ast::Var(r).into())
+}
+
+Atom: Ast = {
+    Ident => Ast::Var(<>),
+}
+
+LambdaAbs: Ast = LambdaSym <i:Ident> "=>" "(" <e:Expr> ")" => Ast::Abs(i, e.into());
 
 extern {
     type Location = usize;
@@ -52,7 +65,8 @@ extern {
     
     enum Token {
         LambdaSym => Token::Lambda,
-        DotSym => Token::Dot,
+        "=>" => Token::ArrowFn,
+        "." => Token::Dot,
         "(" => Token::OpenParen,
         ")" => Token::CloseParen,
         "=" => Token::Assign,

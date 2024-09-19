@@ -87,13 +87,17 @@ impl Repl {
                 .cu
                 .program_parser
                 .parse(tks)
-                .map_err(front::Error::ParserError)?;
-            self.cu.eval(ast)?;
-        } else {
-            let parsed = front::grammar::ExprParser::new()
-                .parse(tks)
-                .map_err(front::Error::ParserError)?;
-            self.reduce_expr(&parsed);
+                .map_err(front::Error::ParserError)
+        }?;
+        if self.settings.show_ast {
+            println!("{ast:#?}");
+        }
+        if self.settings.eval {
+            if is_expr {
+                self.reduce_expr(&ast);
+            } else {
+                self.cu.eval(ast)?;
+            }
         }
         Ok(())
     }

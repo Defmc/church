@@ -34,7 +34,7 @@ where
                     self.buf.push(tk);
                     self.push_depth(Implicit::In);
                 }
-                Token::Dot => {
+                Token::ArrowFn => {
                     self.buf.push(tk);
                     self.push_depth(Implicit::Fn)
                 }

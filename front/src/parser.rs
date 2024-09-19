@@ -12,6 +12,9 @@ pub enum Token {
     Lambda,
 
     #[token("=>")]
+    ArrowFn,
+
+    #[token(".")]
     Dot,
 
     #[token("(")]
@@ -53,7 +56,7 @@ impl Token {
         let mut buf = String::new();
         for (_, tk, _) in tokens {
             match tk {
-                Self::Dot => buf.push_str("=>"),
+                Self::ArrowFn => buf.push_str("=>"),
                 Self::Lambda => buf.push_str("fn"),
                 Self::Tab => buf.push('\t'),
                 Self::NewLine => buf.push('\n'),
@@ -66,6 +69,7 @@ impl Token {
                 Self::Path(p) => buf.push_str(p),
                 Self::OpenParen => buf.push('('),
                 Self::CloseParen => buf.push(')'),
+                Self::Dot => buf.push('.'),
             }
             buf.push(' ');
         }
