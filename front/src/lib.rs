@@ -10,19 +10,26 @@ pub enum Ast {
     Let(Vec<Ast>, Box<Ast>),
     Use(String),
 
+    BinOp(Box<Ast>, Op, Box<Ast>),
+
     // basic term
     App(Box<Ast>, Box<Ast>),
     Abs(String, Box<Ast>),
     Var(String),
 }
 
+#[derive(Debug)]
+pub enum Op {
+    Access,
+}
+
 use church::Term;
 use thiserror::Error;
 
+pub mod compiler;
 pub mod cu;
 pub mod former;
 pub mod parser;
-pub mod scope;
 
 #[derive(Error, Debug)]
 pub enum Error {
