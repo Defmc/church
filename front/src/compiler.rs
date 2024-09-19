@@ -5,12 +5,12 @@ use std::{collections::HashMap, sync::atomic::AtomicUsize};
 use crate::{Ast, Error, Result};
 
 #[derive(Default, Clone)]
-pub struct Scope {
+pub struct Compiler {
     pub defs: HashMap<String, Term>,
     pub aliases: HashMap<Term, String>,
 }
 
-impl Scope {
+impl Compiler {
     pub fn dump(&mut self, t: &Ast) -> Result<Term> {
         self.dump_with(&mut HashMap::new(), t)
     }
