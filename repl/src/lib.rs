@@ -99,7 +99,7 @@ impl Repl {
     }
 
     fn get_tokens(&mut self, src: &str) -> Result<Vec<ParserToken>> {
-        let tks = self.cu.into_raw_tokens(src)?;
+        let tks = CodeUnit::into_raw_tokens(src)?;
         if self.settings.show_tokens {
             self.show_tokens(&tks);
         }
