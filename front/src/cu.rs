@@ -1,20 +1,20 @@
 use crate::grammar::ProgramParser;
 use crate::parser::{ParserToken, Token};
-use crate::scope::Scope;
+use crate::compiler::Compiler;
 use crate::{Ast, Error};
 use logos::Logos;
 use std::fs;
 use std::path::Path;
 
 pub struct CodeUnit {
-    pub scope: Scope,
+    pub scope: Compiler,
     pub program_parser: ProgramParser,
 }
 
 impl Default for CodeUnit {
     fn default() -> Self {
         Self {
-            scope: Scope::default(),
+            scope: Compiler::default(),
             program_parser: ProgramParser::new(),
         }
     }

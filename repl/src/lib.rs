@@ -82,9 +82,13 @@ impl Repl {
 
     pub fn eval(&mut self, src: &str) -> Result<()> {
         let tks = self.get_tokens(src)?;
-        if Self::needs_program_parser(&tks) {
-            let ast = self
-                .cu
+        let is_expr = !Self::needs_program_parser(&tks);
+        let ast = if is_expr {
+            front::grammar::ExprParser::new()
+                .parse(tks)
+                .map_err(front::Error::ParserError)
+            } else {
+            self.cu
                 .program_parser
                 .parse(tks)
                 .map_err(front::Error::ParserError)
