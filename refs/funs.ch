@@ -9,7 +9,6 @@ id2 (x : α) : α = x
 id3 x = x
 id4 = I
 
-
 long_fn : Nat -> Nat -> Nat -> Nat -> Nat -> Nat
 long_fn 1 ... = 1
 long_fn ... 1 = 1
@@ -20,7 +19,6 @@ long_fn ... = 0
 
 just_when_eq (l : Nat) (r : Nat) : Nat = 0
 just_when_eq n n = n
-
 
 # value unwrapping
 map (Some x) f = Some $ f x
