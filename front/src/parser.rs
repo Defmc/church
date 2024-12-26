@@ -4,7 +4,7 @@ use lalrpop_util::ParseError;
 use logos::Logos;
 
 #[derive(Logos, PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
-#[logos(skip r"#.*[\n#]")]
+#[logos(skip r"#.*[\n#]?")]
 #[logos(skip r"[ \f]+")]
 pub enum Token {
     #[token("λ")]
