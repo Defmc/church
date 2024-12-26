@@ -82,12 +82,15 @@ impl Repl {
 
     pub fn eval(&mut self, src: &str) -> Result<()> {
         let tks = self.get_tokens(src)?;
+        if tks.is_empty() {
+            return Ok(());
+        }
         let is_expr = !Self::needs_program_parser(&tks);
         let ast = if is_expr {
             front::grammar::ExprParser::new()
                 .parse(tks)
                 .map_err(front::Error::ParserError)
-            } else {
+        } else {
             self.cu
                 .program_parser
                 .parse(tks)
@@ -144,8 +147,9 @@ impl Repl {
 
     // Looks like a shitty function, but as the language evolves, it's going to be worth
     fn needs_program_parser<'a>(tokens: &[ParserToken]) -> bool {
-        tokens[0].1 == Token::UseKw
-            || (tokens[0].1 != Token::LetKw && tokens.iter().any(|t| t.1 == Token::Assign))
+        !tokens.is_empty()
+            && (tokens[0].1 == Token::UseKw
+                || (tokens[0].1 != Token::LetKw && tokens.iter().any(|t| t.1 == Token::Assign)))
     }
 
     pub fn print_term(&mut self, t: &Term) {
